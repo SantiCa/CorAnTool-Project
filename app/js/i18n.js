@@ -1202,3 +1202,5 @@ Object.assign(D.en, { 'cls.hide': 'Hide this ichnotaxon in the image (not delete
   'fig.tracks': 'Columns', 'fig.recs': 'Other records', 'fig.coreImgW': 'Core width (px)' });
 Object.assign(D.es, { 'sec.needProject': 'Primero crea o abre un proyecto: las imágenes se guardan siempre dentro de un proyecto y de un sondeo.', 'sec.pickCoreTitle': 'Añadir {n} imagen(es)', 'sec.pickCore': '¿A qué sondeo pertenecen?', 'sec.newCore': 'Nuevo sondeo…', 'sec.newCoreName': 'Nombre del nuevo sondeo', 'sec.addHere': 'Añadir' });
 Object.assign(D.en, { 'sec.needProject': 'Create or open a project first: images are always kept inside a project and a core.', 'sec.pickCoreTitle': 'Add {n} image(s)', 'sec.pickCore': 'Which core do they belong to?', 'sec.newCore': 'New core…', 'sec.newCoreName': 'Name of the new core', 'sec.addHere': 'Add' });
+Object.assign(D.es, { 'fig.rangeSubBoth': 'Abundancia relativa por intervalo (barras) e icnotaxones identificados (triángulos)' });
+Object.assign(D.en, { 'fig.rangeSubBoth': 'Relative abundance per interval (bars) and identified ichnotaxa (triangles)' });

@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.3 — 2026-11-05
+- Column and figures can show identification marks together with quantified tracks (bioturbation, ichnotaxa, BI, ii).
+
 ## V0.2 — 2026-11-05
 - Desktop: imported projects are saved again (images stored as bytes); import errors are reported.
 - Images can only be added inside a project and to a core chosen in a dialog.

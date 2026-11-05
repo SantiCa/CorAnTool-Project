@@ -15,7 +15,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.2';
+const DELIVERY = 'V0.3';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2440,8 +2440,8 @@ function renderLog() {
   const axisLabel = D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`;
   const marks = compositeMarks(D), idm = idMode();
   const res = buildLogSVG({
-    title: S.name, subtitle: idm ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
-    axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: idm ? { ...lv.tracks, total: false, species: false, BI: false, ii: false, manual: false } : lv.tracks, image, imageWidth: imgW, records, boundaries,
+    title: S.name, subtitle: idm && !['total', 'species', 'BI', 'ii'].some((k) => lv.tracks[k]) ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
+    axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, imageWidth: imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
     marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes : [], marks),
     ...geoOverlay(D.axis),
     labels: { total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
@@ -4989,7 +4989,7 @@ function coreSVG() {
   const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
   return buildLogSVG({
     title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`,
-    from, to, height: H, rows: D.rows, classes, tracks: idMode() ? { ...lv.tracks, image: !!image, total: false, species: false, BI: false, ii: false, manual: false } : { ...lv.tracks, image: !!image }, image, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
+    from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
     marks: compositeMarks(D), idList: idMode() || compositeMarks(D).length ? idListOf(D.rows, compositeMarks(D)) : null, legendClasses: legendOf(classes, compositeMarks(D)),
     labels: { total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
   }).svg;
@@ -5151,8 +5151,8 @@ function rangeSVG() {
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, index: i, plain: !!c.plain })).filter((c) => S.classes[c.index].id !== 'artifact');
   const presence = [];
   for (const r of D.rows) for (const m of marks) if (m.a >= r.a0 && m.a < r.a1) { const index = S.classes.findIndex((c) => c.id === m.cls); if (!presence.some((p) => p.index === index && p.a0 === r.a0)) presence.push({ a0: r.a0, a1: r.a1, index }); }
-  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(idMode() ? 'fig.rangeSubId' : 'fig.rangeSub'), axisLabel: D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`,
-    from, to, height: F.rangeH, rows: idMode() ? [] : D.rows, classes, presence, total: F.rangeTotal && !idMode(), totalLabel: t('log.total') }).svg;
+  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(presence.length ? (F.rangeTotal || D.rows.some((r) => r.classPct?.some((v) => v > 0)) ? 'fig.rangeSubBoth' : 'fig.rangeSubId') : 'fig.rangeSub'), axisLabel: D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`,
+    from, to, height: F.rangeH, rows: D.rows, classes, presence, total: F.rangeTotal, totalLabel: t('log.total') }).svg;
 }
 
 /** Adds title and caption around any figure SVG. */

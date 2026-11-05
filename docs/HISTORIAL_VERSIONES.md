@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.3 | 05-11-2026 | Aplicación 2.4.1 | Columna y figuras combinan marcas de identificación con bioturbación, icnotaxones, BI e ii |
 | V0.2 | 05-11-2026 | Aplicación 2.4 | Importación arreglada en el programa de escritorio; imágenes siempre en un proyecto y un sondeo elegido; ocultar icnotaxones al interpretar; figuras con ventana de profundidad, columnas, registros y anchura con o sin proporción; más fluidez |
 | V33 = V0.1 | 05-11-2026 | Aplicación 2.3 (release V0.1) | Imágenes en disco y en memoria solo al usarlas; resolución completa guardada y resolución de trabajo cambiable por sección; recorte sin perder resolución; intervalo de análisis en cm |
 | V32 | 05-11-2026 | Aplicación 2.2 | Modo identificación (marcas de trazas sin cuantificar, triángulos y lista de icnotaxones por tramo en la columna), leyenda de icnotaxones en columna y figuras, figura de secciones lado a lado (original, tratada, trazas, flechas…) y gráfico de distribución de icnotaxones |
@@ -625,6 +626,24 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.3 — Identificación y cuantificación juntas (05-11-2026)
+
+**Qué se hizo.** En la columna del sondeo y en las figuras (columna y distribución de icnotaxones) las marcas del modo
+identificación se pueden mostrar junto con las columnas cuantificadas (bioturbación, icnotaxones, BI, ii, manual).
+Antes, el modo identificación las quitaba siempre.
+
+**Cambios.** `app.js`: `renderLog` y `coreSVG` usan las columnas elegidas también en modo identificación; `rangeSVG`
+dibuja a la vez barras de abundancia y triángulos de presencia; subtítulos según lo que se muestra. `i18n.js`:
+`fig.rangeSubBoth`.
+
+**Por qué.** Petición de Santiago: combinar identificación y cuantificación en la columna y las figuras.
+
+**Comprobación.** `npm test` correcto. Sin pruebas en navegador.
+
+**Pendiente.** Nada.
 
 ---
 

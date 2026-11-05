@@ -45,6 +45,7 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.3, 05-11-2026 (Claude):** identificación y cuantificación juntas en columna y figuras.
 - **V0.2, 05-11-2026 (Claude):** importación en escritorio (imágenes como bytes), sondeo obligatorio al añadir imágenes,
   ocultar icnotaxones, opciones de figuras (ventana, columnas, registros, proporción) y cachés de rendimiento.
 - **Numeración, 05-11-2026:** desde ahora las entregas son **V0.<n>**; la V33 es la **V0.1** (primera release). La
