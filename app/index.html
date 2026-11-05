@@ -132,12 +132,12 @@ input[type=number] { font-family: var(--font-data); font-variant-numeric: tabula
 .pane { padding: 12px 14px; display: grid; gap: 12px; align-content: start; overflow: auto; min-height: 0; flex: 1; }
 
 .clist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.clist li { display: grid; grid-template-columns: 18px 22px minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: var(--r); border: 1px solid transparent; cursor: pointer; }
+.clist li { display: grid; grid-template-columns: 22px 18px 22px minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: var(--r); border: 1px solid transparent; cursor: pointer; }
 .clist li:hover { background: var(--bg); }
 .clist li.active { border-color: var(--accent); background: var(--accent-soft); }
 .clist kbd { font: 11px var(--font-data); color: var(--muted); text-align: center; }
 .clist input[type=color] { width: 22px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; }
-.clist input.name { border: 0; background: transparent; padding: 2px 3px; font-style: italic; }
+.clist input.name { min-width: 0; border: 0; background: transparent; padding: 2px 3px; font-style: italic; }
 .clist li.plain input.name { font-style: normal; }
 .clist input.name:focus { background: var(--field); }
 .clist .cnt { font: 11px var(--font-data); color: var(--muted); white-space: nowrap; }

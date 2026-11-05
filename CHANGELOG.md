@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.9 — 2026-11-05
+- Align the ichnotaxon delete button with its row.
+
 ## V0.8 — 2026-11-05
 - Shareable project package (.corantool, ZIP) with full-resolution images; automatic copy as project folders (e.g. shared Drive) and "Open project folder"; replace-or-copy when the same project is opened again.
 - Comments with author, date, replies, resolve and delete; linked to a section and point of the image.

@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.9 | 05-11-2026 | Aplicación 2.8 | Botón de borrado de icnotaxones alineado en su fila |
 | V0.8 | 05-11-2026 | Aplicación 2.8 | Proyecto compartible con imágenes completas (.corantool), carpeta de proyecto para Drive compartido, comentarios con respuestas |
 | V0.7 | 05-11-2026 | Aplicación 2.7 | Figura de trazas: varias versiones de cada traza lado a lado (tratada, original, solo la traza, silueta, contorno…) y escala configurable |
 | V0.6 | 05-11-2026 | Aplicación 2.6.1 | Ancho y formato del eje de cada columna de la derecha (bioturbación, icnotaxones, BI, ii, registros) |
@@ -631,6 +632,16 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.9 — Botón de borrado de icnotaxones (05-11-2026)
+
+- **Qué se hizo:** se alineó el botón de borrado con cada icnotaxón.
+- **Cambios:** la cuadrícula reserva una columna para cada control y el nombre puede reducirse cuando falta espacio.
+- **Por qué:** el botón ocupaba una segunda línea al faltar una columna.
+- **Comprobación:** 48 pruebas JavaScript y 10 pruebas Python superadas.
+- **Pendiente:** ninguno específico de este cambio.
 
 ---
 
