@@ -1562,6 +1562,13 @@ lista de gráficos (`plots`, `plotCur`).
   (AppImage y deb) al subir una etiqueta `V*` y los publica en Releases. Sin firma de código.
 
 ### 22.9 Modo identificación, leyendas y nuevas figuras (desde V32)
+
+**Opciones comunes (V0.2).** Ventana de profundidad (unidades del sondeo; vacía = todo) para todas las figuras; en
+edad se convierte con el modelo de edad. Con «Mantener proporción», alto = ancho · L / A (L = longitud de la ventana en
+cm, A = mediana de la anchura en cm de las zonas de análisis de las secciones de la ventana); máximo 6000 px en la
+columna y 4000 px en los paneles de secciones (si se supera, se reduce el ancho). Ocultar icnotaxones (botón 👁) solo
+cambia lo que se ve en la imagen de trabajo.
+
 - **Modo identificación** (`S.settings.idMode`, casilla en la barra de la sección): para sondeos donde no se puede
   cuantificar la bioturbación. Herramienta **Marcar** (tecla M): clic = marca `{id, x, y, cls}` del icnotaxón activo en
   `s.marks` (coordenadas de la imagen; se guardan con la sección y se recortan y giran con ella); clic a ≤ 9 px de pantalla de

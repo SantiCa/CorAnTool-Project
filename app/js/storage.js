@@ -55,8 +55,9 @@ export const deleteProject = (id) => run(['meta', 'data', 'lite', 'images'], 're
   tx.objectStore('lite').delete(id);
 });
 /** V0.1: original image files live in their own store (on disk) and are read only when a section needs its pixels. */
-export const putImage = (key, blob) => run(['images'], 'readwrite', (tx) => tx.objectStore('images').put({ key, blob, t: Date.now() }));
-export const getImage = (key) => run(['images'], 'readonly', (tx) => tx.objectStore('images').get(key)).then((r) => r?.blob || null);
+// V0.2: stored as bytes (ArrayBuffer), not as Blob: Blob values in IndexedDB fail in the desktop program (app:// origin).
+export const putImage = async (key, blob) => { const bytes = await blob.arrayBuffer(); return run(['images'], 'readwrite', (tx) => tx.objectStore('images').put({ key, bytes, type: blob.type, t: Date.now() })); };
+export const getImage = (key) => run(['images'], 'readonly', (tx) => tx.objectStore('images').get(key)).then((r) => (r ? r.blob || new Blob([r.bytes], { type: r.type || 'image/jpeg' }) : null));
 /** Delete images that no project references (sections removed), if older than one hour. */
 export async function gcImages() {
   const [keys, datas] = await Promise.all([run(['images'], 'readonly', (tx) => tx.objectStore('images').getAllKeys()), run(['data'], 'readonly', (tx) => tx.objectStore('data').getAll())]);

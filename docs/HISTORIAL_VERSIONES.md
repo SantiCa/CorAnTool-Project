@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.2 | 05-11-2026 | Aplicación 2.4 | Importación arreglada en el programa de escritorio; imágenes siempre en un proyecto y un sondeo elegido; ocultar icnotaxones al interpretar; figuras con ventana de profundidad, columnas, registros y anchura con o sin proporción; más fluidez |
 | V33 = V0.1 | 05-11-2026 | Aplicación 2.3 (release V0.1) | Imágenes en disco y en memoria solo al usarlas; resolución completa guardada y resolución de trabajo cambiable por sección; recorte sin perder resolución; intervalo de análisis en cm |
 | V32 | 05-11-2026 | Aplicación 2.2 | Modo identificación (marcas de trazas sin cuantificar, triángulos y lista de icnotaxones por tramo en la columna), leyenda de icnotaxones en columna y figuras, figura de secciones lado a lado (original, tratada, trazas, flechas…) y gráfico de distribución de icnotaxones |
 
@@ -624,6 +625,41 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.2 — Importación en escritorio, sondeo obligatorio, ocultar icnotaxones, opciones de figuras y fluidez (05-11-2026)
+
+**Qué se hizo.**
+- **Importación en el programa de escritorio:** los proyectos importados no se guardaban («Cambios sin guardar») ni
+  aparecían en la lista. Las imágenes se guardan ahora como bytes en el almacén de imágenes, porque los Blob de
+  IndexedDB fallan en el origen `app://` del programa. Si una importación falla, se muestra el motivo.
+- El trabajo empezado sin proyecto se guarda como proyecto nuevo, y **no se pueden añadir imágenes sin proyecto**: al
+  añadirlas se pregunta siempre **a qué sondeo pertenecen** (o se crea uno nuevo).
+- **Ocultar icnotaxones al interpretar:** botón 👁 en cada icnotaxón, «Ver solo el activo» (sigue al icnotaxón
+  activo) y «Mostrar todos». Solo afecta a la imagen: no se borra nada ni cambian el análisis ni las figuras.
+- **Figuras:** ventana de profundidad (desde/hasta) común a todas (trazas, columna, distribución, secciones). En la
+  columna: qué columnas salen (imagen, bioturbación, icnotaxones, BI, ii, manual) y qué otros registros; ancho del
+  testigo libre o con «Mantener proporción» (el alto sigue a la forma real del testigo). En la figura de secciones,
+  la misma opción para ancho y alto de los paneles.
+- **Fluidez:** el recuento por filas de cada sección se reutiliza mientras no cambien trazas, zona o clases; el
+  guardado reutiliza las máscaras comprimidas que no han cambiado; el modelo de icnotaxones solo se reentrena si
+  cambian los ejemplos o sus ajustes, y solo se predicen los objetos nuevos o modificados; los formularios de figuras
+  ya no recalculan el sondeo entero.
+
+**Cambios.** `storage.js` (`putImage`/`getImage` con bytes; lee también los Blob de V0.1). `app.js`: `markDirty`,
+`restoreFiles`, `pickCore`, `addFiles`, `hiddenCls`/`setHidden`/`rebuildLUT`/`render`/`drawMarks`,
+`secFigRange`, `figAxisWin`, `coreRatio`, `figRecords`, `coreFigSize`, `secFigSize`, `figWinHTML`, `figLightD`,
+`classTraces`, `analyze` (caché `_rc`), `lazyMask` (caché de RLE con contador `_mv`), `trainSig`/`learnNow`.
+`i18n.js` e `index.html` (botones de icnotaxones).
+
+**Por qué.** Peticiones de Santiago al probar la V0.1 en Windows.
+
+**Comprobación.** `npm test` (46) y `pytest` (10). Importación probada en Chromium (versión web) antes del cambio a
+bytes. Sin pruebas en el programa de escritorio (las hace Santiago).
+
+**Pendiente.** Comprobar la importación en el .exe. Las cachés dependen de que todo cambio de máscaras pase por
+`beginOp`/`afterChange` o por asignación del array (así es hoy en todo el código).
 
 ---
 

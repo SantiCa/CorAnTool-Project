@@ -1190,3 +1190,15 @@ Object.assign(D.en, {
   'sec.resAll': 'Set all sections to this resolution (px/cm)', 'sec.resAllDone': 'Sections set to ≈ {p} px/cm',
   'sec.maxMPNote': 'Larger images are reduced by pixel averaging. The original file is kept at full resolution and the resolution can be changed later for each section.',
 });
+
+/* V0.2 */
+Object.assign(D.es, { 'err.import': 'No se pudo importar «{f}»: {m}', 'top.lang': 'Cambiar idioma (English / Español)' });
+Object.assign(D.en, { 'err.import': 'Could not import “{f}”: {m}', 'top.lang': 'Switch language (English / Español)' });
+
+/* V0.2: hide ichnotaxa while interpreting; figure options */
+Object.assign(D.es, { 'cls.hide': 'Ocultar este icnotaxón en la imagen (no se borra)', 'cls.show': 'Mostrar este icnotaxón', 'cls.solo': 'Ver solo el activo', 'cls.soloTip': 'Oculta en la imagen los demás icnotaxones para interpretar sin que molesten. No se borra nada ni cambia el análisis.', 'cls.showAll': 'Mostrar todos',
+  'fig.tracks': 'Columnas', 'fig.recs': 'Otros registros', 'fig.coreImgW': 'Ancho del testigo (px)' });
+Object.assign(D.en, { 'cls.hide': 'Hide this ichnotaxon in the image (not deleted)', 'cls.show': 'Show this ichnotaxon', 'cls.solo': 'Show active only', 'cls.soloTip': 'Hides the other ichnotaxa in the image so they do not get in the way. Nothing is deleted and the analysis does not change.', 'cls.showAll': 'Show all',
+  'fig.tracks': 'Columns', 'fig.recs': 'Other records', 'fig.coreImgW': 'Core width (px)' });
+Object.assign(D.es, { 'sec.needProject': 'Primero crea o abre un proyecto: las imágenes se guardan siempre dentro de un proyecto y de un sondeo.', 'sec.pickCoreTitle': 'Añadir {n} imagen(es)', 'sec.pickCore': '¿A qué sondeo pertenecen?', 'sec.newCore': 'Nuevo sondeo…', 'sec.newCoreName': 'Nombre del nuevo sondeo', 'sec.addHere': 'Añadir' });
+Object.assign(D.en, { 'sec.needProject': 'Create or open a project first: images are always kept inside a project and a core.', 'sec.pickCoreTitle': 'Add {n} image(s)', 'sec.pickCore': 'Which core do they belong to?', 'sec.newCore': 'New core…', 'sec.newCoreName': 'Name of the new core', 'sec.addHere': 'Add' });

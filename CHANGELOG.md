@@ -2,6 +2,13 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.2 — 2026-11-05
+- Desktop: imported projects are saved again (images stored as bytes); import errors are reported.
+- Images can only be added inside a project and to a core chosen in a dialog.
+- Hide ichnotaxa in the image while interpreting (per class, "show active only", "show all").
+- Figures: depth window for all figures; column figure with selectable tracks and records, core width and "keep proportion"; same option for section panels.
+- Faster: cached row counts, packed masks and classifier; predictions only for new or changed objects.
+
 ## V0.1 (formerly V33) — App 2.3 — 2026-11-05
 - Original images stored once on disk (separate image store); pixels loaded only for the sections in use.
 - Full-resolution originals kept; per-section working resolution can be changed later (masks follow). Crop no longer re-encodes.

@@ -570,6 +570,9 @@ details.mini[open] { display: grid; gap: 6px; }
 /* V32: identification mode */
 .opt.idmode { gap: 6px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; }
 .opt.idmode:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.clist .eye { background: none; border: 0; cursor: pointer; padding: 0 4px; font-size: 14px; color: var(--ink, inherit); opacity: .8; }
+.clist .eye.off { opacity: .25; }
+.clist li.hid .name { opacity: .5; }
 </style>
 </head>
 <body>
@@ -585,7 +588,7 @@ details.mini[open] { display: grid; gap: 6px; }
       <button class="btn small danger" id="bkReactivateTop" hidden data-i18n="bk.reactivate"></button>
       <button class="btn ghost" id="helpBtn" data-i18n="top.help"></button>
       <button class="btn ghost" id="themeBtn" data-i18n-title="top.theme">☾</button>
-      <button class="btn ghost" id="langBtn">EN</button>
+      <button class="btn ghost" id="langBtn" data-i18n-title="top.lang">EN</button>
     </div>
   </header>
 
@@ -719,6 +722,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <button role="tab" data-tab="results" aria-selected="false" data-i18n="tab.results"></button>
       </div>
       <div class="pane" data-pane="classes">
+        <div class="row"><button class="btn small" id="clsSolo" data-i18n="cls.solo" data-i18n-title="cls.soloTip"></button><button class="btn small" id="clsShowAll" data-i18n="cls.showAll"></button></div>
         <ul class="clist" id="classList"></ul>
         <div class="row"><button class="btn small" id="addClass" data-i18n="cls.add"></button></div>
         <p class="note" data-i18n="cls.hint"></p>
