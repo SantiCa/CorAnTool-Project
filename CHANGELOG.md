@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.21 — 2026-11-05
+- Bioturbation side column: drag its edge to change the width, fixed horizontal scales on top, and records from Data as extra tracks.
+
 ## V0.20 — 2026-11-05
 - Traces may overlap without limit: total bioturbation counts the overlap once; each ichnotaxon keeps its full area, so taxon percentages may add up to more than the total. «Overlap» option for brush, wand and lasso; the Python package accepts per-class mask layers.
 - Scissors tool (C) to split a trace along a drawn line; «Merge» for several selected traces.

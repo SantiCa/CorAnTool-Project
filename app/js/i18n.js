@@ -1678,3 +1678,13 @@ Object.assign(D.en, {
   'cut.done': 'Trace split into {n}.',
   'obj.merge': 'Merge', 'obj.mergeTip': 'Merges the selected traces into one (keeps the class of the largest one identified by hand).',
 });
+
+// V0.21: side column
+Object.assign(D.es, {
+  'p.add': '+ Registros', 'p.addTip': 'Añadir a la columna lateral registros de Datos (geoquímica, etc.). Arrastra el borde izquierdo de la columna para cambiar su ancho; doble clic lo restablece.',
+  'p.noRecs': 'Este sondeo no tiene registros. Añádelos en la pestaña Datos.',
+});
+Object.assign(D.en, {
+  'p.add': '+ Records', 'p.addTip': 'Add records from Data (geochemistry, etc.) to the side column. Drag the left edge of the column to change its width; double click restores it.',
+  'p.noRecs': 'This core has no records. Add them in the Data tab.',
+});

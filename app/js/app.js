@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.20';
+const DELIVERY = 'V0.21';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -1200,25 +1200,46 @@ function drawRuler(s, ch) {
   vctx.fillStyle = '#e0995a'; vctx.fillText(s.units, 4, ch - 10);
 }
 
+/* V0.21: side column — adjustable width (drag its left edge), fixed scales on top, and records from Data as extra tracks. */
+function sideSeries(s) {
+  const want = new Set(S.settings.sideRecs || []), out = [], base = S.sections[0]?.units || s.units, inv = S.age.model ? invertModel(S.age.model) : null;
+  for (const r of S.records || []) for (const se of r.series) {
+    if (!want.has(se.name)) continue;
+    const pts = [];
+    for (let i = 0; i < se.x.length; i++) {
+      const d = toAxis(se.x[i], r.axis, 'depth', S.age.model, inv), v = se.y[i];
+      if (d == null || v == null || !Number.isFinite(+v)) continue;
+      pts.push([(d * UNIT_TO_CM[base]) / UNIT_TO_CM[s.units], +v]);
+    }
+    if (!pts.length) continue;
+    let lo = Infinity, hi = -Infinity; for (const [, v] of pts) { if (v < lo) lo = v; if (v > hi) hi = v; }
+    out.push({ name: se.name, color: se.color || '#7fb8d4', reverse: !!se.reverse, pts, lo, hi: hi > lo ? hi : lo + 1 });
+  }
+  return out;
+}
+const tickTxt = (v) => (Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v) ? v.toExponential(0) : String(+v.toPrecision(3)));
 function renderProfile() {
-  const s = sec(), W = prof.width, H = prof.height;
+  const s = sec(), W = prof.width, H = prof.height, HEAD = 36;
   pctx.fillStyle = '#121615'; pctx.fillRect(0, 0, W, H);
   if (!s || !s.bins?.length) return;
-  const colW = Math.max(18, Math.min(30, W * 0.13)), gap = 6, x0 = 8, pw = W - x0 - 2 * colW - 3 * gap, bx = x0 + pw + gap, ix = bx + colW + gap;
+  const recs = sideSeries(s), gap = 6, x0 = 8, colW = Math.max(18, Math.min(30, W * 0.13)), recW = Math.max(48, Math.min(90, W * 0.22));
+  const pw = Math.max(40, W - x0 - 2 * colW - 3 * gap - recs.length * (recW + gap)), bx = x0 + pw + gap, ix = bx + colW + gap, rx0 = ix + colW + gap;
   const z = S.view.zoom, vy = S.view.y, yOf = (r) => (s.roi.y0 + r - vy) * z;
   pctx.strokeStyle = '#2c3331'; pctx.lineWidth = 1;
-  for (const p of [0, 25, 50, 75, 100]) { const x = Math.round(x0 + (p / 100) * pw) + 0.5; pctx.beginPath(); pctx.moveTo(x, 22); pctx.lineTo(x, H); pctx.stroke(); }
+  for (const p of [0, 25, 50, 75, 100]) { const x = Math.round(x0 + (p / 100) * pw) + 0.5; pctx.beginPath(); pctx.moveTo(x, HEAD); pctx.lineTo(x, H); pctx.stroke(); }
   const cols = S.classes.map((c) => hex(c.color));
   const pts = [];
   for (const b of s.bins) {
     const y0 = yOf(b.r0), y1 = yOf(b.r1);
-    if (y1 < 22 || y0 > H) continue;
+    if (y1 < HEAD || y0 > H) continue;
     const hgt = Math.max(1, y1 - y0);
+    // V0.20: with overlapping traces the class percentages may add up to more than the total: the stack is scaled to the total
+    const sum = b.classPct.reduce((a, v) => a + (v || 0), 0), k0 = b.pct != null && sum > b.pct && sum > 0 ? b.pct / sum : 1;
     let acc = 0;
     b.classPct.forEach((v, k) => {
       if (!v) return;
       const [r, g, bl] = cols[k]; pctx.fillStyle = `rgba(${r},${g},${bl},.75)`;
-      pctx.fillRect(x0 + (acc / 100) * pw, y0, (v / 100) * pw, hgt); acc += v;
+      pctx.fillRect(x0 + (acc / 100) * pw, y0, ((v * k0) / 100) * pw, hgt); acc += v * k0;
     });
     for (const [x, val, max, man] of [[bx, b.BI, 6, b.BIm], [ix, b.ii, 6, b.iim]]) {
       if (val != null) { pctx.fillStyle = '#e0995a'; pctx.fillRect(x, y0, (val / max) * colW, Math.max(1, hgt - (hgt > 3 ? 1 : 0))); }
@@ -1228,10 +1249,53 @@ function renderProfile() {
   }
   pctx.strokeStyle = '#f3ece0'; pctx.lineWidth = 1.5; pctx.beginPath();
   pts.forEach(([x, y], k) => (k ? pctx.lineTo(x, y) : pctx.moveTo(x, y))); pctx.stroke();
-  pctx.fillStyle = '#121615'; pctx.fillRect(0, 0, W, 22);
-  pctx.fillStyle = '#b5aea2'; pctx.font = '600 10.5px "IBM Plex Sans Condensed", sans-serif'; pctx.textBaseline = 'middle';
-  pctx.fillText(t('p.pct'), x0, 11); pctx.fillText('BI', bx, 11); pctx.fillText('ii', ix, 11);
+  recs.forEach((r, k) => {   // records: own scale per track (min–max of the whole series)
+    const xa = rx0 + k * (recW + gap), xOf = (v) => xa + 2 + (((r.reverse ? r.hi - v : v - r.lo) / (r.hi - r.lo)) * (recW - 4));
+    pctx.strokeStyle = '#2c3331'; pctx.lineWidth = 1; pctx.strokeRect(xa + 0.5, HEAD + 0.5, recW - 1, H - HEAD - 1);
+    pctx.save(); pctx.beginPath(); pctx.rect(xa, HEAD, recW, H - HEAD); pctx.clip();
+    pctx.strokeStyle = r.color; pctx.lineWidth = 1.4; pctx.beginPath(); let on = false;
+    for (const [d, v] of r.pts) {
+      const y = (rowAtDepth(s, d) - vy) * z;
+      if (d < Math.min(s.top, s.bottom) || d > Math.max(s.top, s.bottom)) { on = false; continue; }
+      if (on) pctx.lineTo(xOf(v), y); else { pctx.moveTo(xOf(v), y); on = true; }
+    }
+    pctx.stroke(); pctx.restore();
+  });
+  // fixed header: titles and horizontal scales (they stay while the view scrolls)
+  pctx.fillStyle = '#121615'; pctx.fillRect(0, 0, W, HEAD);
+  pctx.strokeStyle = '#3a4240'; pctx.beginPath(); pctx.moveTo(0, HEAD - 0.5); pctx.lineTo(W, HEAD - 0.5); pctx.stroke();
+  pctx.fillStyle = '#b5aea2'; pctx.font = '600 10.5px "IBM Plex Sans Condensed", sans-serif'; pctx.textBaseline = 'middle'; pctx.textAlign = 'left';
+  const clip = (txt, w) => { let t2 = txt; while (t2.length > 2 && pctx.measureText(t2).width > w) t2 = t2.slice(0, -2) + '…'; return t2; };
+  pctx.fillText(clip(t('p.pct'), pw), x0, 10); pctx.fillText('BI', bx, 10); pctx.fillText('ii', ix, 10);
+  recs.forEach((r, k) => { pctx.fillStyle = r.color; pctx.fillText(clip(r.name, recW - 2), rx0 + k * (recW + gap), 10); });
+  pctx.font = '9.5px "IBM Plex Mono", monospace'; pctx.fillStyle = '#8f8a80';
+  const tick = (x, txt, align) => { pctx.textAlign = align; pctx.fillText(txt, x, 26); pctx.fillRect(Math.round(x) - (align === 'right' ? 0 : 0), HEAD - 4, 1, 4); };
+  for (const p of pw < 110 ? [0, 50, 100] : [0, 25, 50, 75, 100]) tick(x0 + (p / 100) * pw, String(p), p === 0 ? 'left' : p === 100 ? 'right' : 'center');
+  for (const x of [bx, ix]) { tick(x, '0', 'left'); tick(x + colW, '6', 'right'); }
+  recs.forEach((r, k) => { const xa = rx0 + k * (recW + gap); tick(xa + 2, tickTxt(r.reverse ? r.hi : r.lo), 'left'); tick(xa + recW - 2, tickTxt(r.reverse ? r.lo : r.hi), 'right'); });
+  pctx.textAlign = 'left';
 }
+/** Width of the side column: drag its left edge (double click restores it). */
+const PROF_EDGE = 6;
+function applyProfWidth() { const w = panelPrefs.profW; const vp = prof.parentElement; if (w) vp.style.setProperty('--pw', w + 'px'); else vp.style.removeProperty('--pw'); requestAnimationFrame(() => resizeCanvases()); }
+prof.addEventListener('pointermove', (e) => { if (!prof._drag) prof.style.cursor = e.offsetX <= PROF_EDGE ? 'col-resize' : ''; });
+prof.addEventListener('pointerdown', (e) => {
+  if (e.offsetX > PROF_EDGE) return;
+  e.preventDefault(); prof.setPointerCapture(e.pointerId); prof._drag = true;
+  const vp = prof.parentElement, r = vp.getBoundingClientRect();
+  const move = (ev) => { const w = Math.round(Math.max(140, Math.min(r.width - 200, r.right - ev.clientX))); panelPrefs.profW = w; vp.style.setProperty('--pw', w + 'px'); resizeCanvases(); };
+  const up = () => { prof._drag = false; prof.removeEventListener('pointermove', move); savePanels(); };
+  prof.addEventListener('pointermove', move); prof.addEventListener('pointerup', up, { once: true });
+});
+prof.addEventListener('dblclick', (e) => { if (e.offsetX <= PROF_EDGE) { delete panelPrefs.profW; savePanels(); applyProfWidth(); } });
+/** Menu of records shown in the side column. */
+function renderProfMenu() {
+  const box = $('profRecs'); if (!box) return;
+  const names = [...new Set((S.records || []).flatMap((r) => r.series.map((x) => x.name)))], on = new Set(S.settings.sideRecs || []);
+  box.innerHTML = names.length ? names.map((n) => `<label class="chk"><input type="checkbox" value="${esc(n)}" ${on.has(n) ? 'checked' : ''}><span>${esc(n)}</span></label>`).join('') : `<p class="note">${t('p.noRecs')}</p>`;
+}
+$('profRecs').addEventListener('change', () => { S.settings.sideRecs = [...$('profRecs').querySelectorAll('input:checked')].map((i) => i.value); markDirty(); requestRender(); });
+$('profMenu').addEventListener('toggle', () => { if ($('profMenu').open) renderProfMenu(); });
 
 /* ───────────── view ───────────── */
 
@@ -4350,6 +4414,7 @@ function applyPanels() {
   w.classList.toggle('lcollapsed', sides.includes('l') && !!p.lc); w.classList.toggle('rcollapsed', sides.includes('r') && !!p.rc);
   if (sides.includes('l') && (p.lc || p.l)) w.style.setProperty('--lw', p.lc ? '0px' : p.l + 'px'); else w.style.removeProperty('--lw');
   if (sides.includes('r') && (p.rc || p.r)) w.style.setProperty('--rw', p.rc ? '0px' : p.r + 'px'); else w.style.removeProperty('--rw');
+  if (panelPrefs.profW) prof.parentElement.style.setProperty('--pw', panelPrefs.profW + 'px');   // V0.21
   requestAnimationFrame(() => { placeSplitters(); resizeCanvases?.(); });
 }
 function placeSplitters() {

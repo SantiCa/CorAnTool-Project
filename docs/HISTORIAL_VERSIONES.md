@@ -54,6 +54,7 @@ La descripción detallada de los algoritmos está en
 | V0.18 | 05-11-2026 | Programa de escritorio | Icono propio de la aplicación (antes salía el genérico de Electron: `.gitignore` ignoraba `desktop/build/`); Electron 42 comprobado tras fusionar la PR #11 de Dependabot |
 | V0.19 | 05-11-2026 | Interfaz | Ayuda al pasar el ratón en casi todos los botones, deslizantes, casillas y menús (es/en), con opción para desactivarla |
 | V0.20 | 05-11-2026 | Edición de trazas | Trazas solapadas sin límite (total sin doble conteo; cada icnotaxón con su superficie completa), opción «Superponer», tijeras para dividir y «Unir» trazas |
+| V0.21 | 05-11-2026 | Columna lateral | Ancho ajustable, escalas horizontales fijas arriba y registros de Datos como columnas adicionales |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -644,6 +645,21 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.21 — Columna lateral de bioturbación: ancho, escalas y registros (05-11-2026)
+
+- **Qué se hizo:** la columna que acompaña a la imagen en Bioturbación (1) cambia de ancho arrastrando su borde
+  izquierdo (doble clic lo restablece; se recuerda en el navegador), (2) muestra arriba, fija al desplazarse, la escala
+  horizontal de cada columna (0–100 % de bioturbación, 0–6 de BI e ii, mínimo y máximo de cada registro) y (3) puede
+  añadir registros de Datos (botón «+ Registros»), cada uno con su escala, pasados a profundidad con el modelo de edad
+  si están en edad.
+- **Cambios:** `app.js` (`renderProfile`, `sideSeries`, ancho `--pw`, menú `profRecs`; selección guardada en el
+  proyecto como `settings.sideRecs`), `index.html` (CSS y menú), `i18n.js`. Con trazas solapadas (V0.20) la barra
+  apilada por icnotaxón se escala a la bioturbación total del intervalo para no salirse. `DELIVERY` = V0.21.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 67 pruebas JS; en Chrome sin pantalla con el sondeo de prueba U1385I: ancho 230 → 350 px
+  arrastrando, dos registros de reflectancia dibujados con su escala, sin errores.
+- **Pendiente / no probado:** escala de cada registro editable (se hará con las escalas de figuras, V0.22).
 
 ## V0.20 — Trazas solapadas, dividir y unir (05-11-2026)
 
