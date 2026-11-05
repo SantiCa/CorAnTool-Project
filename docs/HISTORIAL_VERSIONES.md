@@ -58,6 +58,7 @@ La descripción detallada de los algoritmos está en
 | V0.22 | 05-11-2026 | Escalas de figuras | Marcas largas y cortas del eje vertical con intervalo y longitud propios; escalas editables también en Multiproxy |
 | V0.23 | 05-11-2026 | Figuras | Paneles de imagen en Columna con proporción real, estilo de SIN DATOS, tamaño y borde de símbolos, flechas solo de marcas a mano, grupos excluidos y etiquetas |
 | V0.24 | 05-11-2026 | Columna lateral | Ancho propio y ocultar cada columna (bioturbación, BI, ii, registros) |
+| V0.25 | 05-11-2026 | Figuras | Ancho, paneles uno junto a otro y ocultar zonas excluidas en todas las figuras con sondeo |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -648,6 +649,19 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.25 — Opciones de imagen del sondeo en todas las figuras (05-11-2026)
+
+- **Qué se hizo:** ancho de la imagen, varias versiones del sondeo una junto a otra y mostrarlo con o sin las zonas
+  excluidas, en todas las figuras con sondeo: Columna (ya desde V0.23), Figuras › Sondeo (paneles y «Ocultar zonas
+  excluidas» nuevos; el ancho ya existía), Figuras › Secciones (ya lo tenía) y Multiproxy › Registros (usa los
+  paneles, el ancho y las zonas excluidas elegidos en Columna).
+- **Cambios:** `app.js`: `coreImages` común (antes `columnImages`), `sectionModeCanvas`/`panelDataURL` con
+  ocultar excluidas por figura; `coreSVG` (`fig.corePanels`, `fig.coreHideExcl`); Multiproxy. `DELIVERY` = V0.25.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 68 pruebas JS; en Chrome con U1385I: 2 paneles en Columna, 2 en Figuras › Sondeo con zonas
+  excluidas ocultas; sin errores.
+- **Pendiente / no probado:** con el eje en edad (Multiproxy por defecto) solo se muestra una imagen.
 
 ## V0.24 — Columna lateral: ancho y visibilidad de cada columna (05-11-2026)
 

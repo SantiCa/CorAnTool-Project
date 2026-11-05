@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.25 — 2026-11-05
+- Every figure with a core image: width, several versions side by side, and show or hide excluded zones (Core figure and Multiproxy added).
+
 ## V0.24 — 2026-11-05
 - Bioturbation side column: each track (bioturbation, BI, ii, records) has its own width (drag its edge in the header or type it) and can be hidden.
 

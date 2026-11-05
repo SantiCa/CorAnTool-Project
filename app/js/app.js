@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.24';
+const DELIVERY = 'V0.25';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -3017,26 +3017,27 @@ function sectionCanvas(s) {
 
 /** Core image strip for the window, resampled row by row onto the depth or age axis. */
 /**
- * V0.23: image panels of the core column (like the section figure): original, enhanced, traces painted, outlined, traces
- * only, black and white, arrows. Width keeps the photo proportions by default (style.imgAspect = 'keep'), times
- * style.imgStretch; 'fixed' uses style.imgW px. Panels other than the plain image need the depth axis.
+ * V0.23–V0.25: image panels of a core (core column, Figures › core, Multiproxy): original, enhanced, traces painted,
+ * outlined, traces only, black and white, arrows, side by side. o = { panels, w, hideExcl, keep, stretch }:
+ * width keeps the photo proportions (keep) × stretch, or w px. Panels other than the plain image need the depth axis.
  */
-function columnImages(D, from, to, H) {
-  const lv = S.logView, st = lv.style || {}, panels = (lv.imgPanels?.length ? lv.imgPanels : [lv.imgMode === 'orig' ? 'orig' : 'enh']).filter((p) => FIG_PANELS.includes(p));
-  let w = +st.imgW > 0 ? +st.imgW : 64;
-  if ((st.imgAspect || 'keep') === 'keep') {
-    if (D.axis === 'depth') { const r = coreRatio(D, from, to); if (r) w = H / r; }
-    w *= +st.imgStretch > 0 ? +st.imgStretch : 1;
-  }
+function coreImages(D, from, to, H, o) {
+  const panels = (o.panels?.length ? o.panels : [o.mode === 'orig' ? 'orig' : 'enh']).filter((p) => FIG_PANELS.includes(p));
+  let w = +o.w > 0 ? +o.w : 64;
+  if (o.keep) { if (D.axis === 'depth') { const r = coreRatio(D, from, to); if (r) w = H / r; } w *= +o.stretch > 0 ? +o.stretch : 1; }
   w = Math.round(Math.max(8, Math.min(600, w)));
-  if (D.axis !== 'depth') return [{ href: stripDataURL(D, from, to, H, w * 2), w }];
+  if (D.axis !== 'depth' || (o.plain && panels.length === 1 && panels[0] === (o.mode === 'orig' ? 'orig' : 'enh'))) return [{ href: stripDataURL(D, from, to, H, w * 2), w }];
   const tr = panels.includes('arrows') ? figTraces(D, from, to) : null, multi = panels.length > 1;
   return panels.map((p) => {
-    if ((p === 'enh' || p === 'orig') && !multi && p === lv.imgMode) return { href: stripDataURL(D, from, to, H, w * 2), w };
-    const im = { href: panelDataURL(D, from, to, H, w, p === 'arrows' ? 'enh' : p), w, title: multi ? t('fig.p.' + p) : null };
+    const im = { href: panelDataURL(D, from, to, H, w, p === 'arrows' ? 'enh' : p, !!o.hideExcl), w, title: multi ? t('fig.p.' + p) : null };
     if (p === 'arrows') { im.draw = (x, cw, y) => arrowMarksSVG(tr, x, cw, y); im.marks = false; }
     return im;
   });
+}
+/** Core column and Multiproxy: the panels and width chosen in the core column. */
+function columnImages(D, from, to, H) {
+  const lv = S.logView, st = lv.style || {};
+  return coreImages(D, from, to, H, { panels: lv.imgPanels, mode: lv.imgMode, hideExcl: lv.hideExcl, keep: (st.imgAspect || 'keep') === 'keep', stretch: st.imgStretch, w: st.imgW, plain: true });
 }
 
 function stripDataURL(D, from, to, H, W) {
@@ -4005,17 +4006,17 @@ function renderGeoLogs() {
   }
   const T = geoRT.test;
   $('geoTestOut').textContent = T?.core === core.id ? t(T.n ? 'geo.testRes' : 'geo.testResNo', { s: t('geo.testScheme.' + T.scheme), p: T.n ? fmt((100 * T.ok) / T.n, 1) : '', n: T.n }) : '';
-  let rows = [], image = null, tracks = { image: false, total: false, species: false, BI: false, ii: false, manual: false };
+  let rows = [], image = null, images = null, tracks = { image: false, total: false, species: false, BI: false, ii: false, manual: false };
   if (core.id === S.curCore && S.sections.length && (axis === 'depth' || S.age.model)) {
     const D = compositeData();
     rows = compositeRows(D.secs.map((s) => ({ name: s.name, bins: s.bins.map((b) => ({ ...b, dTop: b.dTop * D.f(s), dBottom: b.dBottom * D.f(s), depth: b.depth * D.f(s) })) })), { axis, model: S.age.model });
     tracks = { ...tracks, image: true, total: true };
-    image = { href: stripDataURL({ ...D, axis }, from, to, 700, 128) };
+    const ims = columnImages({ ...D, axis }, from, to, 700); image = ims[0]; images = ims;   // V0.25: same panels and width as the core column
   }
   const res = buildLogSVG({
     title: core.name, subtitle: t('geo.subtitleLogs', { n: geoRT.samples.filter((s) => s.core === core.id).length, step: st.step }),
     axisLabel: axis === 'age' ? `${t('r.age')} (${S.age.units || 'ka'})` : `${t('r.depth')} (${core.units || 'm'})`,
-    from, to, height: 700, rows, classes: [], tracks, image, imageWidth: 64, records, boundaries: [], bands, bandLegend: bandLegendOf(bands), shade,
+    from, to, height: 700, rows, classes: [], tracks, image, images, imageWidth: image?.w || 64, records, boundaries: [], bands, bandLegend: bandLegendOf(bands), shade,
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image') },
     colWidths: (g.view.colW ||= {}), recWidth: g.view.trackW || 120, style: g.view.style || {},
   });
@@ -5671,12 +5672,12 @@ function coreSVG() {
   const D = compositeData(), [from, to] = figAxisWin(D), F = S.fig, lv = { ...S.logView, tracks: F.tracks || S.logView.tracks };
   const { W: imgW, H } = coreFigSize(D);
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, counts: c.counts })).filter((c) => c.counts);
-  const image = S.sections.length && lv.tracks.image ? { href: stripDataURL(D, from, to, H, Math.max(64, imgW * 2)) } : null;
+  const images = S.sections.length && lv.tracks.image ? coreImages(D, from, to, H, { panels: F.corePanels, mode: 'enh', hideExcl: F.coreHideExcl, w: imgW }) : null, image = images?.[0] || null;   // V0.25
   const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
   const LS = logStyleOf(D);
   return buildLogSVG({
     style: LS.style, colWidths: S.logView.colW || {}, title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: LS.label,
-    from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
+    from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, images, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
     marks: compositeMarks(D), idList: idMode() || compositeMarks(D).length ? idListOf(D.rows, compositeMarks(D)) : null, legendClasses: legendOf(classes, compositeMarks(D)),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
   }).svg;
@@ -5684,9 +5685,9 @@ function coreSVG() {
 
 /* ── V32: core-section figure (versions of the same interval side by side) and ichnotaxa range chart ── */
 /** Section picture in one of the figure styles, reduced to ≤ 900 px wide and cached per section. */
-function sectionModeCanvas(s, mode) {
-  const F = S.fig, key = `${s.logVer}|${mode}|${F.alpha}|${F.hideExcl}|${S.settings.predThr}|${S.settings.includePred}`;
-  s._fc ||= new Map(); if (s._fc.get(mode)?.key === key) return s._fc.get(mode);
+function sectionModeCanvas(s, mode, hx = S.fig.hideExcl) {   // V0.25: hx = paint excluded zones white (per figure)
+  const F = S.fig, key = `${s.logVer}|${mode}|${F.alpha}|${!!hx}|${S.settings.predThr}|${S.settings.includePred}`, mk = mode + (hx ? '|x' : '');
+  s._fc ||= new Map(); if (s._fc.get(mk)?.key === key) return s._fc.get(mk);
   if (!s.orig && !['mask', 'bw'].includes(mode)) { needPixels(s); const p = document.createElement('canvas'); p.width = 1; p.height = Math.max(1, Math.round(s.h / s.w)); const g = p.getContext('2d'); g.fillStyle = '#e4e7e6'; g.fillRect(0, 0, 1, p.height); return { key: 'pending', canvas: p, k: 1 / s.w }; }
   const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
   const ctx = c.getContext('2d'), im = ctx.createImageData(s.w, s.h), d = im.data, lab = s.labels, ex = s.exclude, W = s.w;
@@ -5694,7 +5695,7 @@ function sectionModeCanvas(s, mode) {
   if (photo) d.set(mode === 'orig' ? s.orig : s.enh); else d.fill(255);
   for (let i = 0; i < lab.length; i++) {
     const j = i * 4;
-    if (ex[i] && (F.hideExcl || !photo)) { const v = photo ? 255 : 236; d[j] = d[j + 1] = d[j + 2] = v; continue; }
+    if (ex[i] && (hx || !photo)) { const v = photo ? 255 : 236; d[j] = d[j + 1] = d[j + 2] = v; continue; }
     const id = topAt(lab[i], s.stacks); if (!id) continue; const k = eff[id]; if (k < 0) continue; const col = cols[k];
     if (mode === 'fill' || mode === 'mask') { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; }
     else if (mode === 'bw') { d[j] = d[j + 1] = d[j + 2] = 20; }
@@ -5704,16 +5705,16 @@ function sectionModeCanvas(s, mode) {
   ctx.putImageData(im, 0, 0);
   const k = Math.min(1, 900 / s.w), out = document.createElement('canvas'); out.width = Math.max(1, Math.round(s.w * k)); out.height = Math.max(1, Math.round(s.h * k));
   const o2 = out.getContext('2d'); o2.imageSmoothingQuality = 'high'; o2.drawImage(c, 0, 0, out.width, out.height); c.width = c.height = 0;
-  const r = { key, canvas: out, k: out.width / s.w }; s._fc.set(mode, r); return r;
+  const r = { key, canvas: out, k: out.width / s.w }; s._fc.set(mk, r); return r;
 }
 /** One panel image for depths [from, to) (base units), H × W px. */
-function panelDataURL(D, from, to, H, W, mode) {
+function panelDataURL(D, from, to, H, W, mode, hx = S.fig.hideExcl) {
   const Hc = Math.min(6000, Math.round(H * 2)), Wc = W * 2, c = document.createElement('canvas'); c.width = Wc; c.height = Hc;
   const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, Wc, Hc);
   for (let r = 0; r < Hc; r++) {
     const dd = from + ((r + 0.5) / Hc) * (to - from), s = D.secs.find((q) => dd >= q.top * D.f(q) && dd < q.bottom * D.f(q)); if (!s) continue;
     const row = Math.floor(rowAtDepth(s, dd / D.f(s))); if (row < s.roi.y0 || row >= s.roi.y1) continue;
-    const pc = sectionModeCanvas(s, mode), k = pc.k;
+    const pc = sectionModeCanvas(s, mode, hx), k = pc.k;
     ctx.drawImage(pc.canvas, s.roi.x0 * k, Math.min(pc.canvas.height - 1, Math.floor(row * k)), Math.max(1, (s.roi.x1 - s.roi.x0) * k), 1, 0, r, Wc, 1);
   }
   return ['mask', 'bw'].includes(mode) ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.92);
@@ -5967,6 +5968,8 @@ function renderFigPanel() {
       <div class="grid2"><label class="f"><span>${t('fig.coreImgW')}</span><input type="number" id="figCoreImgW" min="10" max="600" step="10" value="${F.coreImgW || 70}"></label>
       <label class="f"><span>${t('log.height')}</span><input type="number" id="figCoreH" min="200" max="6000" step="100" value="${F.coreH}"></label></div>
       <label class="chk"><input type="checkbox" id="figKeepRatio" ${F.keepRatio ? 'checked' : ''}><span>${t('fig.keepRatio')}</span></label><p class="note" id="figRatioNote"></p>
+      <div class="f"><span>${t('log.panels')}</span><div class="chk2">${FIG_PANELS.map((q) => `<label class="chk"><input type="checkbox" data-corep="${q}" ${(F.corePanels || []).includes(q) ? 'checked' : ''}><span>${t('fig.p.' + q)}</span></label>`).join('')}</div></div>
+      <label class="chk"><input type="checkbox" id="figCoreHideExcl" ${F.coreHideExcl ? 'checked' : ''}><span>${t('log.hideExcl')}</span></label>
       <details class="mini"><summary>${t('st.title')}</summary><div id="figStyle">${styleFormHTML()}</div></details>
       <p class="note">${t('fig.coreNote')}</p>`;
     syncCoreFigSize();
@@ -6049,6 +6052,8 @@ $('figPanel').addEventListener('change', (e) => {
   else if (el.id === 'figTile') F.tile = Math.max(60, +el.value || 150); else if (el.id === 'figImg') { F.img = el.value; renderFigPanel(); }
   else if (el.id === 'figOutline') F.outline = el.checked; else if (el.id === 'figCoreH') F.coreH = Math.max(200, +el.value || 1400);
   else if (el.id === 'figCoreImgW') F.coreImgW = Math.max(10, +el.value || 70);
+  else if (el.dataset.corep) { const set = new Set(F.corePanels || []); if (el.checked) set.add(el.dataset.corep); else set.delete(el.dataset.corep); F.corePanels = FIG_PANELS.filter((q) => set.has(q)); }   // V0.25
+  else if (el.id === 'figCoreHideExcl') F.coreHideExcl = el.checked;
   else if (el.dataset.ftrack) { F.tracks = { ...(F.tracks || S.logView.tracks), [el.dataset.ftrack]: el.checked }; }
   else if (el.dataset.frec != null) { const set = new Set(F.recs || S.records.flatMap((r) => r.series.filter((x) => x.show).map((x) => x.name))); if (el.checked) set.add(el.dataset.frec); else set.delete(el.dataset.frec); F.recs = [...set]; }
   else if (el.id === 'figGeoCore') S.geo.view.core = el.value;
