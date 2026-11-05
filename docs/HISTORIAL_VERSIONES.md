@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.10 | 05-11-2026 | Aplicación 2.8 | Lista de trazas seleccionadas y desplegable de todas las trazas de la imagen |
 | V0.9 | 05-11-2026 | Aplicación 2.8 | Botón de borrado de icnotaxones alineado en su fila |
 | V0.8 | 05-11-2026 | Aplicación 2.8 | Proyecto compartible con imágenes completas (.corantool), carpeta de proyecto para Drive compartido, comentarios con respuestas |
 | V0.7 | 05-11-2026 | Aplicación 2.7 | Figura de trazas: varias versiones de cada traza lado a lado (tratada, original, solo la traza, silueta, contorno…) y escala configurable |
@@ -632,6 +633,16 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.10 — Lista de trazas (05-11-2026)
+
+- **Qué se hizo:** lista de trazas en el panel Objeto.
+- **Cambios:** muestra las seleccionadas con clase y profundidad; al pulsar una se centra sin perder la selección. Sin selección permite desplegar todas las trazas de la imagen y seleccionar una.
+- **Por qué:** facilita localizar e identificar las trazas seleccionadas o disponibles.
+- **Comprobación:** 48 pruebas JavaScript y 10 Python superadas; archivo offline generado.
+- **Pendiente:** comprobar visualmente el panel en la aplicación.
 
 ---
 

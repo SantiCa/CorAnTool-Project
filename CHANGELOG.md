@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.10 — 2026-11-05
+- List selected traces and center them; browse and select all traces in the current image when none is selected.
+
 ## V0.9 — 2026-11-05
 - Align the ichnotaxon delete button with its row.
 

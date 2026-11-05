@@ -16,7 +16,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.9';
+const DELIVERY = 'V0.10';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -1302,9 +1302,37 @@ function renderMulti(s, box) {
   $('multiDel').onclick = () => deleteObjects(objs.map((o) => o.id));
 }
 
+/** The list follows the current selection; without one it can show all traces in the section. */
+let objListHasSelection = false;
+function renderObjectList(s) {
+  const list = $('objList'), ids = selectedIds(), selected = ids.length > 0;
+  if (selected !== objListHasSelection) { list.open = selected; objListHasSelection = selected; }
+  list.hidden = !s;
+  if (!s) return;
+  const objs = (selected ? ids.map((id) => s.objects.get(id)) : [...s.objects.values()])
+    .filter((o) => o?.bbox).sort((a, b) => a.bbox[1] - b.bbox[1] || a.id - b.id);
+  list.querySelector('summary').textContent = t(selected ? 'obj.listSelected' : 'obj.listAll', { n: objs.length });
+  const items = list.querySelector('.obj-list-items');
+  if (!list.open) { items.innerHTML = ''; return; }
+  items.innerHTML = objs.map((o) => {
+    const name = clsById(o.cls || o.pred)?.name || t('obj.unassigned');
+    const depth = `${fmt(depthAtRow(s, o.bbox[1]), 3)}–${fmt(depthAtRow(s, o.bbox[3] + 1), 3)} ${s.units}`;
+    return `<button class="btn small" data-obj-id="${o.id}" title="${esc(t(selected ? 'obj.listFocus' : 'obj.listSelect'))}">#${o.id} · ${esc(name)} · ${esc(depth)}</button>`;
+  }).join('') || `<p class="note">${t('obj.listEmpty')}</p>`;
+}
+$('objList').addEventListener('toggle', () => renderObjectList(sec()));
+$('objList').addEventListener('click', (e) => {
+  const button = e.target.closest('[data-obj-id]'), s = sec();
+  const o = button && s?.objects.get(Number(button.dataset.objId));
+  if (!o?.bbox) return;
+  if (!selectedIds().length) select(o.id);
+  centerOn(o);
+});
+
 function renderObject() {
   const s = sec(), o = s?.objects.get(S.selected), box = $('objInfo');
   renderSelTools(s);
+  renderObjectList(s);
   if (s && S.multi.size > 1) { renderMulti(s, box); return; }
   if (!o) { box.innerHTML = `<p class="note">${t('obj.none')}</p>`; return; }
   const st = status(o), ppu = pxPerCm(s), f = o.feat || {}, [, y0, , y1] = o.bbox;

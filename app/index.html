@@ -141,6 +141,8 @@ input[type=number] { font-family: var(--font-data); font-variant-numeric: tabula
 .clist li.plain input.name { font-style: normal; }
 .clist input.name:focus { background: var(--field); }
 .clist .cnt { font: 11px var(--font-data); color: var(--muted); white-space: nowrap; }
+.obj-list-items { display: grid; gap: 3px; max-height: 240px; overflow: auto; margin-top: 6px; }
+.obj-list-items button { text-align: left; white-space: normal; }
 .clist .del { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0; font-size: 15px; line-height: 1; }
 
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
@@ -731,6 +733,7 @@ details.mini[open] { display: grid; gap: 6px; }
       </div>
       <div class="pane" data-pane="object" hidden>
         <div id="objInfo"></div>
+        <details id="objList"><summary></summary><div class="obj-list-items"></div></details>
         <div class="row" id="selTools"></div>
         <div class="row"><button class="btn small" id="nextReview" data-i18n="obj.next"></button></div>
         <label class="chk"><input type="checkbox" id="autoNext"><span data-i18n="obj.autoNext"></span></label>
