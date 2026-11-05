@@ -15,7 +15,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.6';
+const DELIVERY = 'V0.7';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -4969,7 +4969,11 @@ S.fig = defaultFig();
 let figSvgCache = '';
 
 /** Crop of one trace (padding 15 %), scaled to `size` px on its long side, with optional outline in the class colour. */
-function traceCanvas(s, o, size, img, outline) {
+/**
+ * Crop of one trace. V0.7: img 'orig' | 'enh' | 'none' (white background); iso = only the trace pixels on white;
+ * fillMask = trace filled with its class colour; outline = edge in the class colour.
+ */
+function traceCanvas(s, o, size, img, outline, iso = false, fillMask = false) {
   if (!s.orig) {   // V0.1: placeholder until the section's picture is read from disk
     needPixels(s); const p = document.createElement('canvas'); p.width = p.height = Math.max(1, Math.round(size * 0.5));
     const g = p.getContext('2d'); g.fillStyle = '#cfd4d2'; g.fillRect(0, 0, p.width, p.height);
@@ -4977,13 +4981,16 @@ function traceCanvas(s, o, size, img, outline) {
   }
   const [x0, y0, x1, y1] = o.bbox, pad = Math.round(Math.max(x1 - x0, y1 - y0) * 0.15) + 2;
   const X0 = Math.max(0, x0 - pad), Y0 = Math.max(0, y0 - pad), X1 = Math.min(s.w - 1, x1 + pad), Y1 = Math.min(s.h - 1, y1 + pad);
-  const cw = X1 - X0 + 1, ch = Y1 - Y0 + 1, src = img === 'orig' ? s.orig : s.enh, lab = s.labels;
+  const cw = X1 - X0 + 1, ch = Y1 - Y0 + 1, src = img === 'orig' ? s.orig : s.enh || s.orig, lab = s.labels;
   const c = document.createElement('canvas'); c.width = cw; c.height = ch;
   const ctx = c.getContext('2d'), im = ctx.createImageData(cw, ch), d = im.data, col = hex(clsById(o.cls || o.pred)?.color || '#ffffff');
   for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
     const i = (Y0 + y) * s.w + X0 + x, j = (y * cw + x) * 4;
-    d[j] = src[i * 4]; d[j + 1] = src[i * 4 + 1]; d[j + 2] = src[i * 4 + 2]; d[j + 3] = 255;
-    if (outline && lab[i] === o.id) {
+    const inT = lab[i] === o.id;
+    if (img === 'none' || (iso && !inT)) { d[j] = d[j + 1] = d[j + 2] = 255; } else { d[j] = src[i * 4]; d[j + 1] = src[i * 4 + 1]; d[j + 2] = src[i * 4 + 2]; }
+    d[j + 3] = 255;
+    if (fillMask && inT) { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; }
+    if (outline && inT) {
       const X = X0 + x, Y = Y0 + y;
       const edge = X === 0 || Y === 0 || X === s.w - 1 || Y === s.h - 1 || lab[i - 1] !== o.id || lab[i + 1] !== o.id || lab[i - s.w] !== o.id || lab[i + s.w] !== o.id;
       if (edge) { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; }
@@ -5020,8 +5027,25 @@ function autoPick(list, n, how) {
 }
 const niceBar = (pxPerCm, maxPx) => [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10].filter((v) => v * pxPerCm <= maxPx).pop() || 0.05;
 
+/** V0.7: versions of each trace shown side by side in the traces figure. */
+const TRACE_VIEWS = { enh: ['enh', false, false, false], enhOut: ['enh', true, false, false], orig: ['orig', false, false, false], origOut: ['orig', true, false, false],
+  iso: ['orig', false, true, false], isoEnh: ['enh', false, true, false], isoOut: ['orig', true, true, false], mask: ['none', false, false, true], outline: ['none', true, false, false] };
+const traceViews = (F) => (F.tviews?.length ? F.tviews : [F.img === 'orig' ? (F.outline ? 'origOut' : 'orig') : F.outline ? 'enhOut' : 'enh']).filter((v) => TRACE_VIEWS[v]);
+/** Scale bar of a tile: 'bar' (filled), 'ticks' (alternating segments), 'line' (line with end ticks) or 'none'. */
+function traceScale(X, y, T, pxPerCm, sc) {
+  const style = sc.style || 'bar'; if (style === 'none') return '';
+  const col = sc.color || '#ffffff', ink = sc.ink || '#000000', len = sc.len > 0 ? +sc.len : niceBar(pxPerCm, T * 0.45), bw = len * pxPerCm;
+  const pos = sc.pos || 'bl', bx = pos.endsWith('r') ? X + T - 6 - bw : X + 6, by = pos.startsWith('t') ? y + 22 : y + T - 12;
+  const txt = `<text x="${(pos.endsWith('r') ? bx + bw : bx).toFixed(1)}" y="${(by - 3).toFixed(1)}" text-anchor="${pos.endsWith('r') ? 'end' : 'start'}" fill="${col}" stroke="${ink}" stroke-width="0.25" font-size="10" font-weight="600">${len < 1 ? +(len * 10).toFixed(2) + ' mm' : +len.toFixed(2) + ' cm'}</text>`;
+  if (style === 'line') return `<path d="M${bx.toFixed(1)} ${by - 2}v6M${bx.toFixed(1)} ${by + 1}h${bw.toFixed(1)}M${(bx + bw).toFixed(1)} ${by - 2}v6" stroke="${ink}" stroke-width="2.6" fill="none"/><path d="M${bx.toFixed(1)} ${by - 2}v6M${bx.toFixed(1)} ${by + 1}h${bw.toFixed(1)}M${(bx + bw).toFixed(1)} ${by - 2}v6" stroke="${col}" stroke-width="1.2" fill="none"/>${txt}`;
+  if (style === 'ticks') {
+    const n = Math.max(2, Math.min(10, Math.round(sc.div) || 4)), seg = bw / n;
+    return `<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="4" fill="${col}" stroke="${ink}" stroke-width="0.6"/>${Array.from({ length: n }, (_, k) => (k % 2 ? '' : `<rect x="${(bx + k * seg).toFixed(1)}" y="${by}" width="${seg.toFixed(1)}" height="4" fill="${ink}"/>`)).join('')}${txt}`;
+  }
+  return `<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="4" fill="${col}" stroke="${ink}" stroke-width="0.6"/>${txt}`;
+}
 function tracesSVG() {
-  const F = S.fig, T = F.tile, gap = 12, labW = 190, rows = [];
+  const F = S.fig, T = F.tile, gap = 12, vgap = 4, labW = 190, rows = [], views = traceViews(F), sc = F.scale || {};
   for (const c of S.classes) {
     if (!c.counts && c.id !== 'undet') continue;
     const list = classTraces(c.id), keys = F.picks[c.id]?.length ? F.picks[c.id] : [];
@@ -5029,18 +5053,23 @@ function tracesSVG() {
     if (chosen.length) rows.push({ c, chosen });
   }
   if (!rows.length) return null;
-  const maxN = Math.max(...rows.map((r) => r.chosen.length)), W = labW + maxN * (T + gap) + 10, rowH = T + 34, H = rows.length * rowH + 10;
+  const nv = views.length, TW = nv * T + (nv - 1) * vgap, head = nv > 1 ? 16 : 0;
+  const maxN = Math.max(...rows.map((r) => r.chosen.length)), W = labW + maxN * (TW + gap) + 10, rowH = T + 34, H = head + rows.length * rowH + 10;
   const parts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="IBM Plex Sans, Arial, sans-serif" font-size="11"><rect width="${W}" height="${H}" fill="#fff"/>`];
+  if (nv > 1) for (let k = 0; k < maxN; k++) views.forEach((v, vi) => parts.push(`<text x="${labW + k * (TW + gap) + vi * (T + vgap) + T / 2}" y="12" text-anchor="middle" fill="#5b6763" font-size="10">${esc(t('fig.tv.' + v))}</text>`));
   rows.forEach((r, ri) => {
-    const y = 6 + ri * rowH;
+    const y = head + 6 + ri * rowH;
     parts.push(`<rect x="8" y="${y + 4}" width="10" height="10" fill="${r.c.color}"/><text x="24" y="${y + 13}" font-size="13" font-style="${r.c.plain ? 'normal' : 'italic'}" font-weight="600" fill="#1c2422">${esc(r.c.name)}</text>`);
     parts.push(`<text x="24" y="${y + 29}" fill="#5b6763">${t('fig.nOf', { n: r.chosen.length, m: classTraces(r.c.id).length })}</text>`);
     r.chosen.forEach((x, k) => {
-      const tc = traceCanvas(x.s, x.o, T, F.img, F.outline), X = labW + k * (T + gap), ox = X + (T - tc.canvas.width) / 2, oy = y + (T - tc.canvas.height) / 2;
-      parts.push(`<rect x="${X}" y="${y}" width="${T}" height="${T}" fill="#f0f0ee"/><image x="${ox.toFixed(1)}" y="${oy.toFixed(1)}" width="${tc.canvas.width}" height="${tc.canvas.height}" href="${tc.canvas.toDataURL('image/jpeg', 0.92)}"/>`);
-      const bar = niceBar(tc.pxPerCm, T * 0.45), bw = bar * tc.pxPerCm;
-      parts.push(`<rect x="${X + 6}" y="${y + T - 12}" width="${bw.toFixed(1)}" height="4" fill="#fff" stroke="#000" stroke-width="0.6"/><text x="${X + 6}" y="${y + T - 15}" fill="#fff" stroke="#000" stroke-width="0.25" font-size="10" font-weight="600">${bar < 1 ? bar * 10 + ' mm' : bar + ' cm'}</text>`);
-      parts.push(`<text x="${X + T / 2}" y="${y + T + 13}" text-anchor="middle" fill="#5b6763" font-size="10">${esc(x.s.name)} · ${fmt(tc.depth, 3)} ${tc.units}</text>`);
+      let tc0 = null;
+      views.forEach((v, vi) => {
+        const [img, out, iso, mask] = TRACE_VIEWS[v], tc = traceCanvas(x.s, x.o, T, img, out, iso, mask), X = labW + k * (TW + gap) + vi * (T + vgap);
+        const ox = X + (T - tc.canvas.width) / 2, oy = y + (T - tc.canvas.height) / 2; tc0 ||= tc;
+        parts.push(`<rect x="${X}" y="${y}" width="${T}" height="${T}" fill="${img === 'none' || iso ? '#ffffff' : '#f0f0ee'}"${img === 'none' || iso ? ' stroke="#d9dedc" stroke-width="0.6"' : ''}/><image x="${ox.toFixed(1)}" y="${oy.toFixed(1)}" width="${tc.canvas.width}" height="${tc.canvas.height}" href="${tc.canvas.toDataURL(mask || img === 'none' ? 'image/png' : 'image/jpeg', 0.92)}"/>`);
+        if (vi === 0 || sc.all) parts.push(traceScale(X, y, T, tc.pxPerCm, { ...sc, ...((img === 'none' || iso) && (sc.color || '#ffffff').toLowerCase() === '#ffffff' ? { color: sc.ink || '#000000', ink: '#ffffff' } : {}) }));
+      });
+      parts.push(`<text x="${labW + k * (TW + gap) + TW / 2}" y="${y + T + 13}" text-anchor="middle" fill="#5b6763" font-size="10">${esc(x.s.name)} · ${fmt(tc0.depth, 3)} ${tc0.units}</text>`);
     });
   });
   parts.push('</svg>');
@@ -5290,6 +5319,13 @@ function renderFigPanel() {
       <label class="f"><span>${t('fig.tile')}</span><input type="number" id="figTile" min="60" max="400" step="10" value="${F.tile}"></label>
       <label class="f"><span>${t('log.imgMode')}</span><select id="figImg"><option value="enh" ${F.img === 'enh' ? 'selected' : ''}>${t('log.enh')}</option><option value="orig" ${F.img === 'orig' ? 'selected' : ''}>${t('log.orig')}</option></select></label></div>
       <label class="chk"><input type="checkbox" id="figOutline" ${F.outline ? 'checked' : ''}><span>${t('fig.outline')}</span></label>
+      <div class="f"><span>${t('fig.tviews')}</span><div class="chk2">${Object.keys(TRACE_VIEWS).map((v) => `<label class="chk"><input type="checkbox" data-tview="${v}" ${traceViews(F).includes(v) ? 'checked' : ''}><span>${t('fig.tv.' + v)}</span></label>`).join('')}</div></div>
+      <div class="grid2"><label class="f"><span>${t('fig.sc.style')}</span><select id="figScStyle">${['bar', 'ticks', 'line', 'none'].map((v) => `<option value="${v}" ${(F.scale?.style || 'bar') === v ? 'selected' : ''}>${t('fig.sc.' + v)}</option>`).join('')}</select></label>
+      <label class="f"><span>${t('fig.sc.pos')}</span><select id="figScPos">${['bl', 'br', 'tl', 'tr'].map((v) => `<option value="${v}" ${(F.scale?.pos || 'bl') === v ? 'selected' : ''}>${t('fig.sc.p.' + v)}</option>`).join('')}</select></label>
+      <label class="f"><span>${t('fig.sc.len')}</span><input type="number" id="figScLen" min="0" step="any" value="${F.scale?.len ?? ''}" placeholder="${t('fig.auto2')}"></label>
+      <label class="f"><span>${t('fig.sc.div')}</span><input type="number" id="figScDiv" min="2" max="10" step="1" value="${F.scale?.div ?? 4}"></label>
+      <label class="f"><span>${t('fig.sc.colors')}</span><span class="row"><input type="color" id="figScColor" value="${F.scale?.color || '#ffffff'}"><input type="color" id="figScInk" value="${F.scale?.ink || '#000000'}"></span></label>
+      <label class="chk" style="align-self:end"><input type="checkbox" id="figScAll" ${F.scale?.all ? 'checked' : ''}><span>${t('fig.sc.all')}</span></label></div>
       <button class="btn small" id="figAuto">${t('fig.auto')}</button>
       ${cls.map((c) => { const list = classTraces(c.id).sort((a, b) => b.o.area - a.o.area).slice(0, 60), sel = new Set(F.picks[c.id] || []);
         return `<div class="figcls"><b><span class="swatch" style="background:${c.color}"></span>${esc(c.name)}</b><span class="note">${t('fig.chosen', { n: sel.size, m: classTraces(c.id).length })}</span>
@@ -5364,6 +5400,8 @@ $('figPanel').addEventListener('change', (e) => {
   else if (el.id === 'figPanelW') F.panelW = Math.max(10, +el.value || 150);
   else if (el.id === 'figPanelH') { F.panelH = Math.max(50, +el.value || 700); const z = secFigSize(figLightD()); if (z.r) F.panelW = Math.max(10, Math.min(600, Math.round(F.panelH / z.r))); }
   else if (el.id === 'figKeepRatio') F.keepRatio = el.checked;
+  else if (el.dataset.tview) { const set = new Set(traceViews(F)); if (el.checked) set.add(el.dataset.tview); else set.delete(el.dataset.tview); F.tviews = Object.keys(TRACE_VIEWS).filter((v) => set.has(v)); if (!F.tviews.length) F.tviews = ['enh']; }
+  else if (/^figSc/.test(el.id)) { F.scale ||= {}; const k = { figScStyle: 'style', figScPos: 'pos', figScLen: 'len', figScDiv: 'div', figScColor: 'color', figScInk: 'ink', figScAll: 'all' }[el.id]; F.scale[k] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (el.value === '' ? null : +el.value) : el.value; }
   else if (el.id === 'figMarkStyle') { F.markStyle = el.value; renderFigPanel(); } else if (el.id === 'figOverlap') F.overlap = el.value;
   else if (el.dataset.panel) { const set = new Set(F.panels); if (el.checked) set.add(el.dataset.panel); else set.delete(el.dataset.panel); F.panels = FIG_PANELS.filter((p) => set.has(p)); }
   else if (el.id === 'figAlpha') F.alpha = +el.value; else if (el.id === 'figMinArea') F.minArea = Math.max(0, +el.value || 0); else if (el.id === 'figHideExcl') F.hideExcl = el.checked;

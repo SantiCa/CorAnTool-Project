@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.7 | 05-11-2026 | Aplicación 2.7 | Figura de trazas: varias versiones de cada traza lado a lado (tratada, original, solo la traza, silueta, contorno…) y escala configurable |
 | V0.6 | 05-11-2026 | Aplicación 2.6.1 | Ancho y formato del eje de cada columna de la derecha (bioturbación, icnotaxones, BI, ii, registros) |
 | V0.5 | 05-11-2026 | Aplicación 2.6 | Estilo configurable de la columna y su figura; indicadores de trazas (flecha, triángulo…) con leyenda y manejo de etiquetas que se tocan |
 | V0.4 | 05-11-2026 | Aplicación 2.5 | Intervalos sin datos (excluidos o con pocos píxeles válidos) como SIN DATOS en vez de 0; opción para ampliar esas zonas |
@@ -629,6 +630,28 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.7 — Figura de trazas más configurable (05-11-2026)
+
+**Qué se hizo.** En «Trazas representativas por icnotaxón»:
+- **Versiones de cada traza** una al lado de otra (con su nombre encima): tratada, tratada con contorno, original,
+  original con contorno, solo la traza (fondo blanco), solo la traza tratada, solo la traza con contorno, silueta en el
+  color del icnotaxón y solo contorno.
+- **Escala:** barra, barra con divisiones (nº de divisiones), línea con topes o sin escala; posición (cuatro esquinas),
+  longitud fija en cm o automática, colores de relleno y borde, y en la primera versión o en todas. Sobre fondo blanco
+  la escala blanca se dibuja en el color del borde para que se vea.
+
+**Cambios.** `app.js`: `traceCanvas` (fondo blanco, solo traza, silueta), `TRACE_VIEWS`, `traceViews`, `traceScale`,
+`tracesSVG` y controles del panel. `i18n.js`.
+
+**Por qué.** Petición de Santiago.
+
+**Comprobación.** `npm test` (47); prueba sin pantalla en Chromium con el proyecto de entrenamiento (selección
+automática, tres versiones y escala con divisiones), sin errores.
+
+**Pendiente.** Nada.
 
 ---
 
