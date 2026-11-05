@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
 | V0.14 | 05-11-2026 | Aplicación | Auditoría; sin referencias a datos privados del autor; librerías incluidas (TIFF y Excel sin internet); README de uso |
 | V0.13 | 05-11-2026 | Aplicación | Revisión de V0.9–V0.12; mensajes de error de dibujo |
 | V0.12 | 05-11-2026 | Aplicación web | Distribución por símbolos y símbolo editable de cada icnotaxón |
@@ -636,6 +637,47 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.15 — Segmentación aprendida con U-Net (05-11-2026)
+
+- **Qué se hizo:** flujo completo de segmentación U-Net: la aplicación exporta los datos de entrenamiento y usa un
+  modelo entrenado como cuarto método de detección; el paquete Python prepara, entrena, evalúa y predice con las
+  mismas reglas. Borrador del artículo 2 actualizado.
+- **Cambios:**
+  - `app/js/unet.js` (nuevo, sin DOM): teselas con solape, normalización, unión ponderada, reescalado bilineal,
+    sigmoide/softmax, máscara de entrenamiento con valor 255 «ignorar» y clase mayoritaria por objeto.
+  - `imageproc.js`: `detectMask` acepta el método `unet` (umbral `pThr` sobre la probabilidad); limpieza común en
+    `postMask`. `DEFAULT_DETECT.pThr = 0,5`.
+  - `app.js`, `index.html`, `i18n.js`: método «U-Net (modelo entrenado)», carga de `.onnx` + `.json`, deslizador de
+    probabilidad mínima (sin volver a ejecutar la red), zonas dudosas en magenta, progreso por tesela; botón
+    «Datos para entrenar U-Net (ZIP)» en Resultados. ONNX Runtime Web 1.31.1 (WebAssembly, un hilo) desde
+    `app/vendor/ort/` o jsDelivr. `build_standalone.py` incluye `unet.js`.
+  - Escritorio: `onnxruntime-web` como dependencia de desarrollo; `prepare.js` copia el motor a `vendor/ort` para
+    que funcione sin internet. `app/vendor/ort/` en `.gitignore` (no se sube el WebAssembly de 15 MB).
+  - Python `src/ichantool/unet/`: `tiling.py`, `dataset.py` (división por sondeo), `train.py` (PyTorch +
+    segmentation-models-pytorch, exportación ONNX), `metrics.py`, `evaluate.py`, `predict.py`;
+    `segmentation.mask_from_unet`; órdenes `ichantool unet prepare|train|evaluate|predict`; extra `[unet]`.
+  - Pruebas: `tests/app/unet.test.mjs` (6), `tests/test_unet.py` (6) y referencia común
+    `tests/fixtures/unet_parity.json` (generada con `make_unet_parity.py`).
+  - Documentación: `DOCUMENTACION_TECNICA.md` §7.5, §12 y §13.3; `METODOS_Y_DEFENSA.md` (artículo 2);
+    `publications/02_dataset_segmentation/draft.md` reescrito.
+- **Por qué:** petición de Santiago (chat de segmentación U-Net): sustituir el umbral por una detección aprendida,
+  con validación en sondeos independientes, y preparar el artículo 2.
+- **Comprobación:** 60 pruebas JS y 16 Python. Paridad Python/JS: teselas, ventana, reescalado (exacto en 8 bits) y
+  probabilidades (< 2·10⁻⁴). Flujo de extremo a extremo con datos sintéticos (5 sondeos): `prepare` → `train`
+  (ResNet-18 sin preentrenar, CPU, 6 épocas) → `evaluate` en el sondeo de prueba → mismo modelo en ONNX Runtime
+  Web desde `unet.js`: diferencia máxima de probabilidad 5·10⁻⁷ con reescalado 1,25 y 0 píxeles con distinta clase.
+  Navegador sin pantalla (Chrome) con el ejemplo idealizado: carga del modelo, detección U-Net (732 candidatos),
+  zonas dudosas, asignación de una traza y exportación del ZIP, aceptado por `ichantool unet prepare`; sin errores
+  nuevos en consola.
+- **Pendiente:**
+  - Entrenar con testigos reales anotados; ningún resultado de segmentación se puede citar todavía.
+  - Métodos clásicos (adaptativo, Fiji/ICY, Dorador) en el paquete Python, para puntuarlos con el mismo código.
+  - Herramienta de clic asistido (SAM/MobileSAM) y descriptores de textura para icnotaxones: propuestos en el chat,
+    no incluidos en esta entrega.
+  - Con un modelo multiclase, asignar la clase de la red a los objetos (hoy solo se usa la probabilidad de bioturbación).
 
 ---
 

@@ -145,6 +145,19 @@ plot_section(section)
 
 Prefer lossless formats (PNG/TIFF) for masks: JPEG compression alters the pixel values that the analysis counts.
 
+### Learned segmentation (U-Net, experimental)
+
+Train a U-Net on the traces you reviewed in the app, then use it as a detection method in the app
+(*Detection → U-Net*, load `model.onnx` and `model.json`). No model trained on real cores is published yet.
+
+```bash
+pip install "ichantool[unet] @ git+https://github.com/SantiCa/CorAnTool-Project.git"
+# in the app: Results → U-Net training data (ZIP)
+ichantool unet prepare project_segmentation_dataset.zip data --test CORE_A CORE_B   # tiles, split by core
+ichantool unet train data models/unet_v1                                           # GPU recommended
+ichantool unet evaluate project_segmentation_dataset.zip models/unet_v1.onnx --dataset data
+```
+
 ## Repository layout
 
 ```

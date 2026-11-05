@@ -139,12 +139,22 @@ identificación.
 | Detección clásica: umbral adaptativo + morfología (método base) | §7 |
 | Descriptores de objeto | §9 |
 | k-NN con rechazo de novedad (método base de identificación) | §10 |
-| Segmentación aprendida tipo U-Net (**por implementar**) | — |
+| Segmentación aprendida U-Net: exportación de datos, entrenamiento, evaluación y uso en la aplicación (**implementada en V0.15, sin entrenar con datos reales**) | §7.5 |
 | Formato de máscara y paleta | §12 |
 
 ### Qué se puede afirmar hoy
 Nada sobre la precisión en datos reales: todavía no hay datos anotados. Solo que las herramientas
 existen y producen máscaras en un formato abierto.
+
+- Desde V0.15 el flujo U-Net completo existe y está probado con datos sintéticos: exportación de
+  imágenes y máscaras con píxeles «ignorar» (zonas excluidas y trazas sin revisar), teselado y
+  división por sondeo, entrenamiento, evaluación sobre imágenes completas de sondeos independientes
+  y ejecución en la aplicación. Las reglas de teselado, normalización, unión y reescalado son
+  idénticas en Python y en la aplicación (prueba de paridad). **No hay ningún resultado de
+  segmentación con testigos reales**: no se puede citar ningún Dice ni IoU hasta entrenar y evaluar.
+- Decisiones defendibles ya fijadas en el código: entrada sin realce, resolución común en px/cm,
+  sin giros de 90° en los aumentos, trazas sin revisar ignoradas (no tratadas como matriz),
+  métricas sobre imágenes completas y no sobre teselas.
 
 - La identificación asistida de icnotaxones ya tiene evaluación por imagen (V22); falta medirla en testigos
   independientes anotados por expertos.
@@ -174,6 +184,15 @@ existen y producen máscaras en un formato abierto.
 **¿Por qué un umbral adaptativo como base y no directamente deep learning?**
 Porque es reproducible, no necesita datos de entrenamiento y marca el nivel mínimo que un método
 aprendido debe superar. Se compara con U-Net en el mismo conjunto de prueba.
+
+**¿Por qué se ignoran las trazas no revisadas en vez de contarlas como matriz?**
+Porque una traza que el experto no ha confirmado no es un negativo fiable. Tratarla como matriz
+enseñaría a la red a no detectar trazas reales; ignorarla solo reduce los píxeles de entrenamiento.
+Las clases que no cuentan (artefactos) sí son matriz: el experto las ha revisado.
+
+**¿Por qué no se gira la imagen 90° para aumentar datos?**
+La orientación de las trazas respecto a la estratificación (vertical, horizontal, oblicua) es un
+criterio de identificación. Solo se voltea (horizontal y vertical) y se varían brillo, contraste y gamma.
 
 **¿El acierto del k-NN no está inflado?**
 El acierto dejando uno fuera que muestra la aplicación sí puede estarlo (§10, nota al revisor).

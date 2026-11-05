@@ -404,8 +404,73 @@ Valores por defecto (`DEFAULT_DETECT`): adaptativo, trazas oscuras, `δ = 12`, `
 segmentación automática validada. Su calidad depende del contraste entre relleno y matriz, y no
 está medida en fotografías reales (§14). Los parámetros elegidos se guardan en el proyecto. El
 umbral adaptativo y la morfología son métodos clásicos (Serra, 1982; Gonzalez y Woods, 2018),
-elegidos por ser rápidos, deterministas y fáciles de explicar. La segmentación aprendida es una
-línea futura (artículo 2).
+elegidos por ser rápidos, deterministas y fáciles de explicar. La segmentación aprendida está en
+§7.5 (desde V0.15).
+
+### 7.5 Segmentación aprendida: U-Net (desde V0.15)
+
+Cuarto método de detección (`method: 'unet'`). Una red U-Net entrenada fuera de la aplicación
+(paquete Python, `ichantool unet train`) da para cada píxel la probabilidad de bioturbación `P`.
+La aplicación la ejecuta con ONNX Runtime Web (WebAssembly, un hilo, sin GPU); el paquete Python,
+con ONNX Runtime. Ambos usan las mismas reglas (`app/js/unet.js` y `src/ichantool/unet/tiling.py`),
+comprobadas con el mismo archivo de referencia (`tests/fixtures/unet_parity.json`).
+
+1. **Entrada:** imagen **original** (sin realce) de la zona de análisis. El realce no se usa porque
+   cambia con los ajustes del usuario y la red debe ver lo mismo que vio al entrenar.
+2. **Escala:** si el modelo indica su resolución de entrenamiento `ρ_m` (px/cm) y la sección tiene
+   `ρ_s = (y₁ − y₀) / (fondo − techo)` (en cm), se reescala por `f = ρ_m / ρ_s` cuando `|f − 1| > 0,02`.
+   Tamaño nuevo: `W' = round(W·f)`, `H' = round(H·f)`. Interpolación bilineal con centros de píxel
+   alineados: `x_s = clamp((x + 0,5)·(W/W') − 0,5, 0, W − 1)` (igual en `y`); en imágenes de 8 bits
+   el resultado se redondea al entero más cercano (empates al par). La probabilidad se devuelve a la
+   resolución de la sección con la misma interpolación.
+3. **Teselas:** lado `T` y solape `o` del modelo (por defecto 512 y 64 px). Inicios en cada eje:
+   `0, T − o, 2(T − o), …` mientras `inicio + T < L`, y una última tesela en `L − T`; si `L ≤ T`, una
+   sola tesela. Fuera de la imagen se repite el borde.
+4. **Normalización:** `x_c = (v_c / 255 − μ_c) / σ_c` con `μ = (0,485; 0,456; 0,406)` y
+   `σ = (0,229; 0,224; 0,225)` (ImageNet), o los valores del JSON del modelo.
+5. **Salida:** logits `z`. Con un canal, `P = 1 / (1 + e^(−z))`. Con `C > 1` canales (canal 0 = matriz),
+   softmax `p_k = e^(z_k) / Σ e^(z_j)`, `P = 1 − p_0` y clase = `argmax_{k ≥ 1} p_k`.
+6. **Unión de teselas:** media ponderada con peso `w(i) = min(1, (i + 0,5)/o, (T − i − 0,5)/o)` en cada
+   eje y `w(x, y) = w(x)·w(y)`, que evita bordes visibles entre teselas.
+7. **Máscara:** píxel candidato si `P ≥ p_min` (deslizador «Probabilidad mínima», por defecto 0,5),
+   dentro de la zona y fuera de la exclusión; después, la misma limpieza (§7.2) y los mismos objetos
+   (§7.3) que los otros métodos. Cambiar `p_min` no vuelve a ejecutar la red: la probabilidad se guarda
+   en memoria hasta que cambian el modelo, la zona, el tamaño o la escala. No se guarda en el proyecto.
+8. **Zonas dudosas:** opción para marcar en magenta los píxeles con `|P − 0,5| < 0,2`.
+9. **Modelo:** el usuario carga `modelo.onnx` y `modelo.json` (lado de tesela, solape, normalización,
+   px/cm, clases, tipo de salida). Sin JSON se usan los valores por defecto. El modelo no se guarda en el
+   proyecto; el método elegido y `p_min`, sí.
+
+Con un modelo multiclase, la aplicación usa por ahora solo `P` (bioturbación sí/no); la clase de la red
+no se asigna a los objetos (lo hace el clasificador de §10).
+
+**Entrenamiento (paquete Python, `ichantool unet`).**
+
+- `prepare`: lee el ZIP exportado (§12), reescala cada imagen a una resolución común (por defecto la
+  mediana de px/cm; las máscaras, por vecino más próximo con la misma regla de centros), corta teselas
+  con las reglas de arriba y descarta las que tienen menos del 50 % de píxeles válidos. Las teselas que
+  se salen de la imagen marcan esa parte como «ignorar». **División por sondeo**: todas las teselas de
+  un sondeo van al mismo conjunto (entrenamiento, validación o prueba). Los sondeos se pueden elegir;
+  si no, se reparten al azar con semilla (20 % prueba y 20 % validación, al menos uno de cada si hay
+  3 o más sondeos). Por defecto, binario (todas las clases → 1).
+- `train`: U-Net (Ronneberger et al., 2015) con codificador ResNet-34 preentrenado en ImageNet
+  (`segmentation-models-pytorch`). Pérdida = entropía cruzada (binaria: BCE con logits) + Dice suave
+  `1 − (2Σpt + 1)/(Σp + Σt + 1)` (multiclase: media de las clases ≥ 1), ignorando los píxeles 255.
+  Aumentos: volteo horizontal y vertical, contraste ×U(0,85; 1,15), brillo +U(−0,08; 0,08) y gamma
+  U(0,8; 1,25). **Sin giros de 90°**: la orientación respecto a la estratificación es diagnóstica.
+  AdamW (lr 3·10⁻⁴, decaimiento 10⁻⁴), coseno, 60 épocas como máximo y parada temprana tras 12 sin
+  mejorar el Dice de validación. Exporta ONNX (opset 17, entrada `image` 1×3×T×T, salida `logits`) y el JSON.
+- `evaluate`: predice cada imagen **completa** de los sondeos de prueba (como la aplicación) y la
+  compara con la máscara experta, ignorando los píxeles 255. Bioturbación = cualquier clase > 0.
+  IoU = TP/(TP+FP+FN); Dice = 2TP/(2TP+FP+FN); precisión = TP/(TP+FP); exhaustividad = TP/(TP+FN).
+  Por intervalos de `b` cm (`b·ρ` filas, mismos límites que §3.2): `%` = 100·positivos/válidos;
+  error absoluto medio y sesgo en puntos porcentuales, y proporción de intervalos con el mismo BI e ii.
+  Global: TP, FP y FN sumados en todas las imágenes antes de calcular IoU y Dice.
+- `predict` y `mask_from_unet`: máscara de una imagen con el contrato de `segmentation.py`.
+
+Dependencias opcionales: `pip install 'ichantool[unet]'` (ONNX Runtime; PyTorch, segmentation-models-pytorch
+y onnx solo para entrenar). El ejecutable de escritorio incluye ONNX Runtime Web
+(`desktop/scripts/prepare.js`); el navegador y el archivo único lo descargan de jsDelivr la primera vez.
 
 ---
 
@@ -637,6 +702,8 @@ Los ajustes activos se guardan en el proyecto, así que cualquier resultado se p
 | `*_objects.csv` | Una fila por objeto: sección, id, clase, estado, sugerencia, confianza, profundidades, área (cm²), longitud y anchura (cm), alargamiento, verticalidad, compacidad, luminancia, contraste, si cuenta |
 | `*_mask.png` | Máscara a tamaño completo: fondo negro y cada píxel contado con el color de su clase. Compatible con `ichantool analyze --palette` del paquete Python |
 | `*_palette.json` | `{nombre de clase: "#rrggbb"}` |
+| `*_segmentation_dataset.zip` (desde V0.15) | Datos para entrenar la U-Net (§7.5), de todas las imágenes del proyecto con al menos una traza revisada: `images/<sondeo>__<sección>.png` (zona de análisis original, resolución de trabajo), `masks/…png` (gris de 8 bits: 0 = matriz o clase que no cuenta, k = clase k que cuenta, 255 = ignorar: zona excluida o traza sin clase confirmada; las sugerencias del clasificador no cuentan como revisadas) y `manifest.json` (`kind: "segmentation-dataset"`, clases con índice, y por imagen sondeo, sección, techo, fondo, unidades, px/cm, tamaño, factor de reducción y número de objetos revisados y sin revisar) |
+| `modelo.onnx` + `modelo.json` (desde V0.15) | U-Net entrenada con `ichantool unet train`: red ONNX y su descripción (`tile`, `overlap`, `mean`, `std`, `pxPerCm`, `classes`, `output`, historial de entrenamiento y sondeos de cada conjunto) |
 | `ichantool_model.json` | Modelo de aprendizaje: lista de descriptores, clases y ejemplos `{name, x}` |
 | `*_registro.svg` / `*_registro.csv` | Registro compuesto de la ventana elegida (§18) |
 | `*_mapa_<a0>-<a1>.svg` / `.csv` | Mapa de una ventana de edad (§21.6) |
@@ -686,6 +753,8 @@ La diferencia del porcentaje se explica en §3.4.
 
 ### 13.3 Lo que todavía no está validado
 - Calidad de la detección automática en fotografías reales de testigos.
+- U-Net (V0.15): el código está probado (paridad Python/JS, datos sintéticos, ONNX Runtime en Python y
+  en la versión web), pero **no hay ningún modelo entrenado con testigos reales**; no hay resultados.
 - Acierto del clasificador con icnotaxones reales y testigos independientes.
 - Concordancia entre usuarios (dos personas analizando el mismo testigo).
 - Concordancia entre índices automáticos y estimación visual de expertos.

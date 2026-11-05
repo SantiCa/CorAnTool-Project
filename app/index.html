@@ -649,8 +649,14 @@ details.mini[open] { display: grid; gap: 6px; }
       <details class="step" open>
         <summary><span class="n">3</span><span data-i18n="s3"></span></summary>
         <div class="body">
-          <label class="f"><span data-i18n="d.method"></span><select id="dMethod"><option value="adaptive" data-i18n="d.adaptive"></option><option value="global" data-i18n="d.global"></option><option value="kmeans" data-i18n="d.kmeans"></option></select></label>
-          <label class="f"><span data-i18n="d.polarity"></span><select id="dPol"><option value="dark" data-i18n="d.dark"></option><option value="light" data-i18n="d.light"></option><option value="both" data-i18n="d.both"></option></select></label>
+          <label class="f"><span data-i18n="d.method"></span><select id="dMethod"><option value="adaptive" data-i18n="d.adaptive"></option><option value="global" data-i18n="d.global"></option><option value="kmeans" data-i18n="d.kmeans"></option><option value="unet" data-i18n="d.unet"></option></select></label>
+          <div id="unetBox" hidden style="display:grid;gap:6px">
+            <p class="note" id="unetName"></p>
+            <label class="btn small file"><span data-i18n="u.load"></span><input type="file" id="unetFile" accept=".onnx,.json" multiple></label>
+            <label class="chk"><input type="checkbox" id="showDoubt"><span data-i18n="u.doubt"></span></label>
+            <p class="note" data-i18n="u.note"></p>
+          </div>
+          <label class="f" id="dPolBox"><span data-i18n="d.polarity"></span><select id="dPol"><option value="dark" data-i18n="d.dark"></option><option value="light" data-i18n="d.light"></option><option value="both" data-i18n="d.both"></option></select></label>
           <div id="detectCtl" style="display:grid;gap:8px"></div>
           <label class="chk"><input type="checkbox" id="dFill"><span data-i18n="d.fill"></span></label>
           <div class="row"><button class="btn primary" id="detectBtn" data-i18n="d.run"></button><button class="btn" id="clearCand" data-i18n="d.clear"></button></div>
@@ -759,6 +765,7 @@ details.mini[open] { display: grid; gap: 6px; }
           <button class="btn small" id="expObjects" data-i18n="r.objectsCsv"></button>
           <button class="btn small" id="expMask" data-i18n="r.mask"></button>
           <button class="btn small" id="expPalette" data-i18n="r.palette"></button>
+          <button class="btn small" id="expTrain" data-i18n="r.train" data-i18n-title="r.trainTip"></button>
         </div>
       </div>
     </aside>

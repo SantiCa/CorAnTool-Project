@@ -181,7 +181,7 @@ function morph(m, w, h, dilate) {
   return o;
 }
 
-export const DEFAULT_DETECT = { method: 'adaptive', polarity: 'dark', offset: 12, radius: 40, threshold: 80, minArea: 40, smooth: 1, fillHoles: false };
+export const DEFAULT_DETECT = { method: 'adaptive', polarity: 'dark', offset: 12, radius: 40, threshold: 80, minArea: 40, smooth: 1, fillHoles: false, pThr: 0.5 };
 
 /** Two-class k-means on luminance inside the ROI (as the ICY K-Means option); returns the threshold between the centres. */
 export function kmeansThreshold(L, w, roi, exclude) {
@@ -218,10 +218,18 @@ export function fillHoles(mask, w, h, roi) {
   return out;
 }
 
-/** Binary candidate mask from the enhanced image, restricted to the ROI and non-excluded pixels. */
-export function detectMask(rgba, w, h, roi, exclude, p) {
-  const n = w * h, L = lumaOf(rgba, n);
+/**
+ * Binary candidate mask from the enhanced image, restricted to the ROI and non-excluded pixels.
+ * V0.15: method 'unet' thresholds a U-Net probability map (`prob`, one value per pixel) at p.pThr instead.
+ */
+export function detectMask(rgba, w, h, roi, exclude, p, prob = null) {
+  const n = w * h, L = p.method === 'unet' ? null : lumaOf(rgba, n);
   let m = new Uint8Array(n);
+  if (p.method === 'unet') {
+    const thr = p.pThr ?? 0.5;
+    if (prob) for (let y = roi.y0; y < roi.y1; y++) for (let x = roi.x0; x < roi.x1; x++) { const i = y * w + x; if (!(exclude && exclude[i]) && prob[i] >= thr) m[i] = 1; }
+    return postMask(m, w, h, roi, p);
+  }
   const mean = p.method === 'adaptive' ? boxBlur(L, w, h, p.radius) : null;
   const off = p.offset, t = p.method === 'kmeans' ? kmeansThreshold(L, w, roi, exclude) : p.threshold, pol = p.polarity;
   for (let y = roi.y0; y < roi.y1; y++) {
@@ -236,6 +244,11 @@ export function detectMask(rgba, w, h, roi, exclude, p) {
       m[i] = on ? 1 : 0;
     }
   }
+  return postMask(m, w, h, roi, p);
+}
+
+/** Opening and closing `p.smooth` times with a 3 × 3 square (separable), then optional hole filling. */
+function postMask(m, w, h, roi, p) {
   for (let k = 0; k < p.smooth; k++) m = morph(morph(m, w, h, false), w, h, true); // opening
   for (let k = 0; k < p.smooth; k++) m = morph(morph(m, w, h, true), w, h, false); // closing
   if (p.fillHoles) m = fillHoles(m, w, h, roi);

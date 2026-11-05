@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.15, 05-11-2026 (Claude):** segmentación U-Net (exportación de datos, método de detección en la app, paquete `ichantool.unet`, pruebas de paridad) y borrador del artículo 2. Sin modelos entrenados con datos reales.
+
 - **V0.14, 05-11-2026 (Claude):** auditoría (docs/AUDITORIA.md), sin referencias a datos privados, librerías en app/vendor, README de uso.
 
 - **V0.13, 05-11-2026 (Claude):** revisión de V0.9–V0.12 (correctas; pruebas y comprobación sin pantalla); mensajes de error de dibujo.

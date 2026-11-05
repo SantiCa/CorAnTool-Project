@@ -9,6 +9,7 @@ import { evalColumn, evalCells, cellName, FUNCTIONS } from './sheet.js';
 import { Classifier, TaxonModel, evaluateModels, vec, FEATURES } from './learn.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
+import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } from './unet.js';
 import { coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, colStats, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidate, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
 
 /** App name (V16: IchAnTool → CorAnTool). Files written by IchAnTool are still accepted; browser storage keys keep the old name. */
@@ -16,7 +17,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.14';
+const DELIVERY = 'V0.15';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -230,8 +231,10 @@ const rowAtDepth = (s, d) => s.roi.y0 + ((d - s.top) / (s.bottom - s.top)) * (s.
 /* ───────────── image files ───────────── */
 
 /** V0.14: the libraries ship with the program (app/vendor); the internet copy is only a fallback (e.g. single offline file). */
-const VENDOR = { 'pako.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', 'UTIF.js': 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'xlsx.full.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' };
-function loadLib(file) { return loadScript(`vendor/${file}`).catch(() => loadScript(VENDOR[file])); }
+const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';   // V0.15: U-Net engine (desktop build copies it to vendor/ort)
+const VENDOR = { 'pako.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', 'UTIF.js': 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'xlsx.full.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'ort/ort.wasm.min.js': ORT_CDN + 'ort.wasm.min.js' };
+/** Loads a library from app/vendor, else from the internet; resolves to 'local' or 'cdn'. */
+function loadLib(file) { return loadScript(`vendor/${file}`).then(() => 'local', () => loadScript(VENDOR[file]).then(() => 'cdn')); }
 function loadScript(src) {
   return new Promise((res, rej) => {
     const el = document.createElement('script'); el.src = src; el.onload = res;
@@ -468,7 +471,48 @@ function selectedIds() { const s = sec(); if (!s) return []; const ids = S.multi
 
 /* ───────────── detection ───────────── */
 
-function runDetection() { const s = sec(); if (s) busy(() => withPixels(s, detectSection)); }
+function runDetection() {
+  const s = sec(); if (!s) return;
+  if (s.detect.method !== 'unet') { busy(() => withPixels(s, detectSection)); return; }
+  if (!UNET) { $('detectStatus').textContent = t('u.noModel'); return; }
+  busy(() => withPixels(s, async (x) => { await unetProb(x); detectSection(x); }));
+}
+
+/* ───────────── V0.15: U-Net (model trained with `ichantool unet train`, run with ONNX Runtime Web) ───────────── */
+let UNET = null;   // { session, cfg, name, id }
+const unetKey = (s) => UNET ? `${UNET.id}|${s.roi.x0},${s.roi.y0},${s.roi.x1},${s.roi.y1}|${s.w}x${s.h}|${pxPerCm(s).toFixed(4)}` : '';
+async function loadOrt() {
+  if (window.ort) return;
+  const where = await loadLib('ort/ort.wasm.min.js');
+  window.ort.env.wasm.wasmPaths = where === 'local' ? new URL('vendor/ort/', location.href).href : ORT_CDN;
+  window.ort.env.wasm.numThreads = 1;   // works without cross-origin isolation (single file, browser, desktop)
+}
+/** Model files chosen by the user: the .onnx network and, optionally, the .json written next to it in training. */
+async function loadUnet(files) {
+  const onnx = files.find((f) => /\.onnx$/i.test(f.name)), js = files.find((f) => /\.json$/i.test(f.name));
+  if (!onnx) { toast(t('u.needOnnx')); return; }
+  await busy(async () => {
+    try {
+      await loadOrt();
+      const cfg = { ...UNET_DEFAULTS, ...(js ? JSON.parse(await js.text()) : {}) };
+      const session = await window.ort.InferenceSession.create(new Uint8Array(await onnx.arrayBuffer()), { executionProviders: ['wasm'] });
+      UNET = { session, cfg, name: onnx.name, id: uid() };
+      for (const s of S.cores.flatMap((c) => c.sections)) s._unet = null;
+      toast(t('u.loaded', { n: onnx.name }));
+    } catch (e) { UNET = null; toast(t('u.loadErr') + ' ' + (e?.message || e)); }
+    renderDetectForm();
+  });
+}
+/** Probability map of bioturbation for the section (cached until the model, the analysis area or the scale change). */
+async function unetProb(s) {
+  const key = unetKey(s); if (s._unet?.key === key) return s._unet;
+  const { session, cfg } = UNET, inName = session.inputNames[0], outName = session.outputNames[0];
+  const run = async (data, T) => { const r = await session.run({ [inName]: new window.ort.Tensor('float32', data, [1, 3, T, T]) }); const o = r[outName]; return { data: o.data, channels: o.dims[1] }; };
+  const scale = cfg.pxPerCm ? cfg.pxPerCm / pxPerCm(s) : 1;
+  const res = await predictProb(run, s.orig, s.w, s.h, s.roi, cfg, scale, (k, n) => { $('detectStatus').textContent = t('u.progress', { k, n }); });
+  s._unet = { key, prob: res.prob };
+  return s._unet;
+}
 
 function detectSection(s) {
   {
@@ -480,7 +524,7 @@ function detectSection(s) {
       for (const id of cand) s.objects.delete(id);
       if (cand.has(S.selected)) S.selected = 0;
     }
-    const m = detectMask(s.enh, s.w, s.h, s.roi, s.exclude, p);
+    const m = detectMask(s.enh, s.w, s.h, s.roi, s.exclude, p, p.method === 'unet' && s._unet?.key === unetKey(s) ? s._unet.prob : null);
     const { labels: cl, count } = components(m, s.w, s.h, p.minArea);
     const base = s.nextId;
     for (let i = 0; i < L.length; i++) { const k = cl[i]; if (k && !L[i]) { op.lm.push(i, 0); L[i] = base + k - 1; } }
@@ -672,7 +716,7 @@ function render() {
   }
   if (!s.lutFill || s.lutFill.length < s.nextId * 4) rebuildLUT(s);
   if (!imgData || imgData.width !== cw || imgData.height !== ch) imgData = vctx.createImageData(cw, ch);
-  const d = imgData.data, src = S.showOrig ? s.orig : s.enh, lab = s.labels, ex = s.exclude;
+  const d = imgData.data, src = S.showOrig ? s.orig : s.enh, lab = s.labels, ex = s.exclude, dprob = S.showDoubt && s._unet?.key === unetKey(s) ? s._unet.prob : null;
   const W = s.w, H = s.h, { x: vx, y: vy, zoom: z } = S.view, roi = s.roi;
   const fill = s.lutFill, line = s.lutLine, sty = s.lutStyle, sel = S.selected, step = Math.max(1, Math.round(1 / z));
   const inSel = new Uint8Array(s.nextId + 1); for (const id of S.multi) if (id <= s.nextId) inSel[id] = 1;
@@ -697,6 +741,7 @@ function render() {
           else if (sty[id] !== 1 || ((sx + sy) & 4)) { r = line[k]; g = line[k + 1]; b = line[k + 2]; }
         }
       }
+      if (dprob && dprob[i] && doubtful(dprob[i]) && !((sx + sy) & 3)) { r = 236; g = 72; b = 214; }   // V0.15: U-Net doubtful zone
       if (ex[i]) { if (((sx + sy) & 7) < 2) { r = r * 0.3 + 70; g = g * 0.3 + 70; b = b * 0.3 + 80; } else { r *= 0.55; g *= 0.55; b *= 0.55; } }
       if (!inY || ix < roi.x0 || ix >= roi.x1) { r *= 0.42; g *= 0.42; b *= 0.42; }
       d[o] = r; d[o + 1] = g; d[o + 2] = b; d[o + 3] = 255;
@@ -1502,7 +1547,7 @@ function selectSection(k, fresh = false) {
 
 const FILTER_SLIDERS = [['blackPoint', 0, 254, 1], ['whitePoint', 1, 255, 1], ['gamma', 0.2, 3, 0.01], ['brightness', -100, 100, 1], ['contrast', -100, 100, 1], ['saturation', 0, 300, 1], ['vibrance', -100, 100, 1], ['claheBlock', 0, 400, 1], ['claheSlope', 1, 10, 0.1], ['localAmount', 0, 100, 1], ['localRadius', 2, 150, 1]];
 const BUILTIN_PRESETS = ['none', 'dorador2014', 'clahe2019', 'levels', 'local', 'strong'];
-const DETECT_SLIDERS = [['offset', 1, 80, 1, 'adaptive'], ['radius', 3, 200, 1, 'adaptive'], ['threshold', 0, 255, 1, 'global'], ['minArea', 1, 2000, 1], ['smooth', 0, 4, 1]];
+const DETECT_SLIDERS = [['offset', 1, 80, 1, 'adaptive'], ['radius', 3, 200, 1, 'adaptive'], ['threshold', 0, 255, 1, 'global'], ['pThr', 0.05, 0.95, 0.05, 'unet'], ['minArea', 1, 2000, 1], ['smooth', 0, 4, 1]];
 let userPresets = [];
 const slider = (prefix, [k, min, max, step]) => `<div class="slider" data-only="${''}"><span data-i18n="${prefix}.${k}">${t(prefix + '.' + k)}</span><output id="${prefix}o-${k}"></output><input type="range" id="${prefix}-${k}" data-k="${k}" min="${min}" max="${max}" step="${step}"></div>`;
 
@@ -1526,8 +1571,10 @@ function renderFilterForm() {
 }
 function renderDetectForm() {
   const s = sec(); if (!s) return; const p = s.detect;
-  for (const [k] of DETECT_SLIDERS) { $('d-' + k).value = p[k]; $('do-' + k).textContent = p[k]; }
+  for (const [k] of DETECT_SLIDERS) { const v = p[k] ?? DEFAULT_DETECT[k]; $('d-' + k).value = v; $('do-' + k).textContent = v; }
   $('dMethod').value = p.method; $('dPol').value = p.polarity; $('dFill').checked = !!p.fillHoles;
+  const u = p.method === 'unet'; $('unetBox').hidden = !u; $('dPolBox').hidden = u;   // V0.15
+  $('unetName').textContent = UNET ? t('u.model', { n: UNET.name, c: (UNET.cfg.classes || []).join(', '), p: UNET.cfg.pxPerCm ? fmt(UNET.cfg.pxPerCm, 3) : '—' }) : t('u.noModel');
   document.querySelectorAll('#detectCtl [data-only]').forEach((el) => (el.hidden = !!el.dataset.only && el.dataset.only !== p.method));
 }
 function renderBinNote() {
@@ -1632,6 +1679,8 @@ $('fChannel').addEventListener('change', (e) => { const s = sec(); if (!s) retur
 for (const [id, key] of [['fEqualize', 'equalize'], ['fInvert', 'invert']]) $(id).addEventListener('change', (e) => { const s = sec(); if (!s) return; s.filters[key] = e.target.checked; s.preset = 'custom'; $('fPreset').value = 'custom'; refilter(); });
 
 $('detectCtl').addEventListener('input', (e) => { const s = sec(), k = e.target.dataset.k; if (!s || !k) return; s.detect[k] = +e.target.value; $('do-' + k).textContent = e.target.value; });
+$('unetFile').addEventListener('change', (e) => { const f = [...e.target.files]; e.target.value = ''; if (f.length) loadUnet(f); });   // V0.15
+$('showDoubt').addEventListener('change', (e) => { S.showDoubt = e.target.checked; requestRender(); });
 $('dMethod').addEventListener('change', (e) => { const s = sec(); if (s) { s.detect.method = e.target.value; renderDetectForm(); } });
 $('dPol').addEventListener('change', (e) => { const s = sec(); if (s) s.detect.polarity = e.target.value; });
 $('detectBtn').addEventListener('click', runDetection);
@@ -1774,6 +1823,33 @@ $('expMask').addEventListener('click', () => {
     await saveFile(`${safe(s.name)}_mask.png`, blob, 'image/png');
   });
 });
+
+/** V0.15: training set for the U-Net — for every image with reviewed traces, the original ROI (PNG), its label mask
+ * (PNG, value = class index + 1, 0 = matrix or artefact, 255 = excluded or not reviewed) and manifest.json. */
+$('expTrain').addEventListener('click', () => busy(async () => {
+  const classes = S.classes.filter((c) => c.counts), idx = new Map(classes.map((c, k) => [c.id, k + 1]));
+  const files = [], items = [];
+  const png = async (rgba, w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').putImageData(new ImageData(rgba, w, h), 0, 0); return new Promise((r) => c.toBlob(r, 'image/png')); };
+  for (const core of S.cores) for (const s of core.sections) {
+    const objs = [...s.objects.values()], reviewed = objs.filter((o) => o.cls);
+    if (!reviewed.length) continue;
+    await withPixels(s, async () => {
+      const lab = new Int16Array(s.nextId).fill(-1);
+      for (const o of objs) if (o.cls) lab[o.id] = idx.get(o.cls) ?? 0;   // classes that do not count (artefacts) = matrix
+      const roi = s.roi, w = roi.x1 - roi.x0, h = roi.y1 - roi.y0, m = trainingMask(s.labels, s.w, roi, s.exclude, lab);
+      const g = new Uint8ClampedArray(w * h * 4); for (let i = 0; i < m.length; i++) { g[i * 4] = g[i * 4 + 1] = g[i * 4 + 2] = m[i]; g[i * 4 + 3] = 255; }
+      const base = `${safe(core.name)}__${safe(s.name)}`;
+      files.push({ name: `images/${base}.png`, data: await png(cropRGBA(s.orig, s.w, roi), w, h) }, { name: `masks/${base}.png`, data: await png(g, w, h) });
+      items.push({ image: `images/${base}.png`, mask: `masks/${base}.png`, core: core.name, section: s.name, top: s.top, bottom: s.bottom, units: s.units,
+        pxPerCm: +pxPerCm(s).toFixed(5), width: w, height: h, downsample: s.ds || 1, objects: objs.length, reviewed: reviewed.length, unreviewed: objs.length - reviewed.length });
+    });
+  }
+  if (!items.length) { toast(t('u.noReviewed')); return; }
+  const manifest = { app: APP, kind: 'segmentation-dataset', version: 1, delivery: DELIVERY, created: new Date().toISOString(), ignore: IGNORE,
+    classes: classes.map((c, k) => ({ index: k + 1, name: c.name, color: c.color })), items };
+  files.push({ name: 'manifest.json', data: JSON.stringify(manifest, null, 2) });
+  await saveFile(`${safe(S.name)}_segmentation_dataset.zip`, await zipFiles(files), 'application/zip');
+}));
 
 $('expPalette').addEventListener('click', () => {
   const pal = Object.fromEntries(S.classes.filter((c) => c.counts).map((c) => [c.name, c.color]));
