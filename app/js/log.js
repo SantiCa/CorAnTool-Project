@@ -123,7 +123,8 @@ export function wrapTitle(text, w) {
  * titles for the bioturbation and ichnotaxa columns; fontSize and whether title/subtitle are drawn.
  */
 export const LOG_STYLE = { yFactor: 1, yStep: null, yDiv: null, pctDiv: 4, totalStyle: 'barsline', barColor: '#e7c9a5', lineColor: '#a85f1c',
-  frame: true, grid: true, boundaries: true, totalTitle: '', speciesTitle: '', fontSize: 10, showTitle: true };
+  frame: true, grid: true, boundaries: true, totalTitle: '', speciesTitle: '', fontSize: 10, showTitle: true,
+  axes: {} };   // V0.6: per column {min, max, div, dec, rev, log} keyed by column id (total, species, BI, ii, rec:<name>)
 export function buildLogSVG(o) {
   const st = { ...LOG_STYLE, ...(o.style || {}) };
   const L = { total: 'Bioturbation (%)', species: 'Ichnotaxa (%)', image: 'Core', ...(o.labels || {}) };
@@ -140,8 +141,8 @@ export function buildLogSVG(o) {
   if (t.total) cols.push({ key: 'total', id: 'total', w: wOf('total', 150), title: L.total });
   const presentClasses = o.classes.filter((c) => rows.some((r) => (r.classPct[c.index] || 0) > 0));
   if (t.species) cols.push({ key: 'species', id: 'species', w: wOf('species', 150), title: L.species });
-  if (t.BI) cols.push({ key: 'BI', w: 46, title: 'BI' });
-  if (t.ii) cols.push({ key: 'ii', w: 46, title: 'ii' });
+  if (t.BI) cols.push({ key: 'BI', id: 'BI', w: wOf('BI', 46), title: 'BI' });
+  if (t.ii) cols.push({ key: 'ii', id: 'ii', w: wOf('ii', 46), title: 'ii' });
   for (const b of o.bands || []) { const id = 'band:' + (b.key || b.full || b.title); cols.push({ key: 'band', id, w: wOf(id, b.w || 46), title: b.title, full: b.full, band: b }); }
   for (const r of o.records) { const id = 'rec:' + r.name; cols.push({ key: 'rec', id, w: wOf(id, o.recWidth || 120), title: r.name, rec: r }); }
   if (o.marks?.length && !(t.image && o.image)) cols.splice(1, 0, { key: 'marks', id: 'marks', w: wOf('marks', 40), title: L.marks || 'Traces' });
@@ -178,13 +179,25 @@ export function buildLogSVG(o) {
     const ls = wrapTitle(c.title, c.w);
     out.push(`<text x="${c.x + c.w / 2}" y="${ls.length > 1 ? 46 : 54}" text-anchor="middle" font-weight="600" fill="#1c2422">${ls.map((l, i) => `<tspan x="${c.x + c.w / 2}" dy="${i ? 12 : 0}">${escXml(l)}</tspan>`).join('')}</text>`);
   };
+  // V0.6: axis of a column; the user may fix min/max, divisions, decimals, invert it or (records) use a log scale
   const xScale = (c, lo, hi, reverse = false, ticks = null) => {
-    const sx = (v) => f2(c.x + ((reverse ? hi - v : v - lo) / (hi - lo || 1)) * c.w);
+    const ax = (st.axes || {})[c.id || c.key] || {};
+    if (ax.min != null && ax.min !== '') lo = +ax.min;
+    if (ax.max != null && ax.max !== '') hi = +ax.max;
+    if (ax.rev) reverse = !reverse;
+    const lg = !!ax.log && lo > 0 && hi > lo, tf = (v) => (lg ? Math.log10(Math.max(v, 1e-12)) : v), L0 = tf(lo), L1 = tf(hi);
+    const sx = (v) => f2(c.x + ((reverse ? L1 - tf(v) : tf(v) - L0) / (L1 - L0 || 1)) * c.w);
+    sx.base = sx(lg ? lo : Math.min(Math.max(0, lo), hi));
+    if (ax.div > 0 || lg) {
+      if (lg) { ticks = []; for (let e = Math.floor(L0); e <= Math.ceil(L1); e++) { const v = 10 ** e; if (v >= lo * 0.999 && v <= hi * 1.001) ticks.push(v); } }
+      else ticks = Array.from({ length: Math.round(ax.div) + 1 }, (_, k) => lo + ((hi - lo) * k) / Math.round(ax.div));
+    }
+    const fmtT = (v) => (ax.dec != null && ax.dec !== '' ? (+v).toFixed(Math.max(0, Math.min(6, +ax.dec))) : lbl(v));
     for (const tv of ticks || niceTicks(lo, hi, 3)) {
       const xx = sx(tv);
       if (st.grid) out.push(`<line x1="${xx}" y1="${top}" x2="${xx}" y2="${top + H}" stroke="#e3e8e6" stroke-width="0.6"/>`);
       out.push(`<line x1="${xx}" y1="${top - 4}" x2="${xx}" y2="${top}" stroke="#5b6763" stroke-width="0.6"/>`);
-      out.push(`<text x="${xx}" y="${top - 7}" text-anchor="middle" fill="#5b6763" font-size="9">${lbl(tv)}</text>`);
+      out.push(`<text x="${xx}" y="${top - 7}" text-anchor="middle" fill="#5b6763" font-size="9">${fmtT(tv)}</text>`);
     }
     return sx;
   };
@@ -216,7 +229,7 @@ export function buildLogSVG(o) {
       let d = '', prev = null;
       for (const r of rows) {
         if (r.pct == null) { prev = null; continue; }
-        if (bars) out.push(`<rect x="${c.x}" y="${y(r.a0)}" width="${f2(sx(r.pct) - c.x)}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${st.barColor}"/>`);
+        if (bars) out.push(`<rect x="${f2(Math.min(sx.base, sx(r.pct)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(r.pct) - sx.base))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${st.barColor}"/>`);
         if (st.totalStyle === 'points') out.push(`<circle cx="${sx(r.pct)}" cy="${f2((y(r.a0) + y(r.a1)) / 2)}" r="2.2" fill="${st.lineColor}"/>`);
         d += prev && Math.abs(r.a0 - prev.a1) < 1e-9 ? `L${sx(r.pct)} ${y(r.a0)}` : `M${sx(r.pct)} ${y(r.a0)}`;
         d += `L${sx(r.pct)} ${y(r.a1)}`;
@@ -231,7 +244,7 @@ export function buildLogSVG(o) {
         let acc = 0;
         for (const k of presentClasses) {
           const v = r.classPct[k.index] || 0; if (!v) continue;
-          out.push(`<rect x="${f2(sx(acc))}" y="${y(r.a0)}" width="${f2(sx(acc + v) - sx(acc))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${k.color}"/>`);
+          out.push(`<rect x="${f2(Math.min(sx(acc), sx(acc + v)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(acc + v) - sx(acc)))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${k.color}"/>`);
           acc += v;
         }
       }
@@ -240,7 +253,7 @@ export function buildLogSVG(o) {
       const sx = xScale(c, 0, 6, false, c.key === 'BI' ? [0, 3, 6] : [1, 3, 6]);
       for (const r of rows) {
         const v = r[c.key];
-        if (v != null && v >= lo) out.push(`<rect x="${c.x}" y="${y(r.a0)}" width="${f2(sx(v) - c.x)}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="#c98a4b"/>`);
+        if (v != null && v >= lo) out.push(`<rect x="${f2(Math.min(sx.base, sx(v)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(v) - sx.base))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="#c98a4b"/>`);
         const m = t.manual ? r[c.key === 'BI' ? 'BIm' : 'iim'] : null;
         if (m != null) out.push(`<line x1="${sx(m)}" y1="${y(r.a0)}" x2="${sx(m)}" y2="${y(r.a1)}" stroke="#1c2422" stroke-width="2"/>`);
       }

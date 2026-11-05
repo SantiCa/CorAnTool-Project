@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.6 | 05-11-2026 | Aplicación 2.6.1 | Ancho y formato del eje de cada columna de la derecha (bioturbación, icnotaxones, BI, ii, registros) |
 | V0.5 | 05-11-2026 | Aplicación 2.6 | Estilo configurable de la columna y su figura; indicadores de trazas (flecha, triángulo…) con leyenda y manejo de etiquetas que se tocan |
 | V0.4 | 05-11-2026 | Aplicación 2.5 | Intervalos sin datos (excluidos o con pocos píxeles válidos) como SIN DATOS en vez de 0; opción para ampliar esas zonas |
 | V0.3 | 05-11-2026 | Aplicación 2.4.1 | Columna y figuras combinan marcas de identificación con bioturbación, icnotaxones, BI e ii |
@@ -628,6 +629,25 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.6 — Ancho y ejes de las columnas (05-11-2026)
+
+**Qué se hizo.** En «Estilo de la columna y su figura», tabla con una fila por columna a la derecha del testigo
+(bioturbación, icnotaxones, BI, ii y cada registro): ancho en px, mínimo y máximo del eje, número de divisiones,
+decimales de las etiquetas, invertir el eje y, en los registros, escala logarítmica. Vacío = automático. El ancho es el
+mismo que se cambia arrastrando el borde de la columna, y la figura de columna usa ahora esos anchos.
+
+**Cambios.** `log.js::buildLogSVG`: `style.axes` en `xScale` (mín/máx, divisiones exactas, decimales, invertir, log
+base 10); barras desde la base del eje; BI e ii con ancho ajustable. `app.js`: `axesFormHTML`, `onStyleInput`, anchos en
+`coreSVG`. `i18n.js`.
+
+**Por qué.** Petición de Santiago.
+
+**Comprobación.** `npm test` (47); prueba sin pantalla en Chromium (máximo, divisiones, ancho y escala log), sin errores.
+
+**Pendiente.** Nada.
 
 ---
 

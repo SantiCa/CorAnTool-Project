@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.6 — 2026-11-05
+- Width and axis format (min, max, divisions, decimals, invert, log for records) of each column at the right of the core.
+
 ## V0.5 — 2026-11-05
 - Column and column-figure style: axis units, ticks/divisions, % divisions, font size, bioturbation shape and colours, column titles, frames, grid, section boundaries, title.
 - Section figure markers: arrow+label, arrow, triangles, circle, square, star, cross; symbol legend; handling of touching labels (keep, shift, merge, hide).

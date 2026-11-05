@@ -15,7 +15,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.5';
+const DELIVERY = 'V0.6';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2460,7 +2460,7 @@ function renderLog() {
   box.innerHTML = res.svg;
   lastLog = { ...D, from, to, classes, records, svg: res.svg };
   const ov = geoOverlay(D.axis);
-  logInteract(box, res, { from, to, axisLabel, records, bands: ov.bands || [], widths: lv.colW, onResize: () => { markDirty(); renderLog(); },
+  logInteract(box, res, { from, to, axisLabel, records, bands: ov.bands || [], widths: lv.colW, onResize: () => { markDirty(); renderLog(); if ($('logStyle')) $('logStyle').innerHTML = styleFormHTML(); },
     extra: (a) => {
       const r = D.rows.find((q) => q.a0 <= a && a < q.a1); if (!r) return [];
       const out = [[t('log.total'), `${fmt(r.pct ?? 0, 3)} %`]];
@@ -2492,11 +2492,34 @@ function styleFormHTML() {
     <label class="f"><span>${t('st.colors')}</span><span class="row"><input type="color" data-st="barColor" value="${st.barColor}"><input type="color" data-st="lineColor" value="${st.lineColor}"></span></label>
     <label class="f"><span>${t('st.totalTitle')}</span><input type="text" data-st="totalTitle" value="${esc(st.totalTitle || '')}" placeholder="${esc(t('log.total'))}"></label>
     <label class="f"><span>${t('st.speciesTitle')}</span><input type="text" data-st="speciesTitle" value="${esc(st.speciesTitle || '')}" placeholder="${esc(t('log.species'))}"></label></div>
-    <div class="chk2">${chk('frame', 'st.frame')}${chk('grid', 'st.grid')}${chk('boundaries', 'st.boundaries')}${chk('showTitle', 'st.showTitle')}</div>`;
+    <div class="chk2">${chk('frame', 'st.frame')}${chk('grid', 'st.grid')}${chk('boundaries', 'st.boundaries')}${chk('showTitle', 'st.showTitle')}</div>
+    ${axesFormHTML()}`;
+}
+/** V0.6: width and axis format of each column at the right of the core (total, ichnotaxa, BI, ii and records). */
+function axesFormHTML() {
+  const lv = S.logView, ax = lv.style?.axes || {}, W = lv.colW || {};
+  const recs = [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))];
+  const cols = [['total', t('log.total'), 150], ['species', t('log.species'), 150], ['BI', 'BI', 46], ['ii', 'ii', 46], ...recs.map((n) => ['rec:' + n, n, 120])];
+  const cell = (id, k, ph, step = 'any') => `<input type="number" data-ax="${esc(id)}" data-k="${k}" step="${step}" value="${ax[id]?.[k] ?? ''}" placeholder="${ph}" style="width:100%">`;
+  return `<div class="f"><span>${t('st.axes')}</span><div style="overflow-x:auto"><table class="axtab" style="font-size:11px;border-collapse:collapse;width:100%">
+    <tr><th></th><th>${t('st.ax.w')}</th><th>${t('st.ax.min')}</th><th>${t('st.ax.max')}</th><th>${t('st.ax.div')}</th><th>${t('st.ax.dec')}</th><th title="${esc(t('st.ax.revTip'))}">⇄</th><th title="${esc(t('st.ax.logTip'))}">log</th></tr>
+    ${cols.map(([id, name, w]) => `<tr><td title="${esc(name)}" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</td>
+      <td><input type="number" data-axw="${esc(id)}" min="30" max="600" step="10" value="${W[id] ?? ''}" placeholder="${w}" style="width:100%"></td>
+      <td>${cell(id, 'min', 'auto')}</td><td>${cell(id, 'max', 'auto')}</td><td>${cell(id, 'div', 'auto', 1)}</td><td>${cell(id, 'dec', 'auto', 1)}</td>
+      <td><input type="checkbox" data-ax="${esc(id)}" data-k="rev" ${ax[id]?.rev ? 'checked' : ''}></td>
+      <td>${id.startsWith('rec:') ? `<input type="checkbox" data-ax="${esc(id)}" data-k="log" ${ax[id]?.log ? 'checked' : ''}>` : ''}</td></tr>`).join('')}
+    </table></div><p class="note">${t('st.axesNote')}</p></div>`;
 }
 function onStyleInput(e) {
-  const el = e.target, k = el.dataset.st; if (!k) return;
-  const lv = S.logView; lv.style ||= {};
+  const el = e.target, lv = S.logView;
+  if (el.dataset.axw != null) { lv.colW ||= {}; const v = +el.value; if (v >= 30) lv.colW[el.dataset.axw] = Math.min(600, v); else delete lv.colW[el.dataset.axw]; markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure(); return; }
+  if (el.dataset.ax != null) {
+    lv.style ||= {}; lv.style.axes ||= {}; const a = (lv.style.axes[el.dataset.ax] ||= {}), k2 = el.dataset.k;
+    a[k2] = el.type === 'checkbox' ? el.checked : el.value === '' ? null : +el.value;
+    markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure(); return;
+  }
+  const k = el.dataset.st; if (!k) return;
+  lv.style ||= {};
   if (el.type === 'checkbox') lv.style[k] = el.checked;
   else if (el.type === 'number') lv.style[k] = el.value === '' ? null : Math.max(0, +el.value);
   else lv.style[k] = el.value;
@@ -5034,7 +5057,7 @@ function coreSVG() {
   const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
   const LS = logStyleOf(D);
   return buildLogSVG({
-    style: LS.style, title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: LS.label,
+    style: LS.style, colWidths: S.logView.colW || {}, title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: LS.label,
     from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
     marks: compositeMarks(D), idList: idMode() || compositeMarks(D).length ? idListOf(D.rows, compositeMarks(D)) : null, legendClasses: legendOf(classes, compositeMarks(D)),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
@@ -5326,7 +5349,7 @@ function renderFigure() {
 let figTimer = 0;
 const scheduleFigure = () => { clearTimeout(figTimer); figTimer = setTimeout(renderFigure, 150); };
 $('figPanel').addEventListener('change', (e) => {
-  if (e.target.dataset.st) { onStyleInput(e); return; }   // V0.5: column style
+  if (e.target.dataset.st || e.target.dataset.ax != null || e.target.dataset.axw != null) { onStyleInput(e); return; }   // V0.5–V0.6: column style
   const F = S.fig, el = e.target;
   if (el.id === 'figType') { F.type = el.value; renderFigPanel(); }
   else if (el.id === 'figTitle') F.title = el.value; else if (el.id === 'figCaption') F.caption = el.value;
