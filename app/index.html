@@ -561,6 +561,11 @@ details.mini[open] { display: grid; gap: 6px; }
 .tprog .tptext { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tprog.tptop { flex: 0 0 auto; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .vtag { margin-left: 6px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--line-strong); font: 600 11px/1.4 var(--font-body); color: var(--muted); vertical-align: middle; letter-spacing: 0; }
+
+/* V30: crop bar over the section canvas */
+.cropbar { position: absolute; top: 12px; right: 12px; z-index: 5; width: 280px; display: grid; gap: 6px; padding: 10px 12px; background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); font-size: 12.5px; }
+.cropbar[hidden] { display: none; }
+.cropbar p { margin: 0; }
 </style>
 </head>
 <body>
@@ -600,7 +605,7 @@ details.mini[open] { display: grid; gap: 6px; }
           <p class="note" data-i18n="sec.depthNote"></p>
           <div class="f"><span data-i18n="roi.title"></span>
             <div class="row"><button class="btn small" id="roiBtn" data-i18n="roi.draw"></button><button class="btn small" id="roiReset" data-i18n="roi.reset"></button>
-              <button class="btn small" id="rotL" data-i18n-title="sec.rotate">⟲</button><button class="btn small" id="rotR" data-i18n-title="sec.rotate">⟳</button></div>
+              <button class="btn small" id="cropBtn" data-i18n="crop.btn" data-i18n-title="crop.tip"></button><button class="btn small" id="rotL" data-i18n-title="sec.rotate">⟲</button><button class="btn small" id="rotR" data-i18n-title="sec.rotate">⟳</button></div>
             <p class="note" id="roiInfo"></p>
           </div>
           <div class="f"><span data-i18n="age.title"></span>
@@ -675,6 +680,14 @@ details.mini[open] { display: grid; gap: 6px; }
       </div>
       <div class="viewport" id="viewport">
         <canvas id="view"></canvas>
+        <div class="cropbar" id="cropBar" hidden>
+          <b data-i18n="crop.title"></b>
+          <p class="note" data-i18n="crop.help"></p>
+          <label class="chk"><input type="radio" name="cropMode" value="adjust" checked><span data-i18n="crop.adjust"></span></label>
+          <label class="chk"><input type="radio" name="cropMode" value="keep"><span data-i18n="crop.keep"></span></label>
+          <p class="note" id="cropInfo"></p>
+          <div class="row"><button class="btn small primary" id="cropApply" data-i18n="crop.apply"></button><button class="btn small" id="cropCancel" data-i18n="crop.cancel"></button></div>
+        </div>
         <canvas id="profile"></canvas>
         <div class="empty" id="empty"><div>
           <h2 data-i18n="empty.title"></h2>
@@ -749,7 +762,7 @@ details.mini[open] { display: grid; gap: 6px; }
           <label class="chk"><input type="checkbox" data-track="manual"><span data-i18n="log.manual"></span></label>
         </div>
         <div class="grid2"><label class="f"><span data-i18n="log.imgMode"></span><select id="logImgMode"><option value="enh" data-i18n="log.enh"></option><option value="orig" data-i18n="log.orig"></option></select></label>
-          <label class="chk" style="align-self:end"><input type="checkbox" id="logOverlay"><span data-i18n="log.overlay"></span></label></div>
+          <label class="chk" style="align-self:end"><input type="checkbox" id="logOverlay"><span data-i18n="log.overlay"></span></label><label class="chk" data-i18n-title="log.hideExclTip"><input type="checkbox" id="logHideExcl"><span data-i18n="log.hideExcl"></span></label></div>
         <div class="f"><span data-i18n="log.records"></span>
           <div id="recList" style="display:grid;gap:6px"></div>
           <label class="btn small file"><span data-i18n="log.addRec"></span><input type="file" id="recFile" accept=".csv,.txt,.tsv,.dat,.xlsx,.xls,.ods,text/csv,text/plain"></label>
@@ -925,7 +938,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <div class="row">
           <button class="btn small" id="openTutorial" data-i18n="tut.open"></button>
           <button class="btn small" id="openTest" data-i18n="proj.test"></button>
-          <button class="btn small" id="openIdeal" data-i18n="proj.ideal"></button>
+          <button class="btn small" id="openIdeal" data-i18n="proj.ideal"></button><button class="btn small" id="openThesis" data-i18n="proj.thesis" hidden></button>
         </div>
       </details>
       <details class="hmore bk" id="bkBox">

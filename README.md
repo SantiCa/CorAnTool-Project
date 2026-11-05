@@ -25,6 +25,13 @@ The resulting series can be correlated directly with geochemical, mineralogical 
 > v3 reproduces the published v2.1 results exactly (see `tests/`). The original code is kept in
 > [`legacy/`](legacy/).
 
+## Download (desktop program)
+Windows, macOS and Linux installers are published with every delivery under
+[Releases](https://github.com/SantiCa/IchAnTool-Project/releases/latest) (`CorAnTool-V<n>-…`). The desktop program is
+the same application in its own window, with more memory than a browser tab and the projects stored on disk. It is not
+code-signed: Windows shows “Windows protected your PC” (More info → Run anyway) and macOS needs right-click → Open the
+first time. Build it yourself with `cd desktop && npm ci && npm run dist`.
+
 ## Web app
 
 Browser application (no installation, images stay on your computer): enhancement, automatic
@@ -33,7 +40,7 @@ composite core log with external records, and a **multiproxy mode** (any numeric
 hierarchical described intervals — lithology, turbidites… — for many cores, user-defined labels by
 intervals or rules, configurable automatic interval classification, maps by age, overlay on the core log).
 See [`app/`](app/) and run it with any static server (`python -m http.server`, then open `/app/`),
-or build a single offline file with `python tools/build_standalone.py` (-> `dist/CorAnTool_V<n>.html`, open by double-click).
+or build a single offline file with `python tools/build_standalone.py` (-> `dist/CorAnTool_V<n>.html`, open by double-click; add `--with-thesis` to bundle the owner's private thesis data, never for distribution).
 
 ## Install
 

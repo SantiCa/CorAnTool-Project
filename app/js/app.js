@@ -15,7 +15,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V30';
+const DELIVERY = 'V31';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -165,6 +165,7 @@ async function addFiles(files) {
       } catch (e) { toast(t('err.image', { m: e.message || e })); }
     });
   }
+  if (files.length === 1 && sec()) startCrop();   // V31: offer to cut scale bars or labels off a new image
 }
 
 async function loadExample() {
@@ -526,9 +527,82 @@ function render() {
     vctx.beginPath(); vctx.arc(a, b2, Math.max(2, S.brushSize * z), 0, Math.PI * 2); vctx.stroke();
   }
   drawRuler(s, ch);
+  drawEdges(s, ch, cw, toS);
   vctx.restore();
   $('zoomLbl').textContent = Math.round(z * 100) + '%';
 }
+
+/* ── V31: Start/End markers of the analysed interval and the crop lines ── */
+let cropState = null;   // {s, y0, y1} while cropping
+function edgeYs(s) { return cropState?.s === s ? { a: cropState.y0, b: cropState.y1, crop: true } : { a: s.roi.y0, b: s.roi.y1, crop: false }; }
+function drawEdges(s, ch, cw, toS) {
+  const E = edgeYs(s), [, ya] = toS(0, E.a), [, yb] = toS(0, E.b);
+  if (E.crop) {   // darken what will be removed, dashed cut lines
+    vctx.fillStyle = 'rgba(160,30,30,.38)';
+    vctx.fillRect(54, 0, cw - 54, Math.max(0, ya)); vctx.fillRect(54, yb, cw - 54, Math.max(0, ch - yb));
+    vctx.strokeStyle = '#ff6b5a'; vctx.lineWidth = 2; vctx.setLineDash([8, 5]);
+    for (const y of [ya, yb]) { vctx.beginPath(); vctx.moveTo(54, y); vctx.lineTo(cw, y); vctx.stroke(); }
+    vctx.setLineDash([]);
+  }
+  vctx.font = '600 10px "IBM Plex Sans Condensed", sans-serif'; vctx.textBaseline = 'middle';
+  for (const [y, lab, up] of [[ya, E.crop ? 'Crop top' : 'Start', false], [yb, E.crop ? 'Crop bottom' : 'End', true]]) {
+    if (y < -12 || y > ch + 12) continue;
+    vctx.fillStyle = E.crop ? '#ff6b5a' : '#e0995a';
+    vctx.beginPath(); vctx.moveTo(56, y - 9); vctx.lineTo(72, y); vctx.lineTo(56, y + 9); vctx.closePath(); vctx.fill();
+    vctx.strokeStyle = '#14100c'; vctx.lineWidth = 1; vctx.stroke();
+    const tw = vctx.measureText(lab).width + 8, ty = up ? y + 18 : y - 18;
+    vctx.fillStyle = 'rgba(14,17,16,.85)'; vctx.fillRect(56, ty - 8, tw, 16);
+    vctx.fillStyle = E.crop ? '#ff9b8f' : '#f0b87e'; vctx.fillText(lab, 60, ty);
+  }
+}
+/** Which marker is under the pointer: 'a' (Start / crop top) or 'b' (End / crop bottom). */
+function edgeHit(s, sx, sy) {
+  const E = edgeYs(s), z = S.view.zoom, ya = (E.a - S.view.y) * z, yb = (E.b - S.view.y) * z;
+  const near = (y) => (E.crop ? Math.abs(sy - y) <= 7 && sx >= 50 : sx >= 50 && sx <= 78 && Math.abs(sy - y) <= 11);
+  return near(ya) ? 'a' : near(yb) ? 'b' : null;
+}
+function startCrop() {
+  const s = sec(); if (!s) return;
+  cropState = { s, y0: 0, y1: s.h }; $('cropBar').hidden = false; updateCropInfo(); requestRender();
+}
+function endCrop() { cropState = null; $('cropBar').hidden = true; requestRender(); }
+function cropResult() {
+  const c = cropState, s = c.s, adjust = document.querySelector('input[name=cropMode]:checked')?.value !== 'keep';
+  const r0 = Math.max(s.roi.y0, c.y0), r1 = Math.min(s.roi.y1, c.y1);
+  return adjust ? { top: depthAtRow(s, r0), bottom: depthAtRow(s, r1), roi: { x0: s.roi.x0, x1: s.roi.x1, y0: r0 - c.y0, y1: r1 - c.y0 } }
+    : { top: s.top, bottom: s.bottom, roi: { x0: s.roi.x0, x1: s.roi.x1, y0: 0, y1: c.y1 - c.y0 } };
+}
+function updateCropInfo() {
+  if (!cropState) return; const s = cropState.s, r = cropResult();
+  $('cropInfo').textContent = t('crop.info', { h: cropState.y1 - cropState.y0, H: s.h, a: fmt(r.top, 3), b: fmt(r.bottom, 3), u: s.units });
+}
+/** Remove the rows outside [y0, y1) from the image and its masks; the image is stored again as the cropped picture. */
+async function applyCrop() {
+  const c = cropState; if (!c) return; const s = c.s, { y0, y1 } = c;
+  if (y0 <= 0 && y1 >= s.h) { endCrop(); return; }
+  if (y1 - y0 < 10) { toast(t('crop.small')); return; }
+  const r = cropResult(), W = s.w, H = y1 - y0;
+  await busy(async () => {
+    const cut = (arr, ch) => arr.slice(y0 * W * ch, y1 * W * ch);
+    s.orig = cut(s.orig, 4); s.labels = cut(s.labels, 1); s.exclude = cut(s.exclude, 1); s.h = H;
+    s.top = r.top; s.bottom = r.bottom; s.roi = r.roi;
+    // keep the stored picture identical to what is analysed (re-encoded once; rotation and downsampling are now built in)
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(s.orig.buffer, s.orig.byteOffset, s.orig.length), W, H), 0, 0);
+    const jpg = /jpe?g/i.test(s.file.type || s.file.name), type = jpg ? 'image/jpeg' : 'image/png';
+    const blob = await new Promise((res) => cv.toBlob(res, type, 0.95));
+    s.file = { name: s.file.name.replace(/(\.[^.]+)?$/, jpg ? '_crop.jpg' : '_crop.png'), type, bytes: new Uint8Array(await blob.arrayBuffer()) };
+    s.rot = 0; s.ds = 1; s.view = null;
+    enhance(s); refreshObjects(s, new Set(s.objects.keys()), null);
+    S.undo = S.undo.filter((op) => op.s !== s); $('undoBtn').disabled = !S.undo.length;
+    endCrop(); selectSection(S.cur, true); afterChange(s);
+    toast(t('crop.done', { a: fmt(s.top, 3), b: fmt(s.bottom, 3), u: s.units }));
+  });
+}
+$('cropBtn').addEventListener('click', () => (cropState ? endCrop() : startCrop()));
+$('cropApply').addEventListener('click', applyCrop);
+$('cropCancel').addEventListener('click', endCrop);
+$('cropBar').addEventListener('change', updateCropInfo);
 
 function niceStep(pxPerUnit, minPx) {
   const steps = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
@@ -637,6 +711,8 @@ view.addEventListener('pointerdown', (e) => {
   const p = toImg(e);
   if (e.button === 1 || S.tool === 'pan' || spaceDown) { drag = { type: 'pan', sx: e.clientX, sy: e.clientY, vx: S.view.x, vy: S.view.y }; return; }
   if (e.button !== 0) return;
+  const eh = edgeHit(s, p.sx, p.sy);
+  if (eh) { drag = { type: 'edge', which: eh }; return; }
   const tool = S.tool;
   // Selection: click selects; Shift/Ctrl+click adds or removes; dragging draws a box (Shift/Ctrl adds to the selection).
   if (tool === 'select') drag = { type: 'select', sx: e.clientX, sy: e.clientY, moved: false, p, add: e.shiftKey || e.ctrlKey || e.metaKey };
@@ -664,7 +740,13 @@ view.addEventListener('pointermove', (e) => {
   const s = sec(); if (!s) return;
   const p = toImg(e); cursor = p;
   updateStatus(s, p);
-  if (!drag) { if (['brush', 'erase', 'exclude', 'include'].includes(S.tool)) requestRender(); return; }
+  if (!drag) { view.style.cursor = edgeHit(s, p.sx, p.sy) ? 'ns-resize' : ''; if (['brush', 'erase', 'exclude', 'include'].includes(S.tool)) requestRender(); return; }
+  if (drag.type === 'edge') {
+    const y = Math.round(Math.min(s.h, Math.max(0, p.y)));
+    if (cropState?.s === s) { if (drag.which === 'a') cropState.y0 = Math.min(y, cropState.y1 - 10); else cropState.y1 = Math.max(y, cropState.y0 + 10); updateCropInfo(); }
+    else if (drag.which === 'a') s.roi = { ...s.roi, y0: Math.min(y, s.roi.y1 - 4) }; else s.roi = { ...s.roi, y1: Math.max(y, s.roi.y0 + 4) };
+    requestRender(); return;
+  }
   if (drag.type === 'select') {
     if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) return;
     boxDrag = { x0: drag.p.x, y0: drag.p.y, x1: p.x, y1: p.y }; drag = { type: 'box', add: drag.add }; requestRender();
@@ -679,6 +761,7 @@ view.addEventListener('pointermove', (e) => {
 
 function endDrag() {
   const s = sec(); const d = drag; drag = null; if (!d || !s) return;
+  if (d.type === 'edge') { if (!cropState) setRoi(s, { ...s.roi }); return; }
   if (d.type === 'select') {
     const p = d.p, id = inImg(s, p) ? s.labels[Math.floor(p.y) * s.w + Math.floor(p.x)] : 0;
     if (d.add) toggleSelect(id); else select(id);
@@ -1001,6 +1084,7 @@ function renderSectionForm() {
 }
 
 function selectSection(k, fresh = false) {
+  if (cropState) endCrop();
   const prev = sec(); if (prev) prev.view = { ...S.view };
   S.cur = k; S.selected = 0;
   const s = sec();
@@ -1510,6 +1594,7 @@ function upgradeProject(p) {
 }
 
 async function loadProject(p) {
+  blankStart = false;
   resetState(); loading = true;
   try {
     p = upgradeProject(p);
@@ -1538,6 +1623,7 @@ async function loadProject(p) {
 }
 
 function resetState() {
+  blankStart = false;
   const maxMP = S.settings.maxMP || 8;
   S.id = uid(); S.name = t('proj.untitled'); S.notes = '';
   S.undo = []; S.selected = 0; S.multi.clear(); S.library = []; S.sheet = { columns: [], cells: {} }; S.fig = defaultFig(); S.kind = 'normal'; S.multiSource = null; S.plots = []; S.plotCur = 0; S.coreModels = {};
@@ -1564,7 +1650,9 @@ function markDirty() {
 
 let savePromise = null;
 /** Save the open project; saves never overlap (a new save waits for the one in progress). */
+let blankStart = true;   // V31: nothing is saved until the user creates or opens a project
 async function saveToDB() {
+  if (blankStart) return;
   if (!storageOK) return;
   clearTimeout(saveTimer);
   if (savePromise) { await savePromise.catch(() => {}); if (!dirty && !savePromise) return; }
@@ -1755,8 +1843,8 @@ async function startup() {
   await loadPresets(); await initBackups();
   const firstRun = storageOK && !(await listProjects().catch(() => [])).length;
   if (storageOK && PRELOAD_THESIS) await ensureThesisProject();
-  if (firstRun) { await openTestProject(); showHome(); return; }
   showHome();
+  if (firstRun) { blankStart = true; return; }   // V31: clean start — the start screen invites to create or open a project (examples on demand)
   if (storageOK) {
     let last = null; try { last = localStorage.getItem('ichantool.last'); } catch { /* storage blocked */ }
     const list = await listProjects().catch(() => []);
@@ -1887,7 +1975,7 @@ async function restoreFiles(files) {
 /* ───────────── composite log ───────────── */
 
 function defaultLogView() {
-  return { axis: 'depth', from: null, to: null, height: 900, imgMode: 'enh', overlay: true,
+  return { axis: 'depth', from: null, to: null, height: 900, imgMode: 'enh', overlay: true, hideExcl: false,
     tracks: { image: true, total: true, species: true, BI: true, ii: true, manual: true } };
 }
 S.logView = defaultLogView();
@@ -1925,7 +2013,7 @@ function compositeData() {
 }
 
 function sectionCanvas(s) {
-  const lv = S.logView, key = `${s.logVer}|${lv.imgMode}|${lv.overlay}|${S.ovAlpha}|${S.settings.predThr}|${S.settings.includePred}|${S.settings.countCandidates}`;
+  const lv = S.logView, key = `${s.logVer}|${lv.imgMode}|${lv.overlay}|${lv.hideExcl}|${S.ovAlpha}|${S.settings.predThr}|${S.settings.includePred}|${S.settings.countCandidates}`;
   if (s._lc?.key === key) return s._lc.canvas;
   const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
   const ctx = c.getContext('2d'), im = ctx.createImageData(s.w, s.h), d = im.data;
@@ -1939,9 +2027,17 @@ function sectionCanvas(s) {
       d[j] += (col[0] - d[j]) * a; d[j + 1] += (col[1] - d[j + 1]) * a; d[j + 2] += (col[2] - d[j + 2]) * a;
     }
   }
+  if (lv.hideExcl) { const ex = s.exclude; for (let i = 0; i < ex.length; i++) if (ex[i]) { const j = i * 4; d[j] = d[j + 1] = d[j + 2] = 255; } }   // V31: excluded zones left blank
   ctx.putImageData(im, 0, 0);
-  s._lc = { key, canvas: c };
-  return c;
+  // V31 (memory): keep only a reduced copy (≤ 512 px wide) for the column strip instead of a full-resolution canvas per section
+  const k = Math.min(1, 512 / s.w);
+  if (k < 1) {
+    const small = document.createElement('canvas'); small.width = Math.max(1, Math.round(s.w * k)); small.height = Math.max(1, Math.round(s.h * k));
+    const sc = small.getContext('2d'); sc.imageSmoothingQuality = 'high'; sc.drawImage(c, 0, 0, small.width, small.height);
+    c.width = c.height = 0;   // release the full-size canvas now
+    s._lc = { key, canvas: small, k: small.width / s.w };
+  } else s._lc = { key, canvas: c, k: 1 };
+  return s._lc.canvas;
 }
 
 /** Core image strip for the window, resampled row by row onto the depth or age axis. */
@@ -1954,7 +2050,8 @@ function stripDataURL(D, from, to, H, W) {
     const d = D.axis === 'age' ? interpAge(inv, v) : v; if (d == null) continue;
     const s = D.secs.find((q) => d >= q.top * D.f(q) && d < q.bottom * D.f(q)); if (!s) continue;
     const row = Math.floor(rowAtDepth(s, d / D.f(s))); if (row < s.roi.y0 || row >= s.roi.y1) continue;
-    ctx.drawImage(sectionCanvas(s), s.roi.x0, row, s.roi.x1 - s.roi.x0, 1, 0, r, W, 1);
+    const cv = sectionCanvas(s), k = s._lc.k;
+    ctx.drawImage(cv, s.roi.x0 * k, Math.min(cv.height - 1, Math.floor(row * k)), Math.max(1, (s.roi.x1 - s.roi.x0) * k), 1, 0, r, W, 1);
   }
   return c.toDataURL('image/jpeg', 0.88);
 }
@@ -2002,7 +2099,7 @@ function renderLogPanel() {
   const lv = S.logView;
   $('logAxis').value = lv.axis === 'age' && S.age.model ? 'age' : 'depth';
   $('logHeight').value = lv.height; $('logHeightOut').textContent = lv.height + ' px';
-  $('logImgMode').value = lv.imgMode; $('logOverlay').checked = lv.overlay;
+  $('logImgMode').value = lv.imgMode; $('logOverlay').checked = lv.overlay; $('logHideExcl').checked = !!lv.hideExcl;
   document.querySelectorAll('#logTracks [data-track]').forEach((el) => (el.checked = !!lv.tracks[el.dataset.track]));
 }
 
@@ -2013,6 +2110,7 @@ $('logPanel').addEventListener('change', (e) => {
   else if (el.id === 'logFrom' || el.id === 'logTo') { const a = parseFloat($('logFrom').value), b = parseFloat($('logTo').value); if (b > a) { lv.from = a; lv.to = b; } }
   else if (el.id === 'logImgMode') lv.imgMode = el.value;
   else if (el.id === 'logOverlay') lv.overlay = el.checked;
+  else if (el.id === 'logHideExcl') lv.hideExcl = el.checked;
   else if (el.id === 'logHeight') lv.height = +el.value;
   else if (el.closest('#recList')) return;
   else return;
@@ -2705,7 +2803,7 @@ async function loadGeoDemo() {
 }
 
 /** First version only: the thesis cores are loaded when the Multiproxy mode opens on a project without cores. Set to false for the clean release. */
-const PRELOAD_THESIS = true;
+const PRELOAD_THESIS = false;   // V31: the program starts empty; the thesis is loaded only from its project file
 
 /** Real data of the cores of Casanova-Arenillas (2023): PANGAEA records + intervals from the thesis (examples/tesis_casanova/README.md). */
 async function loadThesisCores(train = true) {
@@ -3243,7 +3341,7 @@ $('geoLogSvg').addEventListener('click', (e) => {
   const hit = geoColAt(e); if (!hit?.col.bkey?.startsWith('auto:')) return;
   autoPop(e.clientX, e.clientY, hit.col.bkey, hit.a);
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeIvPop(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeIvPop(); if (cropState) endCrop(); } });
 document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.ivpop, #geoLogSvg')) closeIvPop(); });
 
 /** Hover text of a map point (V25). */
@@ -3671,6 +3769,12 @@ const THESIS_ID = 'tesis-casanova';
 /** First version only: the thesis cores live in their own project, created once. */
 /** Version of the bundled thesis data: a stored thesis project older than this is refreshed once (V16: all cores of the thesis folder). */
 const THESIS_DATA = 2;
+/** V31: the thesis project is opened only on request, and only where its private files exist (owner's copy). */
+fetchAsset('tesis_casanova/privado/ODP977A_tesis.csv').then(() => { $('openThesis').hidden = false; }).catch(() => {});
+$('openThesis').addEventListener('click', async () => {
+  await flushSave(); await ensureThesisProject();
+  const d = await getProject(THESIS_ID).catch(() => null); if (d) { await busy(() => loadProject(d)); hideHome(); }
+});
 async function ensureThesisProject() {
   const metas = await listProjects().catch(() => []), have = metas.some((m) => m.id === THESIS_ID);
   const ver = (await getPref('thesisData').catch(() => 0)) || 0;

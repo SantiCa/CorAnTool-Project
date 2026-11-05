@@ -48,6 +48,7 @@ La descripción detallada de los algoritmos está en
 | V28 | 01-11-2026 | Documentación | Nota de traspaso a Claude Code (estado, cómo ejecutar, datos privados, pendientes) |
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
+| V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
 
 ---
 
@@ -619,6 +620,40 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V31 — Recorte, Start/End, zonas excluidas, arranque limpio y programa de escritorio (05-11-2026)
+
+**Qué se hizo.** Cambios pedidos por Santiago: recortar en altura la imagen de una sección (escalas, etiquetas) con
+ajuste de techo y muro; ocultar en la columna las zonas excluidas; triángulos «Start» y «End» para el inicio y el final de
+lo analizado; arranque limpio sin la tesis precargada; y, por los problemas de memoria del navegador, un programa de
+escritorio para Windows, macOS y Linux descargable desde GitHub.
+
+**Cambios.**
+- Sección: botón **✂ Recortar** (y se ofrece al importar una sola imagen). Dos líneas rojas «Crop top» / «Crop bottom»
+  con zona sombreada; opción de recalcular las profundidades (eran de la imagen completa) o mantenerlas (ya eran del
+  sondeo); muestra los píxeles y la profundidad resultantes. La imagen recortada sustituye a la original en el proyecto.
+- Sección: triángulos **Start** y **End** a la izquierda de la imagen para mover el inicio y el final del área de análisis.
+- Columna: casilla **Ocultar zonas excluidas** (salen en blanco en la imagen).
+- Memoria: la copia de cada sección para la columna se reduce a ≤ 512 px de ancho.
+- Arranque limpio: sin proyectos precargados y sin guardar nada hasta crear o abrir uno; botón «Proyecto de la tesis»
+  solo donde existen los datos privados; `build_standalone.py` ya no los incluye salvo con `--with-thesis`.
+- **Programa de escritorio** (`desktop/`, Electron): ventana propia, más memoria, proyectos en el disco, enlaces externos
+  en el navegador del sistema. `.github/workflows/desktop.yml` compila Windows, macOS y Linux al subir la etiqueta de la
+  entrega y los publica en **Releases** con instrucciones (`desktop/RELEASE_NOTES.md`). README con la sección de descarga.
+
+**Por qué.** Las imágenes de sondeo traen escalas que falseaban techo y muro; las zonas excluidas se veían en la columna;
+el área de análisis solo se podía cambiar dibujando un rectángulo; la página se quedaba sin memoria.
+
+**Comprobación.** `npm test` 44 y `pytest` 9. Navegador: arranque sin proyectos; recorte de 20 px que recalcula el techo
+(0 → 0,533 cm); Start arrastrado a la fila 40; zonas excluidas en blanco en la columna; sin errores. Programa de escritorio
+compilado aquí para Linux (AppImage 127 MB, deb 93 MB) y abierto con Playwright: carga `app://`, muestra V31, arranca vacío,
+abre el proyecto de entrenamiento y el almacenamiento queda persistente. Windows y macOS se compilan en GitHub Actions.
+
+**Pendiente o problemas conocidos.** Ejecutables sin firma (avisos de Windows y macOS). Electron limita cada ventana a unos
+4 GB de objetos JavaScript; si siguiera faltando memoria con proyectos muy grandes, el siguiente paso es guardar las
+imágenes en disco y cargarlas por sección (pendiente desde V22).
 
 ---
 

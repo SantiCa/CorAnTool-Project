@@ -38,18 +38,23 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Turno de edición
 
-- Estado: libre.
-- Editor: ninguno.
-- Objetivo: sin tarea de implementación activa.
-- Commit base y archivos: se anotarán al tomar el turno.
+- Estado: ocupado.
+- Editor: Claude (sesión en la nube, copia propia sincronizada con `origin/master`).
+- Objetivo: V32 — modo identificación (marcas de trazas sin cuantificar), leyenda de trazas en todas las figuras y
+  figuras de secciones del sondeo lado a lado (encargo de Santiago del 05-11-2026).
+- Commit base y archivos: el commit de V31; `app/js/*.js`, `app/index.html`, `tests/app/*`, `docs/*`, `CHANGELOG.md`.
 
 ### Último traspaso
 
+- **V31, 05-11-2026 (Claude):** recorte de imágenes al importar con ajuste de techo y muro, triángulos Start/End del
+  área de análisis, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados y programa de
+  escritorio (Electron, `desktop/`) con compilación para Windows/macOS/Linux en GitHub Actions al subir la etiqueta
+  `V<n>` (publica en Releases). Se integró sin conflictos con la V30 de coordinación (renumerado de V30 a V31).
 - **V30, 05-11-2026:** preparación para colaborar entre Claude y Codex; instrucciones
   compartidas y cuatro ámbitos de chat. La app solo cambia su etiqueta de entrega.
 - Pendientes de producto: siguen en `docs/TRASPASO_CLAUDE_CODE.md`; ninguno se inicia
   por el mero hecho de crear los chats.
-- Validación de esta entrega: consultar la sección V30 de `docs/HISTORIAL_VERSIONES.md`.
+- Validación: secciones V30 y V31 de `docs/HISTORIAL_VERSIONES.md`.
 
 ## Créditos y elección de modelo
 

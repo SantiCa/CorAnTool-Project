@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import json
+import sys
 import re
 from pathlib import Path
 
@@ -54,8 +55,8 @@ def build(out: Path | None = None) -> Path:
         parts.append(f"// ---- {name} ----\n{strip_module(code)}")
     bundle = "\n".join(parts)
 
-    # Private thesis data (git-ignored) is bundled only when present on this machine.
-    private = sorted(str(p.relative_to(EXAMPLES)).replace("\\", "/") for p in (EXAMPLES / "tesis_casanova" / "privado").glob("*") if p.suffix in MIME)
+    # Private thesis data (git-ignored) is bundled only with --with-thesis and when present on this machine (V30).
+    private = [] if "--with-thesis" not in sys.argv else sorted(str(p.relative_to(EXAMPLES)).replace("\\", "/") for p in (EXAMPLES / "tesis_casanova" / "privado").glob("*") if p.suffix in MIME)
     assets = {a: f"data:{MIME[Path(a).suffix]};base64," + base64.b64encode((EXAMPLES / a).read_bytes()).decode() for a in ASSETS + private}
     assets_js = "window.ICHANTOOL_ASSETS = " + json.dumps(assets) + ";"
 

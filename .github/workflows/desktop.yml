@@ -1,0 +1,63 @@
+# Builds the CorAnTool desktop program for Windows, macOS and Linux and publishes it as a GitHub Release.
+# Runs when a delivery tag (V30, V31…) is pushed, or by hand from the Actions tab (then only as downloadable artifacts).
+# The owner's private thesis data is git-ignored, so it never reaches these builds.
+name: Desktop builds
+
+on:
+  push:
+    tags: ['V*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm test
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: desktop/package-lock.json }
+      - run: npm ci --no-audit --no-fund
+      - run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # unsigned builds (no paid certificates)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corantool-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: out, merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: CorAnTool ${{ github.ref_name }}
+          body_path: desktop/RELEASE_NOTES.md
+          files: out/*

@@ -2,6 +2,12 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V31 — App 2.1 + desktop — 2026-11-05
+- Crop section images (top/bottom) with depth recalculation; draggable Start/End markers for the analysis area.
+- Column: option to hide excluded zones; reduced-size column canvases (memory).
+- Clean start (no preloaded projects; thesis only on demand where its private data exist; offline build excludes it).
+- Desktop program (Electron) for Windows, macOS and Linux; GitHub Actions builds and publishes it as a Release on `V*` tags.
+
 ## V30 — 2026-11-05
 - Added Codex instructions, shared Claude/Codex editing and handoff rules, and four focused chat roles. Updated the visible delivery tag; analysis behavior is unchanged.
 

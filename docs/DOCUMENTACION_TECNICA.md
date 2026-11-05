@@ -1492,6 +1492,33 @@ lista de gráficos (`plots`, `plotCur`).
   más ancho de lo pedido) o la longitud (si es más alto), alrededor del centro, deteniéndose cuando el
   error |ln(H/W ÷ r)| < 0,01 o deja de mejorar (Lambert muy ancho). Nunca recorta la extensión.
 
+### 22.8 Recorte de imágenes, marcadores Start/End, zonas excluidas en la columna y programa de escritorio (desde V31)
+- **Recorte** (sección › ✂ Recortar; se ofrece al importar una sola imagen): dos líneas «Crop top» y «Crop bottom»
+  (filas y0 < y1, al menos 10 px). Se eliminan las filas fuera de [y0, y1) de la imagen, las trazas y la capa de
+  exclusión; los objetos se recalculan y se vacía el historial de deshacer. Profundidades:
+  - «recalcularlas» (por defecto, las profundidades eran de la imagen completa): con r0 = máx(roi.y0, y0) y
+    r1 = mín(roi.y1, y1), techo′ = prof(r0), muro′ = prof(r1) (prof = interpolación lineal actual entre roi.y0 → techo y
+    roi.y1 → muro) y roi′ = [r0 − y0, r1 − y0] en vertical; si el área de análisis estaba dentro del recorte, no cambia nada;
+  - «mantenerlas» (las profundidades ya eran las del sondeo): techo y muro iguales, roi′ = toda la imagen recortada.
+  La imagen recortada se guarda de nuevo en el proyecto (JPEG calidad 0,95 si el original era JPEG; si no, PNG) con
+  rotación 0 y reducción 1, para que el archivo coincida con lo analizado.
+- **Start / End:** triángulos a la izquierda de la imagen en roi.y0 y roi.y1; al arrastrarlos cambia el área de análisis
+  (mínimo 4 px) y techo y muro pasan a corresponder a las nuevas filas.
+- **Columna › Ocultar zonas excluidas:** los píxeles con exclusión salen en blanco en la imagen de la columna
+  (`S.logView.hideExcl`). La copia de cada sección para la columna se reduce a ≤ 512 px de ancho (antes, resolución
+  completa) para ahorrar memoria.
+- **Arranque limpio:** ningún proyecto precargado; nada se guarda hasta crear, importar o abrir un proyecto. El proyecto de
+  la tesis solo se abre con su botón y solo donde existen sus datos privados; el archivo sin conexión ya no los incluye
+  salvo con `--with-thesis`.
+- **Programa de escritorio** (`desktop/`, Electron 33): sirve `app/` y los ejemplos públicos por el esquema `app://`
+  (sin `examples/tesis_casanova`); límite de memoria de JavaScript = 75 % de la RAM entre 2 y 32 GB
+  (`--max-old-space-size`), aunque Electron limita cada ventana a unos 4 GB de objetos JavaScript (compresión de punteros);
+  las imágenes (ArrayBuffer) quedan fuera de ese límite y, por encima de la RAM, el sistema pagina a disco. Los proyectos se
+  guardan en IndexedDB dentro de la carpeta de datos del programa, con almacenamiento persistente. Versión del ejecutable =
+  número de entrega (V31 → 31.0.0); archivos `CorAnTool-V31-<sistema>-<arquitectura>`. GitHub Actions
+  (`.github/workflows/desktop.yml`) compila Windows (instalador NSIS y portable), macOS (dmg universal) y Linux
+  (AppImage y deb) al subir una etiqueta `V*` y los publica en Releases. Sin firma de código.
+
 ### 22.7 Proyecto de entrenamiento, carteles de ayuda y recorrido guiado (desde V19)
 - **Datos sintéticos** (`tools/make_tutorial.py`, semilla 2026; `examples/tutorial/`): 7 sondeos ficticios
   colocados al azar (±0,8°) alrededor de 7 zonas marinas del Mediterráneo; se rechazan posiciones en tierra con

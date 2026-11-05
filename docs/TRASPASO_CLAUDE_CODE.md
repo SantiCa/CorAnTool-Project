@@ -7,7 +7,7 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
 (reglas) y `docs/HISTORIAL_VERSIONES.md` (qué se hizo en cada entrega).
 
 ## Estado
-- Última entrega: **V29** (`DELIVERY` en `app/js/app.js`; el programa es el de V27, aplicación web 2.0.1).
+- Última entrega: **V31** (`DELIVERY` en `app/js/app.js`; aplicación 2.1 y programa de escritorio).
 - Pruebas: `npm test` (44, Node) y `pytest` (9, Python). Deben pasar antes de cada commit.
 - Rama de trabajo: `master`. Remoto: `https://github.com/SantiCa/IchAnTool-Project.git` (público).
 
@@ -15,6 +15,8 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
 - App en local: desde la raíz, `python -m http.server 8765` y abrir `http://localhost:8765/app/`.
 - Archivo sin conexión: `python tools/build_standalone.py` → `dist/CorAnTool_V<n>.html` (incluye los datos privados
   si existen en `examples/tesis_casanova/privado/`; `dist/` no se sube a git).
+- Programa de escritorio: `cd desktop && npm ci && npm start` (probar) o `npm run dist` (instaladores del sistema actual).
+  Las descargas de GitHub se generan al subir la etiqueta `V<n>`.
 - Publicaciones en Word y LaTeX: `python tools/export_publications.py` (necesita pandoc).
 - Python: `pip install -e ".[dev]"` (incluye pytest, openpyxl y matplotlib) y `pytest`.
 
@@ -34,7 +36,7 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
    mapas, figuras) sin cambiar el comportamiento; añadirlos a `ORDER`.
 2. Nombres de columna fijos al desplazar en vertical las curvas (Columna y Multiproxy).
 3. Importación de datos unificada; modelo de edad dentro del diálogo del sondeo.
-4. Imágenes en un almacén aparte de IndexedDB (proyectos grandes); fuentes incrustadas.
+4. Imágenes en disco cargadas por sección (memoria con proyectos grandes); fuentes incrustadas.
 5. Mapa de varianza del kriging; importancia de variables por permutación (también para la red neuronal).
 6. Evitar sesgo de selección de modelo: opción de reservar sondeos para una prueba final independiente.
 

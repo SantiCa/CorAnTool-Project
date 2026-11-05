@@ -1116,3 +1116,25 @@ Object.assign(D.en, {
 
 Object.assign(D.es, { 'cl.pEpoch': 'época {e}/{n}' });
 Object.assign(D.en, { 'cl.pEpoch': 'epoch {e}/{n}' });
+
+// V31: crop, Start/End markers, hide excluded zones, thesis on demand
+Object.assign(D.es, {
+  'crop.btn': '✂ Recortar', 'crop.tip': 'Quita franjas de arriba o abajo de la imagen (escalas, etiquetas) que no son sondeo',
+  'crop.title': 'Recortar la imagen', 'crop.help': 'Arrastra las líneas rojas «Crop top» y «Crop bottom» (o sus triángulos) hasta el borde del sondeo. Lo sombreado se elimina.',
+  'crop.adjust': 'Las profundidades eran de la imagen completa: recalcularlas', 'crop.keep': 'Las profundidades ya son las del sondeo: mantenerlas',
+  'crop.info': 'Quedan {h} de {H} px · profundidad {a}–{b} {u}', 'crop.apply': 'Recortar', 'crop.cancel': 'No recortar',
+  'crop.small': 'Deja al menos 10 px de imagen.', 'crop.done': 'Imagen recortada: {a}–{b} {u}',
+  'roi.title': 'Área de análisis (triángulos Start y End a la izquierda de la imagen)',
+  'log.hideExcl': 'Ocultar zonas excluidas', 'log.hideExclTip': 'Las zonas marcadas con «Excluir» salen en blanco en la imagen de la columna',
+  'proj.thesis': 'Proyecto de la tesis (datos privados)',
+});
+Object.assign(D.en, {
+  'crop.btn': '✂ Crop', 'crop.tip': 'Removes strips at the top or bottom of the image (scales, labels) that are not core',
+  'crop.title': 'Crop the image', 'crop.help': 'Drag the red “Crop top” and “Crop bottom” lines (or their triangles) to the edge of the core. The shaded part is removed.',
+  'crop.adjust': 'Depths were for the whole image: recalculate them', 'crop.keep': 'Depths are already the core’s: keep them',
+  'crop.info': '{h} of {H} px remain · depth {a}–{b} {u}', 'crop.apply': 'Crop', 'crop.cancel': 'Do not crop',
+  'crop.small': 'Keep at least 10 px of image.', 'crop.done': 'Image cropped: {a}–{b} {u}',
+  'roi.title': 'Analysis area (Start and End triangles left of the image)',
+  'log.hideExcl': 'Hide excluded zones', 'log.hideExclTip': 'Zones marked with “Exclude” are left blank in the column image',
+  'proj.thesis': 'Thesis project (private data)',
+});

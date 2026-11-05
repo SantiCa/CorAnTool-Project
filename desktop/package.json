@@ -1,0 +1,23 @@
+{
+  "name": "corantool",
+  "productName": "CorAnTool",
+  "version": "31.0.0",
+  "description": "CorAnTool — core analysis: ichnology on core images and multiproxy records",
+  "author": {
+    "name": "Santiago Casanova-Arenillas",
+    "email": "santic1290@gmail.com"
+  },
+  "license": "MIT",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "prepare-web": "node scripts/prepare.js",
+    "start": "node scripts/prepare.js && electron .",
+    "dist": "node scripts/build.js"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "homepage": "https://github.com/SantiCa/IchAnTool-Project"
+}
