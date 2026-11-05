@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.13 — 2026-11-05
+- Review of V0.9–V0.12; drawing errors other than invalid axes are now shown with their own message.
+
 ## V0.12 — 2026-11-05
 - Show symbols by default in ichnotaxon distribution figures; retain optional abundance bars or both.
 - Choose a symbol per ichnotaxon, shared with identification marks and core-column legends; save it in projects and exports.

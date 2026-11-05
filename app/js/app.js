@@ -16,7 +16,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.12';
+const DELIVERY = 'V0.13';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2631,7 +2631,7 @@ function renderLog() {
     ...geoOverlay(D.axis),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
     colWidths: (lv.colW ||= {}),
-  }); } catch (e) { box.innerHTML = `<p class="note">${esc(t('edit.invalidAxis'))}</p>`; lastLog = null; return; }
+  }); } catch (e) { console.error(e); box.innerHTML = `<p class="note">${esc(axisErr(e))}</p>`; lastLog = null; return; }
   box.innerHTML = res.svg;
   lastLog = { ...D, from, to, classes, records, svg: res.svg };
   editSVGLabels(box, (lv.textEdits ||= {}), (svg) => { if (lastLog) lastLog.svg = svg; });
@@ -5596,6 +5596,8 @@ function editSVGLabels(box, edits, save) {
   save(svg.outerHTML);
 }
 
+/** V0.13: message for a drawing error (translated when it is an invalid axis, the real message otherwise). */
+const axisErr = (e) => (/^Invalid horizontal axis/.test(e?.message || '') ? t('edit.invalidAxis') : e?.message || String(e));
 function renderFigure() {
   if (mode !== 'fig') return;
   $('figStage').querySelector('[data-label-editor]')?.remove();
@@ -5608,7 +5610,7 @@ function renderFigure() {
     else if (F.type === 'log') { renderLog(); svg = lastLog?.svg || null; }
     else if (F.type === 'geolog') { if (geoRT.dirty) geoComputeSamples(); renderGeoLogs(); svg = $('geoLogSvg').querySelector('svg')?.outerHTML || null; }
     else { if (geoRT.dirty) geoComputeSamples(); svg = renderGeoMap() || null; }
-  } catch (e) { $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(e.message)}</p>`; return; }
+  } catch (e) { console.error(e); $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(axisErr(e))}</p>`; return; }
   figSvgCache = svg ? wrapFigure(svg, F.title, F.caption) : '';
   $('figOut').innerHTML = figSvgCache || `<p class="note" style="padding:20px">${t(F.type === 'traces' ? 'fig.pickFirst' : 'fig.empty')}</p>`;
   F.textEdits ||= {};

@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.13 | 05-11-2026 | Aplicación | Revisión de V0.9–V0.12; mensajes de error de dibujo |
 | V0.12 | 05-11-2026 | Aplicación web | Distribución por símbolos y símbolo editable de cada icnotaxón |
 | V0.11 | 05-11-2026 | Aplicación web | Escalas editables, recorte por columna y edición de textos y posiciones en figuras |
 | V0.10 | 05-11-2026 | Aplicación 2.8 | Lista de trazas seleccionadas y desplegable de todas las trazas de la imagen |
@@ -635,6 +636,16 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.13 — Revisión de V0.9–V0.12 (05-11-2026)
+
+- **Qué se hizo:** revisión de las entregas V0.9–V0.12 (hechas con ChatGPT/Codex) y corrección de los mensajes de error al dibujar.
+- **Cambios:** `app.js::axisErr`: la columna y las figuras muestran «eje no válido» solo cuando el error es de un eje; cualquier otro error se muestra con su mensaje y se registra en la consola (antes la columna lo ocultaba como «eje no válido» y las figuras mostraban el texto interno en inglés).
+- **Por qué:** petición de Santiago de revisar lo hecho en su ausencia.
+- **Comprobación:** 54 pruebas JS y 10 Python. Prueba sin pantalla en Chromium con el proyecto de entrenamiento: lista de trazas (122), columna, figuras de columna, distribución y secciones, sin errores en consola.
+- **Pendiente:** nada de esta entrega.
 
 ---
 
