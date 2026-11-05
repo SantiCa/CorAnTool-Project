@@ -1,3 +1,13 @@
+## Novedades de V33
+
+- **Proyectos grandes sin agotar la memoria.** Las imágenes originales se guardan una sola vez en el disco y solo se cargan en memoria las de la sección con la que trabajas. Los proyectos con muchas secciones abren mucho más rápido.
+- **Resolución completa siempre guardada.** Cada sección tiene un selector «Resolución de trabajo» (completa, 1/2, 1/3…, con px/cm y megapíxeles). Puedes cambiarla cuando quieras: la imagen se recalcula desde el original y las trazas, las exclusiones, la zona de análisis y las marcas se adaptan. Un botón iguala todas las secciones a los mismos px/cm.
+- **Recortar ya no reduce la imagen.** El recorte se guarda sobre el original a resolución completa.
+- **Intervalo de análisis en centímetros** (por defecto 1 cm), igual para todas las secciones, en lugar de píxeles. Los proyectos anteriores se convierten solos y conservan sus intervalos.
+- **Proyectos de versiones anteriores:** se abren y se convierten automáticamente. La primera apertura tarda algo más. Antes de actualizar, conviene exportar una copia de seguridad.
+
+Limitaciones conocidas: al subir la resolución, las trazas ya dibujadas conservan el escalonado de la resolución anterior; al bajarla pueden desaparecer trazas muy pequeñas. Las figuras de trazas y de secciones tardan más la primera vez, porque leen las imágenes del disco.
+
 ## Descargar CorAnTool
 
 | Sistema | Archivo | Cómo abrirlo |
