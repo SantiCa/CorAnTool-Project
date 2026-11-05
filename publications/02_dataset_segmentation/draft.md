@@ -3,7 +3,10 @@
 **Target:** Earth System Science Data (data focus) or Computers & Geosciences / Artificial
 Intelligence in Geosciences (method focus). Decide once the dataset size and model results are known.
 
-**Status (V0.16, 05-11-2026; training plan added in §3.5):** the full workflow is implemented in CorAnTool and tested on synthetic
+**Plain-language guide (Spanish):** `publications/GUIA_APRENDIZAJE_AUTOMATICO.md`.
+
+**Status (V0.17, 05-11-2026; training plan in §3.5; training inside the desktop program and vision-model
+descriptors for ichnotaxa in §3.6):** the full workflow is implemented in CorAnTool and tested on synthetic
 data (export → tiles split by core → training → evaluation on whole images of independent cores →
 use in the app). **No model has been trained on real cores yet; every number below is a placeholder.**
 Methods text describes the code exactly; keep it in sync with `docs/DOCUMENTACION_TECNICA.md` §7.5.
@@ -124,6 +127,21 @@ Run in this order; each step uses only commands that exist in CorAnTool V0.15.
    proposal could bias the expert.
 10. **Release:** model `.onnx` + `.json` (with split, seed and history), dataset and protocol with DOIs.
 
+### 3.6 Software used for the experiments (V0.17)
+- **Training inside CorAnTool (desktop).** The same Python code as the command line, run from the program on
+  the annotator's computer (NVIDIA CUDA, Apple MPS or CPU). The user marks each core as validation, test or
+  automatic; the program exports the training data, prepares tiles, trains, evaluates on the test cores and
+  loads the model. Training can be stopped and resumed from a per-epoch checkpoint (models reported in the
+  paper are trained without interruption). This matters for the dataset paper: annotators without
+  programming experience can reproduce the training and the correction loop (§3.5, step 9).
+- **Ichnotaxon identification (secondary aim).** Two inputs for the same classifiers (distance-weighted k-NN
+  with novelty rejection, Random Forest, naive Bayes): (a) 12 shape and colour descriptors per trace;
+  (b) the 384-value embedding of a frozen, self-supervised vision model (DINOv2 ViT-S/14; Oquab et al., 2024)
+  of a square window around each trace (25 % context per side, original image, 224 × 224 px, unit length).
+  The vision model is not fine-tuned; only the classifier learns from the annotations. Both inputs are
+  compared on the same independent test cores (balanced accuracy, per-class F1, confusion matrix) and against
+  agreement between experts. [TODO: decide whether identification goes in this paper or in paper 3.]
+
 ## 4. Results [TODO — no results yet]
 
 | Method | IoU | Dice | Precision | Recall | MAE % (b cm) | BI agreement | ii agreement |
@@ -133,6 +151,15 @@ Run in this order; each step uses only commands that exist in CorAnTool V0.15.
 | Dorador et al. (2014) + threshold | | | | | | | |
 | U-Net (this work) | | | | | | | |
 | Second annotator | | | | | | | |
+
+Identification (test cores):
+
+| Input | Classifier | Balanced accuracy | Macro F1 | Rejected (novel) |
+|---|---|---|---|---|
+| 12 shape/colour descriptors | k-NN | | | |
+| DINOv2 embedding | k-NN | | | |
+| best of RF / Bayes | | | | |
+| Second expert | — | | | — |
 
 Figures: (1) dataset map and examples; (2) workflow; (3) examples of predictions, errors and
 doubtful zones on test cores; (4) bioturbation % logs, expert vs U-Net vs baseline; (5) error by
@@ -159,6 +186,7 @@ contrast class / lithology.
 - [ ] Pilot with 3–5 cores (§3.5, step 1).
 - [ ] Test cores chosen and locked before any training.
 - [ ] Training on a GPU (a single consumer GPU is enough), 3 seeds, learning curve.
+- [ ] Compare shape descriptors vs DINOv2 embeddings for ichnotaxa on test cores.
 - [ ] Verify all references in §1.
 
 ## References (to complete and verify)
@@ -167,6 +195,8 @@ contrast class / lithology.
 - Droser, M. L. and Bottjer, D. J. (1986). *Journal of Sedimentary Petrology* 56.
 - He, K., Zhang, X., Ren, S. and Sun, J. (2016). Deep residual learning for image recognition. CVPR.
 - Miguez-Salas, O., Dorador, J. and Rodríguez-Tovar, F. J. (2019). *Marine Geology* 413.
+- Oquab, M. et al. (2024). DINOv2: learning robust visual features without supervision. *Transactions on
+  Machine Learning Research*. [verify]
 - Ronneberger, O., Fischer, P. and Brox, T. (2015). U-Net: convolutional networks for biomedical
   image segmentation. MICCAI, LNCS 9351.
 - Taylor, A. M. and Goldring, R. (1993). *Journal of the Geological Society* 150.

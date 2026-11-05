@@ -139,6 +139,8 @@ identificación.
 | Detección clásica: umbral adaptativo + morfología (método base) | §7 |
 | Descriptores de objeto | §9 |
 | k-NN con rechazo de novedad (método base de identificación) | §10 |
+| Rasgos de un modelo de visión preentrenado (DINOv2) como entrada del clasificador (**V0.17, sin evaluar con datos reales**) | §10.6 quater |
+| Entrenamiento de la U-Net en el programa de escritorio (mismo código que `ichantool unet`) | §7.5 |
 | Segmentación aprendida U-Net: exportación de datos, entrenamiento, evaluación y uso en la aplicación (**implementada en V0.15, sin entrenar con datos reales**) | §7.5 |
 | Formato de máscara y paleta | §12 |
 
@@ -152,6 +154,12 @@ existen y producen máscaras en un formato abierto.
   y ejecución en la aplicación. Las reglas de teselado, normalización, unión y reescalado son
   idénticas en Python y en la aplicación (prueba de paridad). **No hay ningún resultado de
   segmentación con testigos reales**: no se puede citar ningún Dice ni IoU hasta entrenar y evaluar.
+- Desde V0.17 el clasificador de icnotaxones puede usar, en vez de los 12 descriptores, el vector de 384
+  valores de un modelo de visión preentrenado (DINOv2). Se puede afirmar que la opción existe y cómo se
+  calcula; **no** que mejore la identificación hasta compararla en testigos independientes.
+- Desde V0.17 la U-Net se puede entrenar desde el programa de escritorio. Es el mismo código que la línea de
+  órdenes (mismas teselas, pérdida, aumentos y evaluación), así que los resultados son comparables; los
+  modelos guardan sondeos de cada conjunto, semilla e historial.
 - Decisiones defendibles ya fijadas en el código: entrada sin realce, resolución común en px/cm,
   sin giros de 90° en los aumentos, trazas sin revisar ignoradas (no tratadas como matriz),
   métricas sobre imágenes completas y no sobre teselas.
@@ -193,6 +201,17 @@ Las clases que no cuentan (artefactos) sí son matriz: el experto las ha revisad
 **¿Por qué no se gira la imagen 90° para aumentar datos?**
 La orientación de las trazas respecto a la estratificación (vertical, horizontal, oblicua) es un
 criterio de identificación. Solo se voltea (horizontal y vertical) y se varían brillo, contraste y gamma.
+
+**¿Por qué usar un modelo de visión entrenado con fotos generales y no uno propio?**
+Porque con pocos ejemplos por icnotaxón no se puede entrenar una red de clasificación fiable. Los modelos
+autosupervisados como DINOv2 dan descriptores genéricos de forma y textura que funcionan bien con k-NN y
+pocos ejemplos. La red no se ajusta a nuestros datos (no hay riesgo de sobreajuste en ella); solo el k-NN
+aprende. Se compara con los 12 descriptores en el mismo conjunto de prueba; si no mejora, se dice.
+
+**¿Un modelo reanudado tras una interrupción es equivalente?**
+Continúa desde el último punto guardado (red, optimizador, época, mejor resultado). No es idéntico bit a bit
+a uno sin interrupción (el orden aleatorio de los aumentos no se guarda). Para el artículo se entrenan los
+modelos de una vez y con tres semillas.
 
 **¿El acierto del k-NN no está inflado?**
 El acierto dejando uno fuera que muestra la aplicación sí puede estarlo (§10, nota al revisor).

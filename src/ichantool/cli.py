@@ -55,6 +55,10 @@ def build_parser() -> argparse.ArgumentParser:
     tr.add_argument("--lr", type=float, default=3e-4)
     tr.add_argument("--patience", type=int, default=12)
     tr.add_argument("--seed", type=int, default=42)
+    tr.add_argument("--device", default=None, help="cuda, mps or cpu (default: the best available)")
+    tr.add_argument("--resume", action="store_true", help="continue from the last checkpoint (<out>.ckpt)")
+    tr.add_argument("--progress-json", action="store_true", help="one JSON line per epoch (used by the desktop app)")
+    u.add_parser("device", help="training hardware seen by PyTorch (JSON)")
     ev = u.add_parser("evaluate", help="score whole images of independent cores")
     ev.add_argument("export", type=Path)
     ev.add_argument("model", type=Path)
@@ -103,9 +107,14 @@ def _unet(args) -> int:
             print("warning: no test cores (fewer than 3 cores): scores will not measure independent cores")
     elif args.unet == "train":
         from .unet.train import train
+        prog = (lambda d: print(json.dumps({"progress": d}), flush=True)) if args.progress_json else None
         s = train(args.data, args.out, args.encoder, None if args.no_pretrained else "imagenet", args.epochs,
-                  args.batch, args.lr, args.patience, args.seed)
+                  args.batch, args.lr, args.patience, args.seed, args.device,
+                  log=lambda m: print(m, flush=True), progress=prog, resume=args.resume)
         print(f"best epoch {s['bestEpoch']}, validation Dice {s['valDice']:.4f} -> {args.out.with_suffix('.onnx')}")
+    elif args.unet == "device":
+        from .unet.train import device_info
+        print(json.dumps(device_info()))
     elif args.unet == "evaluate":
         from .unet.evaluate import evaluate
         r = evaluate(args.export, args.model, args.cores, args.threshold, args.bin_cm, args.dataset)

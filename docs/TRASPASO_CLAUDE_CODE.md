@@ -30,6 +30,7 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
 - `tools/build_standalone.py` concatena los módulos en el orden `ORDER` y comprueba que no se repitan nombres.
 
 ## Pendiente (por prioridad sugerida)
+0. (V0.17) Probar en Windows/macOS el entrenamiento en escritorio (instalación CUDA, GPU de Apple) y el modelo DINOv2 real.
 0. (V0.15) U-Net: entrenar con testigos reales; métodos clásicos en Python para la comparación del artículo 2; clic asistido (SAM) y textura para icnotaxones. Ver `docs/HISTORIAL_VERSIONES.md` V0.15.
 1. Dividir `app.js` en módulos (pantalla inicial, sección/bioturbación, columna, datos, multiproxy, clasificadores,
    mapas, figuras) sin cambiar el comportamiento; añadirlos a `ORDER`.

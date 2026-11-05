@@ -468,6 +468,33 @@ no se asigna a los objetos (lo hace el clasificador de §10).
   Global: TP, FP y FN sumados en todas las imágenes antes de calcular IoU y Dice.
 - `predict` y `mask_from_unet`: máscara de una imagen con el contrato de `segmentation.py`.
 
+**Entrenamiento dentro del programa de escritorio (desde V0.17).** Botón «Entrenar en este ordenador…»
+del método U-Net (`desktop/trainer.js`, `preload.js`, `main.js`). Solo en escritorio: el navegador no
+puede ejecutar PyTorch ni acceder a la tarjeta gráfica.
+
+1. **Módulo de entrenamiento:** entorno virtual propio en `<datos de usuario>/trainer/venv`, creado con el
+   Python ≥ 3.10 del sistema (`py -3`, `python` o `python3`); instala PyTorch (en Windows con tarjeta NVIDIA,
+   detectada con `nvidia-smi -L`, desde `https://download.pytorch.org/whl/cu128`, porque PyPI solo tiene la
+   versión para procesador; en Linux y macOS, desde PyPI) e `ichantool[unet]` desde la copia del paquete que
+   viaja con el programa (`resources/python`). Se instala una vez, a petición del usuario (2–3 GB).
+2. **Hardware:** `ichantool unet device` → `cuda` (NVIDIA), `mps` (Apple) o `cpu`, en ese orden de preferencia.
+3. **Datos:** el mismo ZIP que «Datos para entrenar U-Net» (§12), generado en memoria. El usuario marca cada
+   sondeo como «Auto», «Validación» o «Prueba» (`--val`, `--test` de `prepare`); «Auto» sigue la regla de
+   `prepare` (§7.5).
+4. **Ejecución:** `prepare` → `train --progress-json` (una línea JSON por época: época, pérdida, Dice de
+   validación, mejor Dice y su época, dispositivo) → `evaluate` sobre los sondeos de prueba si los hay. Todo en
+   `<datos de usuario>/trainer/runs/<nombre>`; el modelo en `trainer/models/<nombre>.onnx` y `.json`.
+5. **Detener y reanudar:** tras cada época se guarda `<nombre>.ckpt` (red, optimizador, planificador, época,
+   mejor Dice, historial y paciencia). «Reanudar» continúa desde ahí con las mismas teselas (`train --resume`).
+   El resultado no es idéntico bit a bit al de un entrenamiento sin interrupción (el orden aleatorio de los
+   aumentos no se guarda); se registra en el historial del modelo.
+6. **Al terminar:** el modelo se carga en Detección. La lista de modelos muestra el Dice de validación y, si
+   hubo sondeos de prueba, el Dice de prueba.
+
+Seguridad: la página solo accede a seis funciones (`status`, `install`, `train`, `cancel`, `readModel`,
+`openFolder`) a través de `window.corantoolDesktop.trainer`, y el proceso principal solo las atiende si la
+llamada viene de las páginas del propio programa (`app://`).
+
 Dependencias opcionales: `pip install 'ichantool[unet]'` (ONNX Runtime; PyTorch, segmentation-models-pytorch
 y onnx solo para entrenar). El ejecutable de escritorio incluye ONNX Runtime Web
 (`desktop/scripts/prepare.js`); el navegador y el archivo único lo descargan de jsDelivr la primera vez.
@@ -651,6 +678,36 @@ parámetros, evaluación, galería de ejemplos usados y ejemplos de otros proyec
   core, thumb}` (`key = proyecto|sondeo|sección|objeto`). Se pueden añadir a la biblioteca del
   proyecto (`library: {key, name, x, thumb, from}`); si el taxón no existe, se crea con ese nombre.
 
+### 10.6 quater Rasgos de un modelo de visión preentrenado (desde V0.17)
+
+Alternativa a los 12 descriptores (§9) como entrada del clasificador (`S.settings.ml.features`:
+`'shape'` o `'vision'`; diálogo «Modelos y entrenamiento», pestaña Entrenamiento).
+
+1. **Modelo:** DINOv2 ViT-S/14 (Oquab et al., 2024), red de visión entrenada sin etiquetas con 142 millones
+   de imágenes, en formato ONNX (`onnx-community/dinov2-small`, 88 MB). No se entrena en CorAnTool: solo
+   convierte cada imagen en un vector. Se descarga una vez y se guarda en la caché del navegador o del programa
+   (`caches`, clave = URL); también se puede cargar un `.onnx` propio con la misma interfaz.
+2. **Ventana:** cuadrado centrado en el rectángulo de la traza `[x₀, y₀, x₁, y₁]`, de lado
+   `L = max(16, round(max(ancho, alto)·(1 + 2·0,25)))`; centro `((x₀ + x₁ + 1)/2, (y₀ + y₁ + 1)/2)`. Incluye
+   un 25 % de sedimento alrededor por cada lado (contexto). Fuera de la imagen se repite el borde.
+3. **Entrada:** imagen **original** (sin realce), remuestreo bilineal a 224 × 224 px
+   (`x_s = x_v + (x + 0,5)·L/224 − 0,5`), `(v/255 − μ_c)/σ_c` con la media y desviación de ImageNet (§7.5).
+4. **Vector:** salida `pooler_output` (token de clase normalizado) o, si no existe, el primer token de la
+   primera salida; 384 valores, normalizado a longitud 1 (`v/‖v‖`) y redondeado a 4 decimales. Se guarda en el
+   objeto (`emb`; en el proyecto, `em`) y se borra si cambian el área o el rectángulo de la traza.
+5. **Clasificador:** el mismo de §10.2–10.6 ter (k-NN, Random Forest o Bayes; estandarización por dimensión,
+   rechazo de novedad, tres ámbitos, evaluación). La longitud del vector se toma de los ejemplos. El conjunto
+   de rasgos se guarda con el modelo (`features`: `FEATURES` o `["vision:dinov2-small:384"]`) y **nunca se
+   mezclan** vectores de conjuntos distintos: la biblioteca y los ejemplos de otros proyectos guardan ambos
+   (`x` y `xv`) y se usa el del modo activo.
+6. **Cálculo:** botón «Calcular rasgos» para todas las trazas pendientes; en modo visión, las trazas nuevas
+   o editadas de la imagen abierta se calculan solas 0,7 s después del cambio.
+
+**Para el revisor.** El modelo de visión se entrenó con fotos generales, no con testigos: sus vectores
+describen forma y textura de forma genérica. Su ventaja frente a los 12 descriptores es una hipótesis que se
+mide con la evaluación de §10.6 ter y, para publicar, en testigos independientes (artículo 2). Los vectores
+no son interpretables uno a uno; la explicación de una sugerencia sigue siendo «se parece a estos ejemplos».
+
 ### 10.7 Por qué k-NN
 - **Pocos ejemplos:** funciona desde el segundo ejemplo. Un usuario etiqueta unas decenas de
   objetos, no miles.
@@ -703,6 +760,7 @@ Los ajustes activos se guardan en el proyecto, así que cualquier resultado se p
 | `*_mask.png` | Máscara a tamaño completo: fondo negro y cada píxel contado con el color de su clase. Compatible con `ichantool analyze --palette` del paquete Python |
 | `*_palette.json` | `{nombre de clase: "#rrggbb"}` |
 | `*_segmentation_dataset.zip` (desde V0.15) | Datos para entrenar la U-Net (§7.5), de todas las imágenes del proyecto con al menos una traza revisada: `images/<sondeo>__<sección>.png` (zona de análisis original, resolución de trabajo), `masks/…png` (gris de 8 bits: 0 = matriz o clase que no cuenta, k = clase k que cuenta, 255 = ignorar: zona excluida o traza sin clase confirmada; las sugerencias del clasificador no cuentan como revisadas) y `manifest.json` (`kind: "segmentation-dataset"`, clases con índice, y por imagen sondeo, sección, techo, fondo, unidades, px/cm, tamaño, factor de reducción y número de objetos revisados y sin revisar) |
+| Modelo de icnotaxones exportado (`ichantool_model.json`, desde V0.17) | Además de los 12 descriptores, puede ser de vectores del modelo de visión: `features: ["vision:dinov2-small:384"]` y ejemplos de 384 valores. Al importarlo, sus ejemplos van a la biblioteca como `xv` |
 | `modelo.onnx` + `modelo.json` (desde V0.15) | U-Net entrenada con `ichantool unet train`: red ONNX y su descripción (`tile`, `overlap`, `mean`, `std`, `pxPerCm`, `classes`, `output`, historial de entrenamiento y sondeos de cada conjunto) |
 | `ichantool_model.json` | Modelo de aprendizaje: lista de descriptores, clases y ejemplos `{name, x}` |
 | `*_registro.svg` / `*_registro.csv` | Registro compuesto de la ventana elegida (§18) |

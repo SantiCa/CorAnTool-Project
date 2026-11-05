@@ -10,6 +10,7 @@ import { Classifier, TaxonModel, evaluateModels, vec, FEATURES } from './learn.j
 import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
 import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } from './unet.js';
+import { VISION_MODEL, visionFeatureId, traceWindow, traceInput, pickEmbedding } from './vision.js';
 import { coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, colStats, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidate, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
 
 /** App name (V16: IchAnTool → CorAnTool). Files written by IchAnTool are still accepted; browser storage keys keep the old name. */
@@ -17,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.16';
+const DELIVERY = 'V0.17';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -62,9 +63,15 @@ const S = {
 /** Three ichnotaxon models (V16): trained on the open core, on every core of the project, or on every project. */
 const CLF_SCOPES = ['core', 'project', 'all'];
 /** Training settings of the ichnotaxon models (V18); stored in the project settings. */
-const ML_DEFAULT = { method: 'knn', k: 5, weights: 'distance', trees: 100, maxDepth: 12, minLeaf: 2, balanced: true, priors: 'uniform' };
+const ML_DEFAULT = { method: 'knn', k: 5, weights: 'distance', trees: 100, maxDepth: 12, minLeaf: 2, balanced: true, priors: 'uniform', features: 'shape' };
+/* V0.17: input of the ichnotaxon classifier — 12 shape/colour descriptors ('shape') or the vector of a pre-trained
+   vision model ('vision', DINOv2). Vectors of the two sets are never mixed. */
+const visionOn = () => (S.settings.ml?.features || 'shape') === 'vision';
+const featNames = () => (visionOn() ? visionFeatureId() : FEATURES);
+const xOf = (o) => (visionOn() ? o.emb || null : o.feat ? vec(o.feat) : null);
+const xOfLib = (e) => (visionOn() ? e.xv : e.x);
 const mlOpt = () => { const m = { ...ML_DEFAULT, ...(S.settings.ml || {}) };
-  return { method: m.method, k: m.k, weights: m.weights, novelty: S.settings.novelty, seed: 42, fitFn: fitModel, probaFn: predictProba,
+  return { method: m.method, k: m.k, weights: m.weights, novelty: S.settings.novelty, seed: 42, fitFn: fitModel, probaFn: predictProba, features: featNames(),
     rf: { trees: m.trees, maxDepth: m.maxDepth, minLeaf: m.minLeaf, balanced: m.balanced }, nb: { priors: m.priors } }; };
 const mkModel = () => new TaxonModel(mlOpt());
 const clfs = { core: new TaxonModel(), project: new TaxonModel(), all: new TaxonModel() };
@@ -378,6 +385,7 @@ function refreshObjects(s, ids, region) {
     const a = acc.get(id), o = s.objects.get(id);
     if (!o) continue;
     if (!a) { s.objects.delete(id); if (S.selected === id) S.selected = 0; continue; }
+    if (o.emb && (a.n !== o.area || a.x0 !== o.bbox?.[0] || a.y0 !== o.bbox?.[1] || a.x1 !== o.bbox?.[2] || a.y1 !== o.bbox?.[3])) o.emb = null;   // V0.17: the trace changed
     o.area = a.n; o.bbox = [a.x0, a.y0, a.x1, a.y1]; o.stats = a; o.feat = features(a, ppu);
   }
 }
@@ -422,7 +430,7 @@ function undo() {
   afterChange(s);
 }
 
-function afterChange(s) { s._mv = (s._mv || 0) + 1; s.logVer = (s.logVer || 0) + 1; markDirty(); scheduleLog(); rebuildLUT(s); scheduleLearn(); scheduleAnalysis(); renderClasses(); renderObject(); requestRender(); }
+function afterChange(s) { s._mv = (s._mv || 0) + 1; s.logVer = (s.logVer || 0) + 1; markDirty(); scheduleLog(); rebuildLUT(s); scheduleLearn(); scheduleAnalysis(); renderClasses(); renderObject(); requestRender(); scheduleEmbed(s); }
 
 /* pixel-set edits from wand and lasso */
 function applyPixels(pixels, mode) {
@@ -491,17 +499,141 @@ async function loadOrt() {
 async function loadUnet(files) {
   const onnx = files.find((f) => /\.onnx$/i.test(f.name)), js = files.find((f) => /\.json$/i.test(f.name));
   if (!onnx) { toast(t('u.needOnnx')); return; }
+  await loadUnetBytes(new Uint8Array(await onnx.arrayBuffer()), js ? await js.text() : null, onnx.name);
+}
+/** V0.17: also used for models trained in the desktop program. */
+async function loadUnetBytes(bytes, json, name) {
   await busy(async () => {
     try {
       await loadOrt();
-      const cfg = { ...UNET_DEFAULTS, ...(js ? JSON.parse(await js.text()) : {}) };
-      const session = await window.ort.InferenceSession.create(new Uint8Array(await onnx.arrayBuffer()), { executionProviders: ['wasm'] });
-      UNET = { session, cfg, name: onnx.name, id: uid() };
+      const cfg = { ...UNET_DEFAULTS, ...(json ? JSON.parse(json) : {}) };
+      const session = await window.ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] });
+      UNET = { session, cfg, name, id: uid() };
       for (const s of S.cores.flatMap((c) => c.sections)) s._unet = null;
-      toast(t('u.loaded', { n: onnx.name }));
+      toast(t('u.loaded', { n: name }));
     } catch (e) { UNET = null; toast(t('u.loadErr') + ' ' + (e?.message || e)); }
     renderDetectForm();
   });
+}
+
+/* ───────────── V0.17: descriptors from a pre-trained vision model (DINOv2) for the ichnotaxon classifier ───────────── */
+let VIS = null, embTimer = 0, embRunning = false;   // VIS = { session, src }
+const VIS_CACHE = 'corantool-models';
+async function visionCached() { try { const r = await (await caches.open(VIS_CACHE)).match(VISION_MODEL.url); return r ? new Uint8Array(await r.arrayBuffer()) : null; } catch { return null; } }
+/** Loads the vision model from a chosen file, from the local cache, or (download = true) from Hugging Face, then caches it. */
+async function loadVision(file = null, download = false) {
+  const work = async () => {
+    try {
+      await loadOrt();
+      let bytes = file ? new Uint8Array(await file.arrayBuffer()) : await visionCached();
+      if (!bytes && download) {
+        const r = await fetch(VISION_MODEL.url); if (!r.ok) throw new Error('HTTP ' + r.status);
+        const blob = await r.blob(); bytes = new Uint8Array(await blob.arrayBuffer());
+        try { await (await caches.open(VIS_CACHE)).put(VISION_MODEL.url, new Response(blob)); } catch { /* no cache here (single offline file) */ }
+      }
+      if (!bytes) return;
+      const session = await window.ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] });
+      VIS = { session, src: file ? file.name : VISION_MODEL.name };
+      if (file || download) toast(t('vis.loaded', { n: VIS.src }));
+    } catch (e) { VIS = null; toast(t('vis.err') + ' ' + (e?.message || e)); }
+  };
+  if (file || download) await busy(work); else await work();
+  if ($('mlDlg')?.open) renderMl();
+}
+const pendingEmb = (secs = S.cores.flatMap((c) => c.sections)) => secs.reduce((n, s) => n + [...s.objects.values()].filter((o) => o.bbox && !o.emb).length, 0);
+/** Vector of every trace (with a bounding box) that has none yet, in the given sections. */
+async function computeEmbeddings(secs, progress = null) {
+  if (!VIS) await loadVision();
+  if (!VIS || embRunning) return 0;
+  embRunning = true;
+  const { session } = VIS, inName = session.inputNames[0], Z = VISION_MODEL.size, tot = pendingEmb(secs);
+  let k = 0;
+  try {
+    for (const s of secs) {
+      const objs = [...s.objects.values()].filter((o) => o.bbox && !o.emb); if (!objs.length) continue;
+      await withPixels(s, async () => {
+        for (const o of objs) {
+          if (!o.bbox || o.emb) continue;
+          const r = await session.run({ [inName]: new window.ort.Tensor('float32', traceInput(s.orig, s.w, s.h, traceWindow(o.bbox, VISION_MODEL.pad)), [1, 3, Z, Z]) });
+          o.emb = pickEmbedding(Object.fromEntries(Object.entries(r).map(([n, v]) => [n, { data: v.data, dims: v.dims }])), session.outputNames);
+          if (progress) progress(++k, tot);
+        }
+      });
+    }
+  } finally { embRunning = false; }
+  if (k) { markDirty(); learnNow(); }
+  return k;
+}
+/** In vision mode, new or edited traces of the open image get their vector shortly after the change. */
+function scheduleEmbed(s) {
+  if (!visionOn() || !VIS || !s) return;
+  clearTimeout(embTimer); embTimer = setTimeout(() => { if (pendingEmb([s])) computeEmbeddings([s]).catch(() => {}); }, 700);
+}
+
+/* ───────────── V0.17: training the U-Net on this computer (desktop program) ───────────── */
+const DESK = window.corantoolDesktop?.trainer || null;
+const TR = { status: null, log: [], prog: null, running: false, last: null };
+if (DESK) DESK.onEvent((type, d) => {
+  if (type === 'log') { TR.log.push(d); if (TR.log.length > 300) TR.log.splice(0, TR.log.length - 300); }
+  else if (type === 'progress') TR.prog = d;
+  else if (type === 'state') TR.running = !!d.busy;
+  else if (type === 'done') { TR.last = d; trainDone(d).catch(() => {}); }
+  if ($('trainDlg')?.open) renderTrain();
+});
+async function trainDone(d) {
+  const m = await DESK.readModel(d.name);
+  await loadUnetBytes(new Uint8Array(m.onnx), m.json, m.name + '.onnx');
+  TR.status = await DESK.status();
+  if ($('trainDlg')?.open) renderTrain();
+}
+/** Cores with reviewed traces (the ones that go into the training ZIP). */
+function trainCores() {
+  return S.cores.map((c) => { const imgs = c.sections.filter((s) => [...s.objects.values()].some((o) => o.cls)); return { c, imgs: imgs.length, traces: imgs.reduce((n, s) => n + [...s.objects.values()].filter((o) => o.cls).length, 0) }; }).filter((r) => r.imgs);
+}
+async function openTrain() {
+  renderTrain(); if (!$('trainDlg').open) $('trainDlg').showModal();
+  if (DESK) { TR.status = await DESK.status().catch((e) => ({ error: String(e) })); renderTrain(); }
+}
+function renderTrain() {
+  const box = $('trainBody');
+  if (!DESK) { box.innerHTML = `<p>${t('tr.web')}</p>`; return; }
+  const st = TR.status, roles = (S.settings.trainRoles ||= {}), cores = trainCores();
+  let h = `<p class="note">${t('tr.intro')}</p><h3>1. ${t('tr.module')}</h3>`;
+  if (!st) h += `<p class="note">${t('busy')}</p>`;
+  else if (!st.installed) {
+    h += st.python && st.error ? `<p class="note">${esc(st.error)}</p>` : '';
+    h += st.system || st.python ? `<p>${t('tr.noModule', { v: st.system?.version || '' })}</p><button class="btn primary" id="trInstall" ${TR.running ? 'disabled' : ''}>${t('tr.install')}</button>`
+      : `<p>${t('tr.noPython')}</p>`;
+  } else h += `<p>${t('tr.device', { n: esc(st.device?.name || '?'), d: st.device?.device || '?' })}</p>${st.device?.device === 'cpu' ? `<p class="note">${t('tr.cpu')}</p>` : ''}`;
+  h += `<h3>2. ${t('tr.data')}</h3>`;
+  if (!cores.length) h += `<p class="note">${t('u.noReviewed')}</p>`;
+  else h += `<p class="note">${t('tr.roles')}</p><table class="dtable mtab"><thead><tr><th>${t('tr.core')}</th><th>${t('tr.imgs')}</th><th>${t('tr.traces')}</th><th>${t('tr.role')}</th></tr></thead><tbody>${cores.map(({ c, imgs, traces }) => `<tr><td class="txt">${esc(c.name)}</td><td>${imgs}</td><td>${traces}</td><td><select data-trrole="${esc(c.name)}">${['auto', 'val', 'test'].map((r) => `<option value="${r}" ${(roles[c.name] || 'auto') === r ? 'selected' : ''}>${t('tr.r.' + r)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>`;
+  const o = (S.settings.trainOpt ||= { name: safe(S.name || 'modelo'), epochs: 60, pretrained: true });
+  h += `<h3>3. ${t('tr.train')}</h3><div class="row" style="align-items:end;gap:12px"><label class="f"><span>${t('tr.name')}</span><input type="text" data-tropt="name" value="${esc(o.name)}"></label>
+    <label class="f"><span>${t('tr.epochs')}</span><input type="number" data-tropt="epochs" min="1" max="500" value="${o.epochs}" style="width:80px"></label>
+    <label class="chk"><input type="checkbox" data-tropt="pretrained" ${o.pretrained ? 'checked' : ''}><span>${t('tr.pretrained')}</span></label></div>
+    <div class="row">${TR.running ? `<button class="btn" id="trCancel">${t('tr.cancel')}</button>` : `<button class="btn primary" id="trGo" ${st?.installed && cores.length ? '' : 'disabled'}>${t('tr.go')}</button><button class="btn" id="trResume" ${st?.installed ? '' : 'disabled'}>${t('tr.resume')}</button>`}</div>`;
+  if (TR.prog) { const p = TR.prog; h += `<p><progress max="${p.epochs}" value="${p.epoch}" style="width:100%"></progress><br>${t('tr.prog', { e: p.epoch, n: p.epochs, d: fmt(p.val_dice, 3), b: fmt(p.best, 3), be: p.best_epoch, dev: p.device })}</p>`; }
+  if (TR.last?.evaluation) { const q = TR.last.evaluation.pooled; h += `<p><b>${t('tr.test', { c: TR.last.evaluation.cores.join(', '), d: fmt(q.dice, 3), i: fmt(q.iou, 3) })}</b></p>`; }
+  if (TR.log.length) h += `<details ${TR.running ? 'open' : ''}><summary>${t('tr.log')}</summary><pre class="trlog">${esc(TR.log.slice(-60).join('\n'))}</pre></details>`;
+  const ms = st?.models || [];
+  h += `<h3>4. ${t('tr.models')}</h3>` + (ms.length ? `<table class="dtable mtab"><thead><tr><th>${t('tr.name')}</th><th>${t('tr.valDice')}</th><th>${t('tr.testDice')}</th><th>${t('tr.date')}</th><th></th></tr></thead><tbody>${ms.map((m) => `<tr><td class="txt">${esc(m.name)}</td><td>${m.valDice != null ? fmt(m.valDice, 3) : '—'}</td><td>${m.test ? fmt(m.test.dice, 3) : '—'}</td><td class="txt">${esc(m.date.slice(0, 16).replace('T', ' '))}</td><td><button class="btn small" data-truse="${esc(m.name)}">${t('tr.use')}</button></td></tr>`).join('')}</tbody></table>` : `<p class="note">${t('tr.noModels')}</p>`)
+    + `<p><button class="btn small ghost" id="trFolder">${t('tr.folder')}</button></p><p class="note">${t('tr.explain')}</p>`;
+  box.innerHTML = h;
+}
+async function startTrain(resume) {
+  const o = S.settings.trainOpt, roles = S.settings.trainRoles || {};
+  TR.log = []; TR.prog = null; TR.last = null;
+  try {
+    const opt = { name: o.name, epochs: o.epochs, pretrained: o.pretrained, resume };
+    if (!resume) {
+      const z = await buildTrainingZip(); if (!z) return;
+      const names = trainCores().map((r) => r.c.name);
+      Object.assign(opt, { zip: new Uint8Array(await z.arrayBuffer()), val: names.filter((n) => roles[n] === 'val'), test: names.filter((n) => roles[n] === 'test') });
+    }
+    TR.running = true; renderTrain();
+    await DESK.train(opt);
+  } catch (e) { TR.log.push('✕ ' + (String(e?.message || e).includes('cancelled') ? t('tr.cancelled') : e?.message || e)); TR.running = false; renderTrain(); }
 }
 /** Probability map of bioturbation for the section (cached until the model, the analysis area or the scale change). */
 async function unetProb(s) {
@@ -562,21 +694,23 @@ function scheduleLearn() { clearTimeout(learnTimer); learnTimer = setTimeout(lea
 /** Labelled examples of this project with a stable key; objects marked «not for training» (o.nt) are left out. */
 function ownExamples(cores, withExcluded = false) {
   const ex = [];
-  for (const c of cores) for (const s of c.sections) for (const o of s.objects.values()) if (o.cls && o.feat && (withExcluded || !o.nt)) {
-    const k = clsById(o.cls); if (k) ex.push({ key: `${S.id}|${c.id}|${s.id}|${o.id}`, g: `${S.id}|${c.id}|${s.id}`, y: k.name, x: vec(o.feat), c, s, o });
+  for (const c of cores) for (const s of c.sections) for (const o of s.objects.values()) if (o.cls && xOf(o) && (withExcluded || !o.nt)) {
+    const k = clsById(o.cls); if (k) ex.push({ key: `${S.id}|${c.id}|${s.id}|${o.id}`, g: `${S.id}|${c.id}|${s.id}`, y: k.name, x: xOf(o), c, s, o });
   }
   return ex;
 }
 function mlSets() {
   const grp = (k) => String(k).split('|').slice(0, 3).join('|');
-  const lib = S.library.filter((e) => e.name && Array.isArray(e.x)).map((e, i) => ({ key: e.key || `lib|${i}`, g: grp(e.key || `lib|${i}`), y: e.name, x: e.x, lib: e }));
+  const lib = S.library.filter((e) => e.name && Array.isArray(xOfLib(e))).map((e, i) => ({ key: e.key || `lib|${i}`, g: grp(e.key || `lib|${i}`), y: e.name, x: xOfLib(e), lib: e }));
   const cur = S.cores.find((c) => c.id === S.curCore), exCore = ownExamples(cur ? [cur] : []), exProj = ownExamples(S.cores);
   const keys = new Set([...exProj, ...lib].map((e) => e.key));
   // the same trace can exist in two projects (shared core, duplicated or imported project): identical descriptors are
   // used once, otherwise it would count twice and could be both trained on and tested in the evaluation
   const sig = (e) => e.x.map((v) => (+v).toFixed(3)).join(','), seen = new Set(exProj.concat(lib).map(sig));
-  const other = otherExamples.filter((e) => !mlExcluded.has(e.key) && !keys.has(e.key)).filter((e) => { const k = sig(e); if (seen.has(k)) return false; seen.add(k); return true; }).map((e) => ({ ...e, g: grp(e.key) }));
-  return { core: exCore.concat(lib), project: exProj.concat(lib), all: exProj.concat(lib, other) };
+  const other = otherExamples.map((e) => ({ ...e, x: xOfLib(e) })).filter((e) => Array.isArray(e.x) && !mlExcluded.has(e.key) && !keys.has(e.key)).filter((e) => { const k = sig(e); if (seen.has(k)) return false; seen.add(k); return true; }).map((e) => ({ ...e, g: grp(e.key) }));
+  // V0.17: only vectors of the current feature set and length
+  const D = exProj[0]?.x.length ?? lib[0]?.x.length ?? other[0]?.x.length, ok = (e) => e.x.length === D;
+  return { core: exCore.concat(lib).filter(ok), project: exProj.concat(lib).filter(ok), all: exProj.concat(lib, other).filter(ok) };
 }
 /** V0.2: signature of a training set and of the model settings; the model is refitted only when it changes. */
 function trainSig(set) {
@@ -599,10 +733,12 @@ function learnNow() {
   const idOf = (name) => S.classes.find((c) => c.name === name)?.id || null;
   for (const s of S.sections) {
     for (const o of s.objects.values()) {
-      if (o.cls || !o.feat) { o.pred = null; o.conf = 0; o.novel = false; o._pv = 0; continue; }
-      if (o._pv === modelVer && o._pf === o.feat) continue;   // V0.2: prediction still valid
-      o._pv = modelVer; o._pf = o.feat;
-      const p = clf.predict(vec(o.feat));
+      const x = xOf(o);
+      if (o.cls || !x) { o.pred = null; o.conf = 0; o.novel = false; o._pv = 0; continue; }
+      const xi = visionOn() ? o.emb : o.feat;
+      if (o._pv === modelVer && o._pf === xi) continue;   // V0.2: prediction still valid
+      o._pv = modelVer; o._pf = xi;
+      const p = clf.predict(x);
       o.pred = p?.y ? idOf(p.y) : null; o.conf = o.pred ? p.conf : 0; o.novel = !!p?.novel;
     }
     rebuildLUT(s);
@@ -615,7 +751,7 @@ function learnNow() {
 async function refreshOtherExamples() {
   if (!storageOK) return;
   const lites = await listLite().catch(() => []);
-  otherExamples = lites.filter((l) => l.id !== S.id && l.kind !== 'multi').flatMap((l) => (l.examples || []).map((e, i) => ({ key: e.key || `${l.id}|${i}`, y: e.name, x: e.x, thumb: e.thumb || null, where: `${l.name} · ${e.core || ''}`, project: l.id })));
+  otherExamples = lites.filter((l) => l.id !== S.id && l.kind !== 'multi').flatMap((l) => (l.examples || []).map((e, i) => ({ key: e.key || `${l.id}|${i}`, y: e.name, x: e.x, xv: e.xv, thumb: e.thumb || null, where: `${l.name} · ${e.core || ''}`, project: l.id })));
   scheduleLearn();
 }
 let allModelTimer = 0;
@@ -1387,7 +1523,7 @@ function renderObject() {
       <dt>${t('obj.class')}</dt><dd><select id="objCls">${opts}</select></dd>
       <dt>${t('obj.status')}</dt><dd><span class="pill ${st}">${t('obj.' + st)}</span></dd>
       ${o.cls ? '' : `<dt>${t('obj.suggest')}</dt><dd>${sugg}</dd>`}
-      ${o.cls || !o.feat ? '' : `<dt>${t('obj.probs')}</dt><dd>${probTable(o)}</dd>`}
+      ${o.cls || !xOf(o) ? '' : `<dt>${t('obj.probs')}</dt><dd>${probTable(o)}</dd>`}
       <dt>${t('obj.depth')}</dt><dd>${fmt(depthAtRow(s, y0), 3)}–${fmt(depthAtRow(s, y1 + 1), 3)} ${u}</dd>
       <dt>${t('obj.size')}</dt><dd>${fmt(toU(f.majorCm), 3)} × ${fmt(toU(f.minorCm), 3)} ${u}</dd>
       <dt>${t('obj.area')}</dt><dd>${fmt(o.area / (ppu * ppu) / UNIT_TO_CM[u] ** 2, 4)} ${u}² · ${o.area} px</dd>
@@ -1402,7 +1538,8 @@ function renderObject() {
 
 /** Probability of each ichnotaxon for one object according to the three models (top 4 classes). */
 function probTable(o) {
-  const x = vec(o.feat), P = Object.fromEntries(CLF_SCOPES.map((k) => [k, clfs[k].predict(x)]));
+  const x = xOf(o); if (!x) return '—';
+  const P = Object.fromEntries(CLF_SCOPES.map((k) => [k, clfs[k].predict(x)]));
   const tot = {}; for (const k of CLF_SCOPES) for (const [n, v] of Object.entries(P[k]?.probs || {})) tot[n] = (tot[n] || 0) + v;
   const names = Object.keys(tot).sort((a, b) => tot[b] - tot[a]).slice(0, 4);
   if (!names.length) return '—';
@@ -1681,6 +1818,22 @@ for (const [id, key] of [['fEqualize', 'equalize'], ['fInvert', 'invert']]) $(id
 $('detectCtl').addEventListener('input', (e) => { const s = sec(), k = e.target.dataset.k; if (!s || !k) return; s.detect[k] = +e.target.value; $('do-' + k).textContent = e.target.value; });
 $('unetFile').addEventListener('change', (e) => { const f = [...e.target.files]; e.target.value = ''; if (f.length) loadUnet(f); });   // V0.15
 $('showDoubt').addEventListener('change', (e) => { S.showDoubt = e.target.checked; requestRender(); });
+$('trainOpen').addEventListener('click', openTrain);   // V0.17
+$('trainClose').addEventListener('click', () => $('trainDlg').close());
+$('trainBody').addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.dataset.trrole) { (S.settings.trainRoles ||= {})[el.dataset.trrole] = el.value; markDirty(); }
+  else if (el.dataset.tropt) { const k = el.dataset.tropt; S.settings.trainOpt[k] = k === 'pretrained' ? el.checked : k === 'epochs' ? Math.max(1, +el.value || 60) : el.value.trim() || 'modelo'; markDirty(); }
+});
+$('trainBody').addEventListener('click', async (e) => {
+  const el = e.target;
+  if (el.id === 'trInstall') { TR.log = []; TR.running = true; renderTrain(); try { await DESK.install(); } catch (err) { TR.log.push('✕ ' + (err?.message || err)); } TR.running = false; TR.status = await DESK.status(); renderTrain(); }
+  else if (el.id === 'trGo') startTrain(false);
+  else if (el.id === 'trResume') { if (await DESK.unfinished(S.settings.trainOpt.name)) startTrain(true); else toast(t('tr.noResume')); }
+  else if (el.id === 'trCancel') DESK.cancel();
+  else if (el.id === 'trFolder') DESK.openFolder();
+  else if (el.dataset.truse) { const m = await DESK.readModel(el.dataset.truse); await loadUnetBytes(new Uint8Array(m.onnx), m.json, m.name + '.onnx'); }
+});
 $('dMethod').addEventListener('change', (e) => { const s = sec(); if (s) { s.detect.method = e.target.value; renderDetectForm(); } });
 $('dPol').addEventListener('change', (e) => { const s = sec(); if (s) s.detect.polarity = e.target.value; });
 $('detectBtn').addEventListener('click', runDetection);
@@ -1827,6 +1980,10 @@ $('expMask').addEventListener('click', () => {
 /** V0.15: training set for the U-Net — for every image with reviewed traces, the original ROI (PNG), its label mask
  * (PNG, value = class index + 1, 0 = matrix or artefact, 255 = excluded or not reviewed) and manifest.json. */
 $('expTrain').addEventListener('click', () => busy(async () => {
+  const zip = await buildTrainingZip(); if (zip) await saveFile(`${safe(S.name)}_segmentation_dataset.zip`, zip, 'application/zip');
+}));
+/** The ZIP described above (Blob), or null with a message when no trace has been reviewed. */
+async function buildTrainingZip() {
   const classes = S.classes.filter((c) => c.counts), idx = new Map(classes.map((c, k) => [c.id, k + 1]));
   const files = [], items = [];
   const png = async (rgba, w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').putImageData(new ImageData(rgba, w, h), 0, 0); return new Promise((r) => c.toBlob(r, 'image/png')); };
@@ -1844,12 +2001,12 @@ $('expTrain').addEventListener('click', () => busy(async () => {
         pxPerCm: +pxPerCm(s).toFixed(5), width: w, height: h, downsample: s.ds || 1, objects: objs.length, reviewed: reviewed.length, unreviewed: objs.length - reviewed.length });
     });
   }
-  if (!items.length) { toast(t('u.noReviewed')); return; }
+  if (!items.length) { toast(t('u.noReviewed')); return null; }
   const manifest = { app: APP, kind: 'segmentation-dataset', version: 1, delivery: DELIVERY, created: new Date().toISOString(), ignore: IGNORE,
     classes: classes.map((c, k) => ({ index: k + 1, name: c.name, color: c.color })), items };
   files.push({ name: 'manifest.json', data: JSON.stringify(manifest, null, 2) });
-  await saveFile(`${safe(S.name)}_segmentation_dataset.zip`, await zipFiles(files), 'application/zip');
-}));
+  return zipFiles(files);
+}
 
 $('expPalette').addEventListener('click', () => {
   const pal = Object.fromEntries(S.classes.filter((c) => c.counts).map((c) => [c.name, c.color]));
@@ -1858,21 +2015,23 @@ $('expPalette').addEventListener('click', () => {
 
 function modelExamples() {
   const ex = [];
-  for (const s of S.sections) for (const o of s.objects.values()) if (o.cls && o.feat) ex.push({ name: clsById(o.cls).name, x: vec(o.feat).map((v) => +v.toFixed(5)) });
-  return ex.concat(S.library);
+  for (const s of S.sections) for (const o of s.objects.values()) if (o.cls && xOf(o)) ex.push({ name: clsById(o.cls).name, x: xOf(o).map((v) => +v.toFixed(5)) });
+  return ex.concat(S.library.filter((e) => Array.isArray(xOfLib(e))).map((e) => ({ ...e, x: xOfLib(e), xv: undefined })));
 }
 $('exportModel').addEventListener('click', () => {
   const used = new Set(modelExamples().map((e) => e.name));
-  const model = { app: APP, kind: 'model', version: 1, features: FEATURES, classes: S.classes.filter((c) => used.has(c.name)).map(({ name, color, counts }) => ({ name, color, counts })), examples: modelExamples() };
+  const model = { app: APP, kind: 'model', version: 1, features: featNames(), classes: S.classes.filter((c) => used.has(c.name)).map(({ name, color, counts }) => ({ name, color, counts })), examples: modelExamples() };
   saveFile('corantool_model.json', JSON.stringify(model), 'application/json');
 });
 $('importModel').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   try {
     const m = JSON.parse(await f.text());
-    if (m.kind !== 'model' || JSON.stringify(m.features) !== JSON.stringify(FEATURES)) throw new Error();
+    const vis = JSON.stringify(m.features) === JSON.stringify(visionFeatureId());   // V0.17: models of vision vectors
+    if (m.kind !== 'model' || (!vis && JSON.stringify(m.features) !== JSON.stringify(FEATURES))) throw new Error();
     for (const c of m.classes) if (!S.classes.some((k) => k.name === c.name)) S.classes.splice(S.classes.length - 1, 0, { id: 'c' + uid(), name: c.name, color: c.color, counts: c.counts !== false });
-    S.library = S.library.concat(m.examples.filter((x) => Array.isArray(x.x) && x.x.length === FEATURES.length));
+    const D = vis ? VISION_MODEL.dim : FEATURES.length;
+    S.library = S.library.concat(m.examples.filter((x) => Array.isArray(x.x) && x.x.length === D).map((x) => (vis ? { name: x.name, key: x.key, xv: x.x } : x)));
     scheduleLearn(); renderClasses();
   } catch { toast(t('err.project')); }
 });
@@ -1983,7 +2142,8 @@ function projectMeta() {
 function liteSnapshot() {
   return {
     id: S.id, name: S.name, updated: Date.now(), kind: S.kind || 'normal',
-    examples: ownExamples(S.cores).map((e) => ({ key: e.key, name: e.y, x: e.x.map((v) => +v.toFixed(4)), core: e.c.name, thumb: thumbOf(e.s, e.o) })),
+    examples: S.cores.flatMap((c) => c.sections.flatMap((s) => [...s.objects.values()].filter((o) => o.cls && !o.nt && clsById(o.cls) && (o.feat || o.emb)).map((o) => ({   // V0.17: both vector sets
+      key: `${S.id}|${c.id}|${s.id}|${o.id}`, name: clsById(o.cls).name, x: o.feat ? vec(o.feat).map((v) => +v.toFixed(4)) : null, ...(o.emb ? { xv: o.emb } : {}), core: c.name, thumb: thumbOf(s, o) })))),
     layers: S.geo.layers, intervals: S.geo.intervals, geo: (({ cores: _c, ...g }) => g)(S.geo),
     cores: S.cores.map((c) => ({ id: c.id, name: c.name, lat: c.lat, lon: c.lon, units: c.units, ageText: c.ageText, depth: c.depth, age: c.age, proxies: c.proxies, src: c.src, nImages: c.sections.length })),
   };
@@ -2032,7 +2192,7 @@ $('cdDel').addEventListener('click', () => {
  * (`st`) are saved so that a section can be used without decoding its picture.
  */
 function serSection(s) {
-  const o2 = (o) => ({ id: o.id, cls: o.cls, src: o.src, ...(o.nt ? { nt: 1 } : {}), ...(o.stats ? { st: o.stats } : {}), ...(o.cls && o._thumb ? { th: o._thumb } : {}) });
+  const o2 = (o) => ({ id: o.id, cls: o.cls, src: o.src, ...(o.nt ? { nt: 1 } : {}), ...(o.stats ? { st: o.stats } : {}), ...(o.cls && o._thumb ? { th: o._thumb } : {}), ...(o.emb ? { em: o.emb } : {}) });
   return {
     id: s.id, name: s.name, ds: s.ds, rot: s.rot, w: s.w, h: s.h, crop: s.crop || null, full: s.full || null,
     file: s.file.key ? { name: s.file.name, type: s.file.type, key: s.file.key, size: s.file.size } : { name: s.file.name, type: s.file.type, blob: s.file.blob },
@@ -2072,7 +2232,7 @@ async function loadSection(q) {
   const ppu = pxPerCm(s);
   for (const o of q.objects) {
     const st = o.st || null;
-    s.objects.set(o.id, { id: o.id, cls: o.cls, src: o.src, nt: !!o.nt, pred: null, conf: 0, area: st?.n || 0, bbox: st ? [st.x0, st.y0, st.x1, st.y1] : null, stats: st, feat: st ? features(st, ppu) : null, ...(o.th ? { _thumb: o.th } : {}) });
+    s.objects.set(o.id, { id: o.id, cls: o.cls, src: o.src, nt: !!o.nt, pred: null, conf: 0, area: st?.n || 0, bbox: st ? [st.x0, st.y0, st.x1, st.y1] : null, stats: st, feat: st ? features(st, ppu) : null, ...(o.th ? { _thumb: o.th } : {}), ...(o.em ? { emb: o.em } : {}) });
   }
   if (q.objects.some((o) => !o.st)) {   // older files: object statistics need the pixels once
     await withPixels(s, (x) => refreshObjects(x, new Set(x.objects.keys()), null));
@@ -4646,7 +4806,10 @@ function mlTrainHTML() {
       ${b ? `<p>${t('ml.recBest', { s: t('l.scope.' + b.scope), m: t('ml.m.' + b.method), v: Math.round(b.balanced * 100) })} ${b.close ? t('ml.recClose') : ''} <button class="btn small primary" id="mlUseBest">${t('ml.useBest')}</button></p>
       <details><summary>${t('ml.cm')}</summary><p class="note">${t('ml.cmNote')}</p><div class="tablewrap"><table class="dtable mtab"><thead><tr><th>${t('ml.real')} \\ ${t('ml.pred')}</th>${cm.classes.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${cm.classes.map((c, i) => `<tr><td class="txt">${esc(c)}</td>${cm.cm[i].map((v, j) => `<td class="${i === j ? 'on' : ''}">${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : ''}`;
   }
-  return `<p class="note">${t('ml.trainIntro')}</p><div class="mlmethods">${methods}</div><div class="row" style="align-items:end;gap:12px">${params}
+  const fset = m.features || 'shape', pend = fset === 'vision' ? pendingEmb() : 0;   // V0.17: input vectors
+  const feats = `<h3>${t('vis.title')}</h3><div class="mlmethods">${['shape', 'vision'].map((k) => `<label class="mlm ${fset === k ? 'on' : ''}"><input type="radio" name="mlFeat" data-ml="features" value="${k}" ${fset === k ? 'checked' : ''}><b>${t('vis.f.' + k)}</b><span class="note">${t('vis.d.' + k)}</span></label>`).join('')}</div>`
+    + (fset === 'vision' ? `<p class="note">${VIS ? t('vis.ready', { n: esc(VIS.src) }) : t('vis.none', { mb: VISION_MODEL.mb })} ${t('vis.pending', { n: pend })}</p><div class="row">${VIS ? '' : `<button class="btn small primary" id="visDl">${t('vis.dl', { mb: VISION_MODEL.mb })}</button><label class="btn small file"><span>${t('vis.file')}</span><input type="file" id="visFile" accept=".onnx"></label>`}<button class="btn small" id="visCalc" ${VIS && pend ? '' : 'disabled'}>${t('vis.calc', { n: pend })}</button></div>` : '');
+  return `${feats}<h3>${t('ml.tab.train')}</h3><p class="note">${t('ml.trainIntro')}</p><div class="mlmethods">${methods}</div><div class="row" style="align-items:end;gap:12px">${params}
     <label class="f"><span>${t('l.novelty')}</span><input type="number" data-ml="novelty" min="1" max="8" step="0.5" value="${S.settings.novelty}" style="width:80px"></label></div>
     <p class="note">${t('ml.paramHelp.' + m.method)} ${t('ml.noveltyHelp')}</p>
     <div class="row"><button class="btn primary" id="mlEvalBtn">${t('ml.eval')}</button><span class="note">${t('ml.evalHint')}</span></div>${ev}`;
@@ -4703,8 +4866,10 @@ $('mlBody').addEventListener('change', (e) => {
     if (k === 'novelty') { S.settings.novelty = v; $('novelty').value = v; $('novOut').textContent = '×' + v; }
     else S.settings.ml = { ...ML_DEFAULT, ...(S.settings.ml || {}), [k]: v };
     if (k === 'method') mlEval = mlEval && { ...mlEval };
+    if (k === 'features') { mlEval = null; for (const x of S.cores.flatMap((c) => c.sections)) for (const o of x.objects.values()) o._pv = 0; if (v === 'vision' && !VIS) loadVision(); }
     markDirty(); learnNow(); renderMl(); return;
   }
+  if (el.id === 'visFile') { const f = el.files[0]; el.value = ''; if (f) loadVision(f); return; }
   if (el.id === 'mlScopeSel') { mlScope = el.value; renderMl(); return; }
   if (el.id === 'mlOtherSel') { mlOtherProj = el.value; mlPicked.clear(); renderMl(); return; }
   const fig = el.closest('.mlx'); if (!fig) return;
@@ -4719,12 +4884,14 @@ $('mlBody').addEventListener('change', (e) => {
 $('mlBody').addEventListener('click', (e) => {
   const el = e.target;
   if (el.id === 'mlEvalBtn') { busy(async () => runMlEval()); return; }
+  if (el.id === 'visDl') { loadVision(null, true); return; }
+  if (el.id === 'visCalc') { busy(async () => { const n = await computeEmbeddings(S.cores.flatMap((c) => c.sections), (k, tot) => { $('busy').textContent = t('vis.progress', { k, n: tot }); }); $('busy').textContent = t('busy'); toast(t('vis.done', { n })); renderMl(); }); return; }
   if (el.id === 'mlUseBest' && mlEval?.best) { S.settings.clfScope = mlEval.best.scope; S.settings.ml = { ...ML_DEFAULT, ...(S.settings.ml || {}), method: mlEval.best.method }; markDirty(); learnNow(); renderMl(); toast(t('ml.applied')); return; }
   if (el.id === 'mlPickAll') { for (const q of otherExamples) if (q.project === mlOtherProj) mlPicked.add(q.key); renderMl(); return; }
   if (el.id === 'mlPickNone') { mlPicked.clear(); renderMl(); return; }
   if (el.id === 'mlAddLib') {
     const have = new Set(S.library.map((q) => q.key));
-    for (const q of otherExamples) if (mlPicked.has(q.key) && !have.has(q.key)) S.library.push({ key: q.key, name: q.y, x: q.x, thumb: q.thumb, from: q.where });
+    for (const q of otherExamples) if (mlPicked.has(q.key) && !have.has(q.key)) S.library.push({ key: q.key, name: q.y, x: q.x, xv: q.xv, thumb: q.thumb, from: q.where });
     if (!S.classes.length) return;
     for (const q of S.library) if (!S.classes.some((c) => c.name === q.name)) S.classes.splice(S.classes.length - 1, 0, { id: 'c' + uid(), name: q.name, color: GROUP_COLORS[S.classes.length % GROUP_COLORS.length], counts: true });
     toast(t('ml.added', { n: mlPicked.size })); mlPicked.clear(); markDirty(); renderClasses(); learnNow(); return;

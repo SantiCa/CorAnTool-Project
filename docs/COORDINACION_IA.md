@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.17, 05-11-2026 (Claude):** entrenamiento U-Net en el programa de escritorio (`desktop/trainer.js`), rasgos DINOv2 para icnotaxones (`app/js/vision.js`), guía y publicaciones. Falta probar el Electron empaquetado en Windows/macOS.
+
 - **V0.16, 05-11-2026 (Claude):** plan de entrenamiento de la U-Net en el borrador del artículo 2 (§3.5).
 
 - **V0.15, 05-11-2026 (Claude):** segmentación U-Net (exportación de datos, método de detección en la app, paquete `ichantool.unet`, pruebas de paridad) y borrador del artículo 2. Sin modelos entrenados con datos reales.

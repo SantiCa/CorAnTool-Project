@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
 | V0.14 | 05-11-2026 | Aplicación | Auditoría; sin referencias a datos privados del autor; librerías incluidas (TIFF y Excel sin internet); README de uso |
@@ -638,6 +639,48 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.17 — Entrenamiento en el programa y rasgos de visión para icnotaxones (05-11-2026)
+
+- **Qué se hizo:** (1) la U-Net se entrena desde el programa de escritorio con la tarjeta gráfica del equipo;
+  (2) el clasificador de icnotaxones puede usar el vector de un modelo de visión preentrenado (DINOv2) en vez de
+  los 12 descriptores; (3) publicaciones actualizadas y guía en lenguaje sencillo.
+- **Cambios:**
+  - Escritorio: `desktop/trainer.js` (nuevo: entorno virtual propio con el Python del sistema, PyTorch con CUDA en
+    Windows+NVIDIA, `ichantool[unet]` desde la copia incluida; `prepare` → `train` → `evaluate`; progreso por época;
+    detener, reanudar, lista y lectura de modelos), `preload.js` (nuevo, seis funciones expuestas),
+    `main.js` (IPC solo desde `app://`), `scripts/prepare.js` y `build.js` (fuente Python como recurso extra
+    `python/`, en `.gitignore`).
+  - Aplicación: diálogo «Entrenar en este ordenador…» (módulo, sondeos con uso Auto/Validación/Prueba, opciones,
+    progreso, registro, Dice de prueba, modelos con «Usar»); en el navegador explica la vía con ZIP + Python.
+    `loadUnetBytes`; `buildTrainingZip` compartido con la exportación.
+  - Icnotaxones: `app/js/vision.js` (nuevo, sin DOM: ventana con 25 % de contexto, entrada 224 px normalizada,
+    vector unitario); `learn.js` admite vectores de cualquier longitud y guarda su conjunto de rasgos;
+    `app.js`: ajuste `ml.features` (`shape`/`vision`), descarga y caché del modelo (88 MB, Hugging Face) o archivo
+    propio, «Calcular rasgos», cálculo automático de trazas nuevas en modo visión, vectores `emb` guardados en el
+    proyecto (`em`) y en el índice de otros proyectos (`xv`), modelos exportados con su conjunto de rasgos.
+  - Python: `train(progress=…, resume=…)`, punto de control `.ckpt` por época, `best_device` (cuda/mps/cpu),
+    `device_info`; órdenes `unet device`, `unet train --resume --progress-json --device`.
+  - Pruebas: `tests/app/vision.test.mjs` (4) y prueba de entrenamiento con reanudación en `tests/test_unet.py`
+    (se salta sin PyTorch).
+  - Documentación: `DOCUMENTACION_TECNICA.md` §7.5 (entrenamiento en escritorio), §10.6 quater, §12;
+    `METODOS_Y_DEFENSA.md`; borrador del artículo 2 (§3.6, tabla de identificación); artículo 1 (JOSS);
+    `publications/GUIA_APRENDIZAJE_AUTOMATICO.md` (nueva); `publications/README.md`; `README.md`.
+- **Por qué:** petición de Santiago: entrenar dentro del programa con el hardware del equipo y empezar por rasgos
+  preentrenados + k-NN para los icnotaxones; que las publicaciones lo expliquen también para él.
+- **Comprobación:** 64 pruebas JS y 17 Python. Módulo de entrenamiento probado en Node sin Electron (Linux):
+  instalación completa desde cero (entorno, PyTorch, `ichantool[unet]` desde la copia incluida) y estado
+  «instalado»; entrenamiento con datos sintéticos, detención tras la época 1, reanudación hasta la 3, evaluación en
+  el sondeo de prueba, lista y lectura del modelo. Navegador sin pantalla (Chrome) con el ejemplo y un puente de
+  escritorio simulado: diálogo, envío del ZIP con el sondeo de prueba, progreso, resultado y carga automática del
+  modelo; modo visión con un modelo ONNX con la interfaz de DINOv2 (756 trazas calculadas y sugerencias), sin
+  errores. Ruta de inferencia de visión probada con ONNX Runtime Web en Node.
+- **Pendiente / no probado:** el programa Electron empaquetado no se ha ejecutado aquí (sin pantalla ni descarga de
+  Electron): falta probar en Windows/macOS el diálogo real, la instalación con CUDA en Windows y la GPU de Apple;
+  el modelo DINOv2 real no se pudo descargar en este entorno (sí su interfaz); comparar 12 rasgos frente a DINOv2
+  en testigos independientes; lo pendiente de V0.15.
 
 ---
 

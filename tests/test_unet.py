@@ -112,3 +112,20 @@ def test_mask_from_unet_with_onnx_model(tmp_path):
     img[4:10, 6:20] = 20
     mask, names = mask_from_unet(img, tmp_path / "m.onnx")
     assert names == ["bioturbation"] and mask[4:10, 6:20].all() and mask.sum() == 6 * 14
+
+
+def test_train_resume_and_export(tmp_path):
+    """V0.17: tiny training on CPU, interrupted after 1 epoch and resumed to 2 (needs ichantool[unet])."""
+    pytest.importorskip("torch")
+    pytest.importorskip("segmentation_models_pytorch")
+    from ichantool.unet.train import train
+
+    exp = _export(tmp_path, cores=("C1", "C2", "C3", "C4"), size=(48, 40))
+    prepare_dataset(exp, tmp_path / "ds", tile=32, overlap=8, px_per_cm=10, test_cores=["C4"], val_cores=["C3"])
+    seen = []
+    kw = dict(encoder="resnet18", encoder_weights=None, batch=4, log=lambda m: None, progress=seen.append, device="cpu")
+    train(tmp_path / "ds", tmp_path / "m" / "unet", epochs=1, **kw)
+    assert (tmp_path / "m" / "unet.ckpt").exists() and seen[-1]["epoch"] == 1
+    s = train(tmp_path / "ds", tmp_path / "m" / "unet", epochs=2, resume=True, **kw)
+    assert seen[-1]["epoch"] == 2 and len(s["history"]) == 2 and (tmp_path / "m" / "unet.onnx").exists()
+    assert json.loads((tmp_path / "m" / "unet.json").read_text())["tile"] == 32

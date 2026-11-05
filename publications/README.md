@@ -27,12 +27,13 @@ Todo lo marcado `[TODO]` está pendiente; ningún resultado de estos borradores 
 | # | Se puede afirmar | No se puede afirmar todavía |
 |--|------------------------------------|------------------------------------|
 | 1 | Reproduce exactamente los resultados de 2020; es determinista; integra imágenes, registros, intervalos, clasificación, mapas y figuras | Rendimiento de la detección automática en datos reales |
-| 2 | Las herramientas de anotación existen y producen máscaras abiertas | Precisión de la segmentación (faltan datos anotados) |
+| 2 | Las herramientas de anotación existen y producen máscaras abiertas; flujo U-Net completo (exportar, entrenar en el programa o en Python, evaluar, usar); rasgos DINOv2 para icnotaxones (V0.15–V0.17) | Precisión de la segmentación y de la identificación (faltan datos anotados) |
 | 3 | La app registra BI/ii manuales junto a los automáticos | Concordancia con observadores (falta el experimento) |
 | 4 | La cadena funciona con verdad conocida (sintético: RF ≈ 91 %, red ≈ 80 %) | Capacidad predictiva real: con los datos privados del autor, 18 % de acierto equilibrado dejando un sondeo fuera (7 clases) |
 | 5 | Funcionalidad y ejemplo con datos públicos | — |
 
 ## Documentación de métodos
+Explicación sencilla del aprendizaje automático (segmentación U-Net, icnotaxones, validación): [GUIA_APRENDIZAJE_AUTOMATICO.md](GUIA_APRENDIZAJE_AUTOMATICO.md).
 Qué algoritmos usa cada artículo, qué se puede afirmar, qué falta validar y respuestas preparadas a revisores:
 [METODOS_Y_DEFENSA.md](METODOS_Y_DEFENSA.md). Detalle técnico con fórmulas:
 [../docs/DOCUMENTACION_TECNICA.md](../docs/DOCUMENTACION_TECNICA.md). Revistas: [journals.md](journals.md).

@@ -94,8 +94,12 @@ def _dice(logits, y, n_cls):
 
 def train(data: str | Path, out: str | Path, encoder: str = "resnet34", encoder_weights: str | None = "imagenet",
           epochs: int = 60, batch: int = 8, lr: float = 3e-4, patience: int = 12, seed: int = 42,
-          device: str | None = None, log=print) -> dict:
-    """Train on ``data`` (written by ``prepare_dataset``); write ``out.onnx`` and ``out.json``; return the summary."""
+          device: str | None = None, log=print, progress=None, resume: bool = False) -> dict:
+    """Train on ``data`` (written by ``prepare_dataset``); write ``out.onnx`` and ``out.json``; return the summary.
+
+    ``progress(dict)`` is called after every epoch (epoch, epochs, loss, val_dice, best, best_epoch).
+    A checkpoint ``out.ckpt`` is written after every epoch; ``resume=True`` continues from it (V0.17).
+    """
     torch, smp = _torch()
     data, out = Path(data), Path(out).with_suffix("")
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -103,15 +107,24 @@ def train(data: str | Path, out: str | Path, encoder: str = "resnet34", encoder_
     n_cls = 1 if info["binary"] else len(info["classes"]) + 1
     cfg = UnetConfig(tile=info["tile"], overlap=info["overlap"], px_per_cm=info["pxPerCm"], classes=info["classes"])
     random.seed(seed), np.random.seed(seed), torch.manual_seed(seed)
-    device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    device = device or best_device()
     model = smp.Unet(encoder, encoder_weights=encoder_weights, in_channels=3, classes=n_cls).to(device)
     tr = _loader(data / "train", cfg, True, batch, seed)
     has_val = any((data / "val" / "images").glob("*.png"))
     va = _loader(data / ("val" if has_val else "train"), cfg, False, batch, seed)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, epochs))
-    best, best_ep, history, wait = -1.0, 0, [], 0
-    for ep in range(1, epochs + 1):
+    best, best_ep, history, wait, start = -1.0, 0, [], 0, 1
+    ckpt = out.with_suffix(".ckpt")
+    if resume and ckpt.exists():
+        c = torch.load(ckpt, map_location=device, weights_only=False)
+        model.load_state_dict(c["model"]), opt.load_state_dict(c["opt"]), sched.load_state_dict(c["sched"])
+        best, best_ep, history, wait, start = c["best"], c["best_ep"], c["history"], c["wait"], c["epoch"] + 1
+        log(f"resuming after epoch {c['epoch']}")
+    stopped = wait >= patience
+    for ep in range(start, epochs + 1):
+        if stopped:
+            break
         model.train()
         tot = 0.0
         for x, y in tr:
@@ -136,8 +149,12 @@ def train(data: str | Path, out: str | Path, encoder: str = "resnet34", encoder_
             torch.save(model.state_dict(), out.with_suffix(".pt"))
         else:
             wait += 1
-            if wait >= patience:
-                break
+            stopped = wait >= patience
+        torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(), "epoch": ep,
+                    "best": best, "best_ep": best_ep, "history": history, "wait": wait}, ckpt)
+        if progress:
+            progress({"epoch": ep, "epochs": epochs, "loss": history[-1]["loss"], "val_dice": d, "best": best,
+                      "best_epoch": best_ep, "device": device})
     model.load_state_dict(torch.load(out.with_suffix(".pt"), map_location=device))
     export_onnx(model.cpu().eval(), cfg.tile, out.with_suffix(".onnx"))
     summary = {**cfg.to_json(), "encoder": encoder, "encoderWeights": encoder_weights, "bestEpoch": best_ep,
@@ -145,6 +162,23 @@ def train(data: str | Path, out: str | Path, encoder: str = "resnet34", encoder_
                "split": info["split"], "seed": seed, "history": history}
     out.with_suffix(".json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
+
+
+def best_device() -> str:
+    """'cuda' (NVIDIA), 'mps' (Apple GPU) or 'cpu'."""
+    torch, _ = _torch()
+    if torch.cuda.is_available():
+        return "cuda"
+    mps = getattr(torch.backends, "mps", None)
+    return "mps" if mps is not None and mps.is_available() else "cpu"
+
+
+def device_info() -> dict:
+    """Training hardware seen by PyTorch (for the app's training dialog)."""
+    torch, _ = _torch()
+    d = best_device()
+    name = torch.cuda.get_device_name(0) if d == "cuda" else ("Apple GPU (MPS)" if d == "mps" else "CPU")
+    return {"device": d, "name": name, "torch": torch.__version__}
 
 
 def export_onnx(model, tile: int, path: str | Path) -> Path:

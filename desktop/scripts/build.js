@@ -10,7 +10,8 @@ const config = {
   appId: 'org.corantool.app', productName: 'CorAnTool', copyright: 'Santiago Casanova-Arenillas',
   extraMetadata: { version: n },
   artifactName: `CorAnTool-${V}-\${os}-\${arch}.\${ext}`,
-  files: ['main.js', 'web/**', 'build/icon.png', 'package.json'],
+  files: ['main.js', 'preload.js', 'trainer.js', 'web/**', 'build/icon.png', 'package.json'],
+  extraResources: [{ from: 'python', to: 'python' }],   // V0.17: Python package source for the training module
   directories: { output: 'dist', buildResources: 'build' },
   win: { target: [{ target: 'nsis', arch: ['x64'] }, { target: 'portable', arch: ['x64'] }], icon: 'build/icon.png' },
   nsis: { oneClick: false, allowToChangeInstallationDirectory: true, artifactName: `CorAnTool-${V}-windows-setup.\${ext}` },

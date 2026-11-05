@@ -150,6 +150,13 @@ Prefer lossless formats (PNG/TIFF) for masks: JPEG compression alters the pixel 
 Train a U-Net on the traces you reviewed in the app, then use it as a detection method in the app
 (*Detection → U-Net*, load `model.onnx` and `model.json`). No model trained on real cores is published yet.
 
+In the **desktop program** you can train without the command line: *Detection → U-Net → Train on this
+computer…* (installs a 2–3 GB training module once; uses an NVIDIA or Apple GPU if present; needs Python ≥ 3.10).
+
+For ichnotaxa, *Models and training → What the classifier looks at → Vision model (DINOv2)* replaces the 12
+shape descriptors by the embedding of a pre-trained vision model (88 MB download, cached).
+Plain-language guide (Spanish): [publications/GUIA_APRENDIZAJE_AUTOMATICO.md](publications/GUIA_APRENDIZAJE_AUTOMATICO.md).
+
 ```bash
 pip install "ichantool[unet] @ git+https://github.com/SantiCa/CorAnTool-Project.git"
 # in the app: Results → U-Net training data (ZIP)

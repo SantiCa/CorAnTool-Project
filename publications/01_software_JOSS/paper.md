@@ -76,8 +76,13 @@ The web application adds four steps before the mask is final:
   (*k* = 5) on twelve standardised shape, size (physical units) and colour descriptors, with a
   confidence threshold, a novelty gate based on the leave-one-out nearest-neighbour distance and
   exportable models.
+  Optionally, the descriptors can be replaced by the embedding of a frozen pre-trained vision model
+  (DINOv2; the classifier still learns only from the user's labels);
+- learned segmentation (experimental): export of images and expert masks, a U-Net trained with the
+  Python package or from the desktop program on the user's GPU, and in-app inference with ONNX Runtime
+  (probability threshold and doubtful zones). No trained model is distributed yet.
 
-All computations are deterministic. Project files store the original image and every parameter.
+All computations except optional U-Net training are deterministic. Project files store the original image and every parameter.
 A full technical reference, with formulas and default values, is distributed with the code
 (`docs/`).
 

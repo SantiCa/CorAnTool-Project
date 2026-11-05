@@ -2,6 +2,11 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.17 — 2026-11-05
+- Desktop: train the U-Net from the program on the computer's GPU (one-time training module, cores marked validation/test, progress, stop and resume, trained-model list).
+- Ichnotaxa: optional DINOv2 vision-model embeddings as classifier input instead of the 12 shape descriptors.
+- Plain-language guide to the machine learning (publications/GUIA_APRENDIZAJE_AUTOMATICO.md); papers 1 and 2 updated.
+
 ## V0.16 — 2026-11-05
 - Paper 2 draft: U-Net training protocol and experiments (§3.5).
 

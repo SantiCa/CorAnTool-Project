@@ -11,7 +11,8 @@ export const LOO_MAX = 1500;
 export const vec = (f) => FEATURES.map((k) => (Number.isFinite(f?.[k]) ? f[k] : 0));
 
 export class Classifier {
-  constructor({ k = 5, novelty = 3, weights = 'distance' } = {}) { this.k = k; this.novelty = novelty; this.weights = weights; this.n = 0; }
+  /** V0.17: `features` names the input vector (FEATURES, or a vision-model id); its length is taken from the examples. */
+  constructor({ k = 5, novelty = 3, weights = 'distance', features = FEATURES } = {}) { this.k = k; this.novelty = novelty; this.weights = weights; this.features = features; this.n = 0; }
 
   fit(examples) {
     this.n = examples.length;
@@ -21,7 +22,7 @@ export class Classifier {
     this.counts = {};
     for (const y of this.y) this.counts[y] = (this.counts[y] || 0) + 1;
     if (this.n < 2) { this.accuracy = null; return this; }
-    const d = FEATURES.length;
+    const d = examples[0].x.length;
     this.mu = new Array(d).fill(0); this.sd = new Array(d).fill(0);
     for (const e of examples) e.x.forEach((v, j) => (this.mu[j] += v / this.n));
     for (const e of examples) e.x.forEach((v, j) => (this.sd[j] += (v - this.mu[j]) ** 2 / this.n));
@@ -80,14 +81,14 @@ export class Classifier {
   /** Stored model ("weights" of a k-NN model: standardisation, novelty scale and the examples). */
   toJSON() {
     const r5 = (v) => +v.toFixed(5);
-    return { kind: 'knn', version: 1, k: this.k, novelty: this.novelty, weights: this.weights, n: this.n, features: FEATURES, mu: this.mu?.map(r5) || null, sd: this.sd?.map(r5) || null,
+    return { kind: 'knn', version: 1, k: this.k, novelty: this.novelty, weights: this.weights, n: this.n, features: this.features, mu: this.mu?.map(r5) || null, sd: this.sd?.map(r5) || null,
       scale: this.scale ?? null, accuracy: this.accuracy ?? null, counts: this.counts || {}, y: this.y || [], X: (this.X || []).map((x) => x.map(r5)) };
   }
 
   /** Model rebuilt from toJSON() without refitting (same standardisation, scale and examples). */
-  static fromJSON(m) {
-    const c = new Classifier({ k: m.k, novelty: m.novelty, weights: m.weights || 'distance' });
-    if (!m || !Array.isArray(m.X) || JSON.stringify(m.features) !== JSON.stringify(FEATURES)) return c;
+  static fromJSON(m, features = FEATURES) {
+    const c = new Classifier({ k: m.k, novelty: m.novelty, weights: m.weights || 'distance', features });
+    if (!m || !Array.isArray(m.X) || JSON.stringify(m.features) !== JSON.stringify(features)) return c;
     Object.assign(c, { n: m.n, y: m.y, X: m.X, counts: m.counts, scale: m.scale, accuracy: m.accuracy, mu: m.mu, sd: m.sd });
     if (c.n >= 2 && c.mu) c.Z = c.X.map((x) => c.z(x));
     return c;
@@ -144,7 +145,7 @@ export class TaxonModel {
   get method() { return this.opt.method; }
   fit(examples) {
     const o = this.opt;
-    this.knn = new Classifier({ k: o.k, novelty: o.novelty, weights: o.weights }).fit(examples);
+    this.knn = new Classifier({ k: o.k, novelty: o.novelty, weights: o.weights, features: o.features || FEATURES }).fit(examples);
     this.n = this.knn.n; this.counts = this.knn.counts; this.ext = null;
     if (o.method !== 'knn' && this.n >= 2 && Object.keys(this.counts).length >= 2 && o.fitFn) {
       this.ext = o.fitFn(o.method, this.knn.Z, this.knn.y, o[o.method] || {}, o.seed);
