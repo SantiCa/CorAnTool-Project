@@ -253,6 +253,14 @@ artículo 3.
 
 Implementación: `depth.py::depth_to_age` (Python) y `core.js::parseAgeModel, interpAge` (web).
 
+- Desde V0.28 (solo web): cada línea puede llevar dos columnas más, `edad mínima, edad máxima` (p. ej. el intervalo
+  del 95 % de Bacon), que se usan solo si están en todas las líneas. Se interpolan linealmente como la edad central
+  (`core.js::interpAgeRange`), se exportan en `age_min` y `age_max` y se dibujan como columna «Intervalo de edad»
+  (máx − mín) en la columna y las figuras. La edad central (mediana o media) es la que se usa para el eje de edad.
+- **Bacon** (V0.28; `core.js::baconToAgeText`): la tabla `*_ages.txt` de rbacon (`depth min max median mean`,
+  profundidad en cm, edad en años cal BP) se convierte a las unidades de profundidad del sondeo (÷ cm por unidad) y de
+  edad elegidas (÷ 1, 1000 o 10⁶), con la mediana (o la media, a elegir) como edad central. El programa no ejecuta
+  Bacon ni usa las iteraciones del MCMC; el paquete Python todavía no lee las columnas de intervalo.
 - Entrada: pares `(profundidad, edad)`, ordenados por profundidad. Los separadores pueden ser
   coma, punto y coma, tabulador o espacio, y se ignoran las líneas no numéricas.
 - Edad de cada intervalo: **interpolación lineal** entre los dos puntos del modelo que rodean la
@@ -346,7 +354,18 @@ Procedimiento propio, no publicado. Para cada ajuste (de fábrica y del usuario)
 reducida de la imagen (lado ÷ k, con k tal que quedan ~0,4 MP; promedio de bloques) y se mide, en la
 zona de análisis, la separabilidad de Otsu (1979) del histograma de luminancia BT.601:
 `η = σ²_B(t*) / σ²_T`, con `σ²_B(t) = (μ·ω₀(t) − μ₀(t))² / (ω₀(t)·(1 − ω₀(t)))` maximizada en `t*`
-(η ∈ [0, 1]). Se aplica el ajuste de mayor η y se muestran los cuatro primeros. Una η alta indica dos
+(η ∈ [0, 1]). Se aplica el ajuste de mayor η y se muestran los cuatro primeros.
+**Desde V0.28** el procedimiento es otro, porque η premiaba cualquier bimodalidad y la ecualización (histograma
+uniforme: η = 0,75) siempre ganaba. Se prueban los ajustes y, para los de fábrica, también cada canal (R, G, B).
+(1) Si en la sección hay ≥ 50 píxeles (en la copia reducida) de trazas identificadas a mano con una clase que cuenta,
+se mide cuánto separa cada ajuste esas trazas de la matriz (píxeles sin traza o de la clase Artefacto, fuera de
+exclusiones), con la variable que usa la detección: luminancia menos su media local de radio `radius/k` (umbral
+adaptativo) o luminancia (umbral global). Puntuación = 2·AUC − 1 en el sentido de «Las trazas son» (más oscuras, más
+claras o ambas: máx(AUC, 1 − AUC)), con AUC = P(matriz > traza) + ½ P(igual) a partir de histogramas
+(`imageproc.js::traceSeparation`). (2) Sin trazas identificadas, separabilidad local: en cuadros de ~96 px de la
+imagen completa con desviación ≥ 4 niveles se separa en el umbral de Otsu y se calcula el cociente de Fisher
+`J = (μ₁ − μ₂)² / (σ₁² + σ₂²)`, que no cambia con un estiramiento de contraste y vale 6 para un histograma uniforme;
+puntuación = media de `J / (J + 6)` (0,5 = como un reparto uniforme; `imageproc.js::localSeparability`). Una η alta indica dos
 grupos de grises bien separados (relleno y matriz), en la línea de la comparación de valores de
 píxel de Rodríguez-Tovar y Dorador (2015). Limitación: η premia cualquier bimodalidad (también
 grietas o cambios de color de fondo), y un histograma uniforme da 0,75; por eso es una propuesta

@@ -61,6 +61,7 @@ La descripción detallada de los algoritmos está en
 | V0.25 | 05-11-2026 | Figuras | Ancho, paneles uno junto a otro y ocultar zonas excluidas en todas las figuras con sondeo |
 | V0.26 | 05-11-2026 | Interfaz | La página ya no se desplaza (solo los paneles), paneles que se adaptan al ancho de pantalla, barra de estado visible, franja de navegación, «Ver todo» y Re Pág/Av Pág/Inicio/Fin |
 | V0.27 | 05-11-2026 | Diseño | Cabecera en una fila, fuentes incluidas, paneles por secciones y opciones en botones, figura vacía como hoja, títulos de columna partidos, paleta de registros; franja de navegación a la izquierda con su regla |
+| V0.28 | 05-11-2026 | Edad y realce | Modelo de edad con intervalo (Bacon *_ages.txt), columna de incertidumbre y age_min/age_max; nuevo criterio para «Elegir el ajuste…» con las trazas identificadas |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -651,6 +652,26 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.28 — Modelos de edad de Bacon con incertidumbre y mejor elección del realce (05-11-2026)
+
+- **Qué se hizo:**
+  - El modelo de edad admite «profundidad, edad, mínima, máxima». «Cargar CSV…» reconoce la tabla `*_ages.txt` de
+    Bacon (rbacon) y la pasa a las unidades del sondeo (cm → m, años → ka…), con la mediana o la media como edad.
+  - El intervalo de edad se interpola en cada intervalo de análisis, se exporta (`age_min`, `age_max`) y se dibuja
+    como columna «Intervalo de edad» (anchura máx − mín) en Columna y Figuras, que se puede ocultar.
+  - «Elegir el ajuste que más separa trazas y matriz»: nuevo criterio (ver DOCUMENTACION_TECNICA §6) que usa las
+    trazas identificadas a mano y la variable de la detección; sin trazas, un criterio local que no premia la
+    ecualización. También prueba cada canal de color.
+- **Cambios:** `core.js` (`parseAgeModel` con intervalo, `interpAgeRange`, `baconToAgeText`), `imageproc.js`
+  (`traceSeparation`, `localSeparability`), `app.js` (carga de Bacon, mediana/media, columnas CSV, columna de
+  incertidumbre, `rankPresets`), `index.html`, `i18n.js`. `DELIVERY` = V0.28.
+- **Por qué:** petición de Santiago (modelos de Bacon con incertidumbre; el selector de ajuste no funcionaba bien).
+- **Comprobación:** 70 pruebas JS (2 nuevas), 16 Python; en Chrome con U1385I: tabla Bacon de prueba importada
+  (4 profundidades, mediana, intervalo), columna de incertidumbre en Columna; selector con y sin trazas identificadas;
+  sin errores.
+- **Pendiente / no probado:** con un `*_ages.txt` real de Santiago; iteraciones del MCMC; el paquete Python no lee aún
+  el intervalo de edad.
 
 ## V0.27 — Revisión del diseño de la interfaz (05-11-2026)
 

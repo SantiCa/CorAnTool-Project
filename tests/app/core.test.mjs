@@ -88,3 +88,14 @@ test('V0.3: intervals with too few valid pixels are no data (null), not 0', () =
   assert.equal(b[0].pct, 0); assert.equal(b[1].pct, null); assert.equal(b[1].noData, true);
   assert.equal(binRows(counts, { top: 0, bottom: 2, binPx: 10 })[1].pct, 0);   // without threshold: 0 %
 });
+
+test('V0.28: age model with range and Bacon table', async () => {
+  const { parseAgeModel, interpAgeRange, baconToAgeText } = await import('../../app/js/core.js');
+  const m = parseAgeModel('0, 0, 0, 1\n10, 10, 8, 13');
+  assert.deepEqual(interpAgeRange(m, 5), { min: 4, max: 7 });
+  assert.equal(interpAgeRange(parseAgeModel('0,0\n1,1'), 0.5), null);
+  const bac = 'depth\tmin\tmax\tmedian\tmean\n0\t100\t300\t200\t210\n100\t9000\t11000\t10000\t10100\n';
+  assert.deepEqual(baconToAgeText(bac, { depthUnit: 'm', ageDiv: 1000 }), ['0, 0.2, 0.1, 0.3', '1, 10, 9, 11']);
+  assert.deepEqual(baconToAgeText(bac, { center: 'mean', depthUnit: 'cm', ageDiv: 1 })[1], '100, 10100, 9000, 11000');
+  assert.equal(baconToAgeText('a,b\n1,2'), null);
+});

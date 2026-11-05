@@ -450,3 +450,51 @@ export function separability(rgba, w, h, roi = { x0: 0, y0: 0, x1: w, y1: h }) {
   }
   return { eta: best / varT, threshold: thr };
 }
+
+/**
+ * V0.28: how well an enhanced image separates traces from matrix, for ranking enhancement settings.
+ * cls[i] (same size as the image): 1 = trace, 2 = matrix, 0 = not used. The feature is the luminance (global
+ * threshold) or the luminance minus its local mean over `radius` px (adaptive threshold), as the detection uses it.
+ * Score = 2·AUC − 1 in the expected direction (polarity 'dark': traces darker; 'light'; 'both' = either), 0–1.
+ */
+export function traceSeparation(rgba, w, h, roi, cls, { local = true, radius = 40, polarity = 'dark' } = {}) {
+  const L = lumaOf(rgba, w * h), M = local ? boxBlur(L, w, h, Math.max(1, Math.round(radius))) : null;
+  const ht = new Float64Array(511), hm = new Float64Array(511); let nt = 0, nm = 0;
+  for (let y = roi.y0; y < roi.y1; y++) for (let x = roi.x0; x < roi.x1; x++) {
+    const i = y * w + x, c = cls[i]; if (!c) continue;
+    const v = Math.max(0, Math.min(510, Math.round((M ? L[i] - M[i] : L[i]) + 255)));
+    if (c === 1) { ht[v]++; nt++; } else { hm[v]++; nm++; }
+  }
+  if (!nt || !nm) return { score: 0, auc: 0.5, nTrace: nt, nMatrix: nm };
+  // AUC = P(matrix value > trace value) + ½ P(equal): probability that a trace pixel is darker than a matrix pixel
+  let below = 0, auc = 0;
+  for (let v = 0; v < 511; v++) { auc += (ht[v] / nt) * ((nm - below - hm[v]) / nm + 0.5 * (hm[v] / nm)); below += hm[v]; }
+  const dir = polarity === 'light' ? 1 - auc : polarity === 'both' ? Math.max(auc, 1 - auc) : auc;
+  return { score: Math.max(0, 2 * dir - 1), auc, nTrace: nt, nMatrix: nm };
+}
+
+/**
+ * V0.28: separability without reviewed traces, computed in tiles of `tile` px (so slow colour changes along the core
+ * and large cracks weigh less than with one histogram of the whole area). In each tile not flat (std ≥ 4 grey levels)
+ * the grey levels are split at Otsu's threshold and Fisher's ratio J = (μ₁ − μ₂)² / (σ₁² + σ₂²) is measured; it does not
+ * change with a contrast stretch and is 6 for a uniform histogram, so equalising alone does not raise it. Result:
+ * mean of J / (J + 6) over the tiles (0–1; 0.5 = no more separated than a uniform spread).
+ */
+export function localSeparability(rgba, w, h, roi, tile = 48) {
+  let sum = 0, n = 0;
+  const hist = new Float64Array(256);
+  for (let y0 = roi.y0; y0 < roi.y1; y0 += tile) for (let x0 = roi.x0; x0 < roi.x1; x0 += tile) {
+    const x1 = Math.min(roi.x1, x0 + tile), y1 = Math.min(roi.y1, y0 + tile);
+    if ((x1 - x0) * (y1 - y0) < tile * tile * 0.4) continue;
+    hist.fill(0); let k = 0, s1 = 0, s2 = 0;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const j = (y * w + x) * 4, v = Math.min(255, Math.round(0.299 * rgba[j] + 0.587 * rgba[j + 1] + 0.114 * rgba[j + 2])); hist[v]++; k++; s1 += v; s2 += v * v; }
+    if (Math.sqrt(Math.max(0, s2 / k - (s1 / k) ** 2)) < 4) continue;
+    const thr = separability(rgba, w, h, { x0, y0, x1, y1 }).threshold;
+    let n0 = 0, a0 = 0, b0 = 0, n1 = 0, a1 = 0, b1 = 0;
+    for (let v = 0; v < 256; v++) { const c = hist[v]; if (v <= thr) { n0 += c; a0 += c * v; b0 += c * v * v; } else { n1 += c; a1 += c * v; b1 += c * v * v; } }
+    if (!n0 || !n1) continue;
+    const m0 = a0 / n0, m1 = a1 / n1, v0 = b0 / n0 - m0 * m0, v1 = b1 / n1 - m1 * m1, J = (m1 - m0) ** 2 / Math.max(1e-6, v0 + v1);
+    sum += J / (J + 6); n++;
+  }
+  return n ? sum / n : 0;
+}

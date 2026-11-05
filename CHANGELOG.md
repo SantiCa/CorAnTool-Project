@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.28 — 2026-11-05
+- Age model with an age range; imports the Bacon (rbacon) *_ages.txt table with median or mean; age_min/age_max in the CSV and an age-uncertainty track.
+- «Pick the setting that best separates traces and matrix» now measures the separation of your identified traces from the matrix (or a contrast-invariant local criterion without them) and also tries each colour channel.
+
 ## V0.27 — 2026-11-05
 - Interface review: one-row top bar, bundled IBM Plex fonts (same look offline), sentence-case panel sections, Core column in collapsible sections, option groups as toggle chips, blank-sheet empty figure, two-line column titles, colour-blind-safe record palette.
 - Navigation strip moved to the left of the depth ruler, with its own small ruler.

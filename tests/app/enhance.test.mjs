@@ -62,3 +62,13 @@ test('separability (Otsu η) ranks a bimodal image above a uniform ramp', async 
   assert.ok(a.eta > 0.99 && a.threshold >= 40 && a.threshold < 200);
   assert.ok(b.eta > 0.7 && b.eta < 0.8);   // uniform distribution: η = 0.75
 });
+
+test('V0.28: trace separation and local separability', async () => {
+  const { traceSeparation, localSeparability } = await import('../../app/js/imageproc.js');
+  const w = 40, h = 40, rgba = new Uint8ClampedArray(w * h * 4), cls = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) { const x = i % w, tr = x >= 15 && x < 25; const v = tr ? 60 : 180; rgba.set([v, v, v, 255], i * 4); cls[i] = tr ? 1 : 2; }
+  const roi = { x0: 0, y0: 0, x1: w, y1: h };
+  assert.equal(traceSeparation(rgba, w, h, roi, cls, { local: false, polarity: 'dark' }).score, 1);
+  assert.equal(traceSeparation(rgba, w, h, roi, cls, { local: false, polarity: 'light' }).score, 0);
+  assert.ok(localSeparability(rgba, w, h, roi, 20) > 0.9);
+});

@@ -1,6 +1,6 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
-import { BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
-import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
+import { interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
+import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
 import { LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.27';
+const DELIVERY = 'V0.28';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -880,6 +880,7 @@ function analyze(s) {
   for (const b of s.bins) if (b.noData) { b.BI = null; b.ii = null; }
   for (const b of s.bins) {
     b.age = interpAge(S.age.model, b.depth);
+    const ar = interpAgeRange(S.age.model, b.depth); b.ageMin = ar?.min ?? null; b.ageMax = ar?.max ?? null;   // V0.28
     const m = manualAt(s, b.depth); b.BIm = m?.BI ?? null; b.iim = m?.ii ?? null;
   }
 }
@@ -2008,24 +2009,48 @@ $('fPreset').addEventListener('change', (e) => {
  * Choose the setting (built-in or user) that best separates two grey-level groups in the analysis area
  * (Otsu separability η on a reduced copy of the image). Own procedure; see DOCUMENTACION_TECNICA §6.
  */
+/**
+ * V0.28: ranks enhancement settings (presets and their single-channel variants). With traces identified by hand in
+ * this section it measures how well each one separates those traces from the matrix as the detection sees them
+ * (`traceSeparation`); without them, the local grey-level separability (`localSeparability`).
+ */
 function rankPresets(s) {
   const k = Math.max(1, Math.round(Math.sqrt((s.w * s.h) / 4e5)));
   const sm = downsampleRGBA(s.orig, s.w, s.h, k);
   const roi = { x0: Math.floor(s.roi.x0 / k), y0: Math.floor(s.roi.y0 / k), x1: Math.max(1, Math.floor(s.roi.x1 / k)), y1: Math.max(1, Math.floor(s.roi.y1 / k)) };
-  const cands = [...BUILTIN_PRESETS.map((v) => ({ id: v, name: t('f.p.' + v), filters: { ...FILTER_PRESETS[v] } })),
+  const base = [...BUILTIN_PRESETS.map((v) => ({ id: v, name: t('f.p.' + v), filters: { ...FILTER_PRESETS[v] } })),
     ...userPresets.map((u) => ({ id: 'u:' + u.id, name: u.name, filters: { ...DEFAULT_FILTERS, ...u.filters }, detect: u.detect }))];
-  return cands.map((c) => {
+  const cands = [];
+  for (const c of base) {
+    cands.push(c);
+    if (!c.id.startsWith('u:') && c.id !== 'none' && ['rgb', 'gray'].includes(c.filters.channel || 'rgb'))
+      for (const ch of ['r', 'g', 'b']) cands.push({ ...c, id: 'custom', name: `${c.name} · ${t('ch.' + ch)}`, filters: { ...c.filters, channel: ch } });
+  }
+  // pixels of the downsampled image: 1 = trace identified by hand (a class that counts), 2 = matrix (no trace, or artefact), 0 = unused
+  const cls = new Uint8Array(sm.w * sm.h), countable = new Set(S.classes.filter((c) => c.counts).map((c) => c.id));
+  const own = new Set([...s.objects.values()].filter((o) => o.cls && countable.has(o.cls)).map((o) => o.id));
+  let nT = 0;
+  if (own.size) for (let y = roi.y0; y < roi.y1; y++) for (let x = roi.x0; x < roi.x1; x++) {
+    const i = Math.min(s.h - 1, y * k) * s.w + Math.min(s.w - 1, x * k); if (s.exclude[i]) continue;
+    const v = s.labels[i], id = v ? topAt(v, s.stacks) : 0, o = id && s.objects.get(id);
+    if (!id || (o && o.cls && !countable.has(o.cls))) cls[y * sm.w + x] = 2; else if (own.has(id)) { cls[y * sm.w + x] = 1; nT++; }
+  }
+  const supervised = nT >= 50, dp = s.detect || DEFAULT_DETECT;
+  const opt = { local: dp.method !== 'global', radius: (dp.radius || 40) / k, polarity: dp.polarity || 'dark' };
+  const out = cands.map((c) => {
     const tmp = { filters: c.filters, orig: sm.rgba, w: sm.w, h: sm.h, roi };
     const enh = applyFilters(sm.rgba, sm.w, sm.h, effectiveFilters(tmp));
-    return { ...c, eta: separability(enh, sm.w, sm.h, roi).eta };
+    return { ...c, eta: supervised ? traceSeparation(enh, sm.w, sm.h, roi, cls, opt).score : localSeparability(enh, sm.w, sm.h, roi, Math.max(16, Math.round(96 / k))) };
   }).sort((a, b) => b.eta - a.eta);
+  out.mode = supervised ? 'traces' : 'local'; out.nTraces = own.size;
+  return out;
 }
 $('presetBest').addEventListener('click', () => busy(() => {
   const s = sec(); if (!s?.orig) return;
   const r = rankPresets(s), best = r[0];
   s.preset = best.id; s.filters = { ...best.filters }; if (best.detect) s.detect = { ...DEFAULT_DETECT, ...best.detect };
   renderFilterForm(); renderDetectForm(); refilter();
-  $('presetRank').textContent = t('f.rank', { list: r.slice(0, 4).map((c) => `${c.name} ${c.eta.toFixed(3)}`).join(' · ') });
+  $('presetRank').textContent = t(r.mode === 'traces' ? 'f.rankT' : 'f.rankL', { n: r.nTraces, list: r.slice(0, 4).map((c) => `${c.name} ${c.eta.toFixed(2)}`).join('; ') });
 }));
 $('fAuto').addEventListener('change', (e) => { const s = sec(); if (!s) return; s.filters.autoLevels = e.target.checked; s.preset = 'custom'; renderFilterForm(); refilter(); });
 $('fAutoG').addEventListener('change', (e) => { const s = sec(); if (!s) return; s.filters.autoGamma = e.target.checked; s.preset = 'custom'; renderFilterForm(); refilter(); });
@@ -2162,7 +2187,23 @@ function setAge() {
 }
 $('ageText').addEventListener('input', setAge);
 $('ageUnits').addEventListener('change', setAge);
-$('ageFile').addEventListener('change', async (e) => { const f = e.target.files[0]; if (!f) return; $('ageText').value = await f.text(); setAge(); e.target.value = ''; });
+$('ageFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return; const txt = await f.text(); e.target.value = '';
+  // V0.28: a Bacon table (*_ages.txt) is converted to core units; other files are read as "depth, age[, min, max]"
+  const units = S.sections[0]?.units || curCore()?.units || 'cm', div = { a: 1, ka: 1000, Ma: 1e6 }[$('ageUnits').value] || 1000;
+  const bac = baconToAgeText(txt, { center: S.age.center || 'median', depthUnit: units, ageDiv: div });
+  if (bac) { S.age.bacon = txt; $('ageText').value = `# ${t('age.baconHead', { f: f.name, c: t('age.c.' + (S.age.center || 'median')), u: units, a: $('ageUnits').value })}\n# ${t('age.cols')}\n` + bac.join('\n'); toast(t('age.baconOk', { n: bac.length })); }
+  else { S.age.bacon = null; $('ageText').value = txt; }
+  setAge(); renderAgeCenter();
+});
+/** V0.28: median or mean of a Bacon model (re-converted from the stored table). */
+function renderAgeCenter() { $('ageCenterRow').hidden = !S.age.bacon; $('ageCenter').value = S.age.center || 'median'; }
+$('ageCenter').addEventListener('change', (e) => {
+  S.age.center = e.target.value; if (!S.age.bacon) return;
+  const units = S.sections[0]?.units || curCore()?.units || 'cm', div = { a: 1, ka: 1000, Ma: 1e6 }[$('ageUnits').value] || 1000;
+  const bac = baconToAgeText(S.age.bacon, { center: S.age.center, depthUnit: units, ageDiv: div }); if (!bac) return;
+  $('ageText').value = `# ${t('age.baconHead', { f: 'Bacon', c: t('age.c.' + S.age.center), u: units, a: $('ageUnits').value })}\n# ${t('age.cols')}\n` + bac.join('\n'); setAge();
+});
 
 /* toolbar */
 document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
@@ -2203,11 +2244,11 @@ const safe = (s) => String(s).replace(/[^\w.-]+/g, '_').slice(0, 80) || 'section
 
 $('expCSV').addEventListener('click', () => {
   const counted = S.classes.map((c, k) => [c, k]).filter(([c]) => c.counts);
-  const head = ['section', 'depth_top', 'depth_bottom', 'depth', 'units', 'age', 'age_units', 'valid_pixels', 'bioturbation_pct', ...counted.map(([c]) => c.name + '_pct'), 'BI', 'ii', 'BI_manual', 'ii_manual'];
+  const rng = !!S.age.model?.min, head = ['section', 'depth_top', 'depth_bottom', 'depth', 'units', 'age', ...(rng ? ['age_min', 'age_max'] : []), 'age_units', 'valid_pixels', 'bioturbation_pct', ...counted.map(([c]) => c.name + '_pct'), 'BI', 'ii', 'BI_manual', 'ii_manual'];
   const rows = [head];
   for (const s of S.sections) {
     analyze(s);
-    for (const b of s.bins) rows.push([s.name, b.dTop, b.dBottom, b.depth, s.units, b.age, S.age.model ? S.age.units : null, b.valid, b.pct, ...counted.map(([, k]) => b.classPct[k]), b.BI, b.ii, b.BIm, b.iim]);
+    for (const b of s.bins) rows.push([s.name, b.dTop, b.dBottom, b.depth, s.units, b.age, ...(rng ? [b.ageMin, b.ageMax] : []), S.age.model ? S.age.units : null, b.valid, b.pct, ...counted.map(([, k]) => b.classPct[k]), b.BI, b.ii, b.BIm, b.iim]);
   }
   analyze(sec());
   saveFile(`${safe(S.name)}_bioturbation.csv`, toCSV(rows), 'text/csv');
@@ -2319,7 +2360,7 @@ function makeCore(q = {}) {
     units: q.units || 'm', source: q.source || null, notes: q.notes || '',
     imp: q.imp || null, user: q.user || {}, records: q.records || [], sections: [],
     logView: { ...lv, ...(q.logView || {}), tracks: { ...lv.tracks, ...(q.logView?.tracks || {}) } },
-    ageModel: { text: q.age?.text || q.ageText || '', units: q.age?.units || 'ka', model: null },
+    ageModel: { text: q.age?.text || q.ageText || '', units: q.age?.units || 'ka', model: null, bacon: q.age?.bacon || null, center: q.age?.center || 'median' },
     depth: null, age: null, proxies: {}, src: {}, ageText: '',
   };
   c.ageModel.model = parseAgeModel(c.ageModel.text);
@@ -2332,7 +2373,7 @@ function activateCore(id, silent = false) {
   S.curCore = c.id;
   S.sections = c.sections; S.records = c.records; S.age = c.ageModel; S.logView = c.logView;
   S.undo = []; S.selected = 0; S.multi.clear(); $('undoBtn').disabled = true;
-  $('ageText').value = S.age.text; $('ageUnits').value = S.age.units;
+  $('ageText').value = S.age.text; $('ageUnits').value = S.age.units; renderAgeCenter?.();
   const keep = loading; loading = true; setAge(); loading = keep;
   selectSection(S.sections.length ? 0 : -1, true);
   renderRecList(); renderLogPanel(); renderCoreBar(); scheduleLog(0);
@@ -2478,7 +2519,7 @@ function serialize() {
     geo, sheet: S.sheet, fig: S.fig, curCore: S.curCore, plots: S.plots || [], plotCur: S.plotCur || 0,
     cores: S.cores.map((c) => ({
       id: c.id, name: c.name, lat: c.lat, lon: c.lon, waterDepth: c.waterDepth ?? null, units: c.units, source: c.source || null, notes: c.notes || '',
-      imp: c.imp, user: c.user || {}, records: c.records, logView: c.logView, age: { text: c.ageModel.text, units: c.ageModel.units },
+      imp: c.imp, user: c.user || {}, records: c.records, logView: c.logView, age: { text: c.ageModel.text, units: c.ageModel.units, bacon: c.ageModel.bacon || undefined, center: c.ageModel.center || undefined },
       sections: c.sections.map((q) => serSection(q)),
     })),
   };
@@ -3129,6 +3170,12 @@ function stripDataURL(D, from, to, H, W) {
 function logRecords(D) {
   const inv = invertModel(D.model), out = [];
   for (const r of S.records) for (const s of r.series) if (s.show) out.push({ name: s.name, color: s.color, reverse: s.reverse, axis: r.axis, x: s.x, y: s.y, pts: s.x.map((x, i) => [toAxis(x, r.axis, D.axis, D.model, inv), s.y[i]]) });
+  // V0.28: width of the age interval (e.g. Bacon 95 %) as one more track, when the age model has it
+  const m = S.age.model;
+  if (m?.min && S.logView.tracks.ageErr !== false) {
+    const name = t('age.errTrack', { u: S.age.units || 'ka' }), y = m.depth.map((_, i) => m.max[i] - m.min[i]);
+    out.push({ name, color: '#6b5e4b', reverse: false, axis: 'depth', x: m.depth, y, pts: m.depth.map((d, i) => [toAxis(d, 'depth', D.axis, D.model, inv), y[i]]) });
+  }
   return out;
 }
 
@@ -3271,7 +3318,7 @@ function renderLogPanel() {
   $('logHeight').value = lv.height; $('logHeightOut').textContent = lv.height + ' px';
   renderImgPanelsForm();
   $('logImgMode').value = lv.imgMode; $('logOverlay').checked = lv.overlay; $('logHideExcl').checked = !!lv.hideExcl;
-  document.querySelectorAll('#logTracks [data-track]').forEach((el) => (el.checked = !!lv.tracks[el.dataset.track]));
+  document.querySelectorAll('#logTracks [data-track]').forEach((el) => (el.checked = el.dataset.track === 'ageErr' ? lv.tracks.ageErr !== false : !!lv.tracks[el.dataset.track]));
 }
 
 $('logStyle').addEventListener('change', onStyleInput);   // V0.5

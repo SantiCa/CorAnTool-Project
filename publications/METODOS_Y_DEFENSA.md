@@ -29,6 +29,12 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 - **Figuras de secciones (V32):** paneles original / tratada / trazas resaltadas / flechas, al estilo de Dorador y
   Rodríguez-Tovar; las trazas resaltadas son las clasificadas en el programa (incluidas las predicciones aceptadas si así
   está configurado), lo que debe constar en el pie.
+- **Modelo de edad (V0.28):** se puede importar un modelo de Bacon (mediana o media e intervalo del 95 %); el
+  programa no ejecuta Bacon ni propaga las iteraciones del MCMC. Las edades por intervalo se interpolan linealmente
+  sobre la tabla de Bacon; citar Bacon (Blaauw y Christen, 2011) y la curva de calibración usada.
+- **Elección del realce (V0.28):** con trazas identificadas, el criterio es la separación (2·AUC − 1) entre esas trazas
+  y la matriz; si las mismas trazas se usan después para evaluar la detección, la evaluación es optimista: elegir el
+  ajuste con unas secciones y evaluar con otras.
 - **Trazas solapadas (V0.20):** una traza puede estar dentro de otra. La bioturbación total cuenta el solape una vez
   (≤ 100 %), pero cada icnotaxón cuenta su superficie completa, así que la suma de los porcentajes por icnotaxón puede
   superar al total (y a 100 %). Hay que decirlo en los métodos y no presentar los porcentajes por icnotaxón como

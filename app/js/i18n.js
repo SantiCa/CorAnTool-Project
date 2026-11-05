@@ -1742,3 +1742,31 @@ Object.assign(D.en, { 'view.all': 'Show all', 'view.allTip': 'Shows the whole an
 // V0.27: interface review
 Object.assign(D.es, { 'logs.win': 'Eje y tramo', 'logs.img': 'Imagen del sondeo', 'log.imgStretch': 'Factor horizontal', 'log.asp.keep': 'Proporción real' });
 Object.assign(D.en, { 'logs.win': 'Axis and window', 'logs.img': 'Core image', 'log.imgStretch': 'Horizontal factor', 'log.asp.keep': 'True proportions' });
+
+// V0.28: choose the enhancement setting
+Object.assign(D.es, {
+  'f.rankT': 'Separación entre tus {n} trazas identificadas y la matriz (0–1, como la ve la detección): {list}. Revisa el resultado a ojo.',
+  'f.rankL': 'Sin trazas identificadas en esta sección: separación local de grises por zonas (Fisher en el umbral de Otsu; 0,5 = como un reparto uniforme): {list}. Identifica unas cuantas trazas y vuelve a pulsar para un resultado mejor.',
+  'h.f.best': 'Prueba los ajustes y cada canal de color. Si en esta sección hay trazas identificadas a mano, elige el que mejor las separa de la matriz tal como las detecta el método elegido; si no, el que más contraste local da.',
+});
+Object.assign(D.en, {
+  'f.rankT': 'Separation between your {n} identified traces and the matrix (0–1, as the detection sees it): {list}. Check the result by eye.',
+  'f.rankL': 'No identified traces in this section: local grey-level separation by tiles (Fisher at the Otsu threshold; 0.5 = like a uniform spread): {list}. Identify a few traces and press again for a better result.',
+  'h.f.best': 'Tries the settings and each colour channel. With traces identified by hand in this section, picks the one that best separates them from the matrix as the chosen method detects them; otherwise the one with most local contrast.',
+});
+Object.assign(D.es, {
+  'age.center': 'Edad del modelo Bacon', 'age.c.median': 'Mediana', 'age.c.mean': 'Media',
+  'age.fileTip': 'CSV o texto con «profundidad, edad» y, opcionalmente, «mínimo, máximo» (intervalo de edad). También acepta la tabla *_ages.txt de Bacon (rbacon), que se pasa a las unidades del sondeo.',
+  'age.baconHead': 'Bacon ({f}): {c} e intervalo del 95 %; profundidad en {u}, edad en {a}', 'age.cols': 'profundidad, edad, edad mínima, edad máxima',
+  'age.baconOk': 'Modelo Bacon importado: {n} profundidades con intervalo del 95 %.',
+  'age.errTrack': 'Intervalo de edad ({u})', 'age.errChip': 'Incertidumbre de edad', 'age.errTip': 'Anchura del intervalo de edad (p. ej. 95 % de Bacon) a cada profundidad. Solo aparece si el modelo de edad lo tiene.',
+  'age.ph': 'profundidad, edad[, mín, máx]\n0, 0\n150, 12.5',
+});
+Object.assign(D.en, {
+  'age.center': 'Age of the Bacon model', 'age.c.median': 'Median', 'age.c.mean': 'Mean',
+  'age.fileTip': 'CSV or text with "depth, age" and, optionally, "minimum, maximum" (age interval). It also accepts the Bacon (rbacon) *_ages.txt table, converted to the core units.',
+  'age.baconHead': 'Bacon ({f}): {c} and 95 % interval; depth in {u}, age in {a}', 'age.cols': 'depth, age, minimum age, maximum age',
+  'age.baconOk': 'Bacon model imported: {n} depths with 95 % interval.',
+  'age.errTrack': 'Age interval ({u})', 'age.errChip': 'Age uncertainty', 'age.errTip': 'Width of the age interval (e.g. Bacon 95 %) at each depth. Shown only when the age model has it.',
+  'age.ph': 'depth, age[, min, max]\n0, 0\n150, 12.5',
+});

@@ -134,11 +134,13 @@ export function parseAgeModel(text) {
   const pts = [];
   for (const line of String(text || '').split(/\r?\n/)) {
     const p = line.trim().split(/[,;\t ]+/).map(Number);
-    if (p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1])) pts.push([p[0], p[1]]);
+    if (p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1])) pts.push([p[0], p[1], p[2], p[3]]);
   }
   pts.sort((a, b) => a[0] - b[0]);
   if (pts.length < 2) return null;
   const m = { depth: pts.map((p) => p[0]), age: pts.map((p) => p[1]) };
+  // V0.28: optional third and fourth columns = age range (e.g. the 95 % interval of a Bacon model), only if every row has them
+  if (pts.every((p) => Number.isFinite(p[2]) && Number.isFinite(p[3]))) { m.min = pts.map((p) => Math.min(p[2], p[3])); m.max = pts.map((p) => Math.max(p[2], p[3])); }
   // reversals (age decreasing downwards) make depth↔age conversion ambiguous: flagged for the interface
   m.reversals = m.age.reduce((k, a, i) => k + (i && a < m.age[i - 1] ? 1 : 0), 0);
   return m;
@@ -153,6 +155,33 @@ export function interpAge(model, d) {
   while (hi - lo > 1) { const m = (lo + hi) >> 1; if (depth[m] <= d) lo = m; else hi = m; }
   const span = depth[hi] - depth[lo];
   return span ? age[lo] + ((d - depth[lo]) / span) * (age[hi] - age[lo]) : age[lo];
+}
+
+/** V0.28: age range at depth d, linearly interpolated like the central age; null without a range or outside the model. */
+export function interpAgeRange(model, d) {
+  if (!model?.min || d == null) return null;
+  const lo = interpAge({ depth: model.depth, age: model.min }, d), hi = interpAge({ depth: model.depth, age: model.max }, d);
+  return lo == null ? null : { min: lo, max: hi };
+}
+
+/**
+ * V0.28: age–depth table written by Bacon (rbacon, *_ages.txt: depth, min, max, median, mean; depth in cm,
+ * ages in cal yr BP, min–max = 95 % interval). Returns age-model text in the core units: "depth, age, min, max".
+ * center: 'median' (default) or 'mean'; depthUnit: unit of the core depths; ageDiv: years per age unit (ka = 1000).
+ */
+export function baconToAgeText(text, { center = 'median', depthUnit = 'cm', ageDiv = 1000 } = {}) {
+  const lines = String(text || '').split(/\r?\n/).filter((l) => l.trim());
+  if (!lines.length) return null;
+  const head = lines[0].trim().replace(/"/g, '').toLowerCase().split(/[,;\t ]+/);
+  const col = (k) => head.indexOf(k), iD = col('depth'), iMin = col('min'), iMax = col('max'), iC = col(center) >= 0 ? col(center) : col('median') >= 0 ? col('median') : col('mean');
+  if (iD < 0 || iMin < 0 || iMax < 0 || iC < 0) return null;
+  const f = 1 / UNIT_TO_CM[depthUnit], r = (v) => +(+v).toPrecision(8), out = [];
+  for (const l of lines.slice(1)) {
+    const p = l.trim().split(/[,;\t ]+/).map(Number);
+    if ([iD, iMin, iMax, iC].some((i) => !Number.isFinite(p[i]))) continue;
+    out.push(`${r(p[iD] * f)}, ${r(p[iC] / ageDiv)}, ${r(p[iMin] / ageDiv)}, ${r(p[iMax] / ageDiv)}`);
+  }
+  return out.length >= 2 ? out : null;
 }
 
 export function toCSV(rows) {
