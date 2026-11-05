@@ -64,6 +64,7 @@ La descripción detallada de los algoritmos está en
 | V0.28 | 05-11-2026 | Edad y realce | Modelo de edad con intervalo (Bacon *_ages.txt), columna de incertidumbre y age_min/age_max; nuevo criterio para «Elegir el ajuste…» con las trazas identificadas |
 | V0.29 | 05-11-2026 | Edición de trazas | «Superponer trazas» activado por defecto, más visible, tecla S y aviso cuando una traza sustituye a otra |
 | V0.30 | 05-11-2026 | Edición de trazas | Solape solo entre icnotaxones distintos; trazas del mismo icnotaxón que se solapan se unen al reasignar |
+| V0.31 | 05-11-2026 | Figuras | Elegir qué icnotaxones se dibujan y representarlos apilados o cada uno en su columna |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -654,6 +655,17 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.31 — Icnotaxones elegibles y en columnas separadas (05-11-2026)
+
+- **Qué se hizo:** en «Escalas y estilo» (Columna, Figuras › Sondeo y Distribución) se eligen los icnotaxones que se
+  dibujan y si van apilados en una columna o cada uno en su propia columna con su escala. Los ocultos tampoco se
+  dibujan en la columna lateral de Bioturbación. Solo cambia el dibujo, no los cálculos ni los CSV.
+- **Cambios:** `log.js` (`buildLogSVG`: columnas `sp1`; `buildRangeSVG`: ocultos), `app.js` (`speciesFormHTML`,
+  `onStyleInput`, tabla de ejes, columna lateral), `i18n.js`. `DELIVERY` = V0.31.
+- **Comprobación:** 70 pruebas JS; en Chrome con U1385I: «Cada uno en su columna» crea una columna por icnotaxón y
+  desmarcarlo la quita; sin errores.
+- **Pendiente / no probado:** —
 
 ## V0.30 — Solape solo entre icnotaxones distintos (05-11-2026)
 

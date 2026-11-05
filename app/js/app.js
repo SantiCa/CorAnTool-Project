@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.30';
+const DELIVERY = 'V0.31';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -1346,8 +1346,9 @@ function renderProfile() {
       // V0.20: with overlapping traces the class percentages may add up to more than the total: the stack is scaled to the total
       const sum = b.classPct.reduce((a, v) => a + (v || 0), 0), k0 = b.pct != null && sum > b.pct && sum > 0 ? b.pct / sum : 1;
       let acc = 0;
+      const spH = new Set(S.logView?.style?.speciesHide || []);   // V0.31
       b.classPct.forEach((v, k) => {
-        if (!v) return;
+        if (!v || spH.has(S.classes[k]?.name)) return;
         const [r, g, bl] = cols[k]; pctx.fillStyle = `rgba(${r},${g},${bl},.75)`;
         pctx.fillRect(x0 + (acc / 100) * pw, y0, ((v * k0) / 100) * pw, hgt); acc += v * k0;
       });
@@ -3304,14 +3305,24 @@ function styleFormHTML() {
     <label class="f"><span>${t('st.totalTitle')}</span><input type="text" data-st="totalTitle" value="${esc(st.totalTitle || '')}" placeholder="${esc(t('log.total'))}"></label>
     <label class="f"><span>${t('st.speciesTitle')}</span><input type="text" data-st="speciesTitle" value="${esc(st.speciesTitle || '')}" placeholder="${esc(t('log.species'))}"></label></div>
     <div class="chk2">${chk('frame', 'st.frame')}${chk('grid', 'st.grid')}${chk('boundaries', 'st.boundaries')}${chk('showTitle', 'st.showTitle')}</div>
+    ${speciesFormHTML(st)}
     ${ndFormHTML(st)}
     ${axesFormHTML()}`;
+}
+/** V0.31: ichnotaxa shown in «By ichnotaxon» (and the distribution chart), stacked or each in its own column. */
+function speciesFormHTML(st) {
+  const hide = new Set(st.speciesHide || []), names = S.classes.filter((c) => c.counts !== false && c.id !== 'artifact').map((c) => c.name);
+  return `<div class="f"><span>${t('sp.title')}</span>
+    <label class="f"><span>${t('sp.mode')}</span><select data-st="speciesMode"><option value="stack" ${st.speciesMode !== 'separate' ? 'selected' : ''}>${t('sp.stack')}</option><option value="separate" ${st.speciesMode === 'separate' ? 'selected' : ''}>${t('sp.separate')}</option></select></label>
+    <div class="chk2">${names.map((n) => `<label class="chk"><input type="checkbox" data-sph="${esc(n)}" ${hide.has(n) ? '' : 'checked'}><span><i>${esc(n)}</i></span></label>`).join('')}</div></div>`;
 }
 /** V0.6: width and axis format of each column at the right of the core (total, ichnotaxa, BI, ii and records). */
 function axesFormHTML(only = null, lv = S.logView, recNames = null) {
   const ax = lv.style?.axes || {}, W = lv.colW || {};
   const recs = recNames || [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))];
-  const cols = [['total', t('log.total'), 150], ['species', t('log.species'), 150], ['BI', 'BI', 46], ['ii', 'ii', 46], ...recs.map((n) => ['rec:' + n, n, 120])];
+  const sep = lv.style?.speciesMode === 'separate', spHide = new Set(lv.style?.speciesHide || []);
+  const spCols = sep ? S.classes.filter((c) => c.counts !== false && c.id !== 'artifact' && !spHide.has(c.name)).map((c) => ['sp:' + c.name, c.name, 70]) : [['species', t('log.species'), 150]];
+  const cols = [['total', t('log.total'), 150], ...spCols, ['BI', 'BI', 46], ['ii', 'ii', 46], ...recs.map((n) => ['rec:' + n, n, 120])];
   const cell = (id, k, ph, step = 'any') => `<input type="number" data-ax="${esc(id)}" data-k="${k}" step="${step}" value="${ax[id]?.[k] ?? ''}" placeholder="${ph}" aria-label="${esc(id + ' ' + k)}" style="width:100%;min-width:54px">`;
   return `<div class="f"><span>${t('st.axes')}</span><div style="overflow-x:auto"><table class="axtab" style="font-size:11px;border-collapse:collapse;width:100%">
     <tr><th></th><th>${t('st.ax.w')}</th><th>${t('st.ax.min')}</th><th>${t('st.ax.max')}</th><th>${t('st.ax.div')}</th><th>${t('st.ax.dec')}</th><th>${t('edit.step')}</th><th title="${esc(t('st.ax.revTip'))}">⇄</th><th title="${esc(t('st.ax.logTip'))}">log</th></tr>
@@ -3334,6 +3345,10 @@ function onStyleInput(e) {
     if (invalid) { a[k2] = previous; el.setCustomValidity(t('edit.invalidAxis')); el.reportValidity(); return; }
     el.setCustomValidity('');
     markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure(); return;
+  }
+  if (el.dataset.sph != null) {   // V0.31: ichnotaxa shown
+    lv.style ||= {}; const h = new Set(lv.style.speciesHide || []); if (el.checked) h.delete(el.dataset.sph); else h.add(el.dataset.sph);
+    lv.style.speciesHide = [...h]; markDirty(); scheduleLog(); requestRender(); if (mode === 'fig') scheduleFigure(); return;
   }
   const k = el.dataset.st; if (!k) return;
   lv.style ||= {};
@@ -6126,7 +6141,7 @@ function renderFigPanel() {
   } else if (F.type === 'geolog') {
     box.innerHTML = `<label class="f"><span>${t('geo.core')}</span><select id="figGeoCore">${S.cores.map((c) => `<option value="${c.id}" ${c.id === S.geo.view.core ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label><p class="note">${t('fig.geoNote')}</p>`;
   } else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
-  if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? axesFormHTML(['total', 'species']) : '')}</details>`);
+  if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? speciesFormHTML(S.logView.style || {}) + axesFormHTML(['total', 'species']) : '')}</details>`);
 }
 
 /** Editable SVG labels. Keys include source text and occurrence; offsets use the parent SVG coordinates. */
@@ -6196,7 +6211,7 @@ function renderFigure() {
 let figTimer = 0;
 const scheduleFigure = () => { clearTimeout(figTimer); figTimer = setTimeout(renderFigure, 150); };
 $('figPanel').addEventListener('change', (e) => {
-  if (e.target.dataset.st || e.target.dataset.ax != null || e.target.dataset.axw != null) { onStyleInput(e); return; }   // V0.5–V0.6: column style
+  if (e.target.dataset.st || e.target.dataset.sph != null || e.target.dataset.ax != null || e.target.dataset.axw != null) { onStyleInput(e); return; }   // V0.5–V0.6: column style
   const F = S.fig, el = e.target;
   if (el.id === 'figType') { F.type = el.value; renderFigPanel(); }
   else if (el.id === 'figTitle') F.title = el.value; else if (el.id === 'figCaption') F.caption = el.value;

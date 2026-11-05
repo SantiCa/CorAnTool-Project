@@ -1776,3 +1776,7 @@ Object.assign(D.es, { 'tool.overlap': 'Superponer trazas (S)', 'ov.on': 'Superpo
   'ov.hint': 'La traza nueva ha sustituido parte de otra. Para que se solapen, activa «Superponer trazas» (tecla S).' });
 Object.assign(D.en, { 'tool.overlap': 'Overlap traces (S)', 'ov.on': 'Overlap on: new traces overlap those underneath.', 'ov.off': 'Overlap off: new traces replace those underneath.',
   'ov.hint': 'The new trace replaced part of another. To make them overlap, turn on «Overlap traces» (key S).' });
+
+// V0.31: ichnotaxa in charts
+Object.assign(D.es, { 'sp.title': 'Icnotaxones en los gráficos', 'sp.mode': 'Representación', 'sp.stack': 'Apilados en una columna', 'sp.separate': 'Cada uno en su columna' });
+Object.assign(D.en, { 'sp.title': 'Ichnotaxa in the charts', 'sp.mode': 'Display', 'sp.stack': 'Stacked in one column', 'sp.separate': 'Each in its own column' });

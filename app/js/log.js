@@ -204,8 +204,10 @@ export function buildLogSVG(o) {
   if (t.image && o.images?.length) for (const im of o.images) cols.push({ key: 'image', w: im.w || o.imageWidth || 60, title: im.title || L.image, img: im });   // V0.23: several panels
   else if (t.image && o.image) cols.push({ key: 'image', w: o.imageWidth || 60, title: L.image, img: o.image });
   if (t.total) cols.push({ key: 'total', id: 'total', w: wOf('total', 150), title: L.total });
-  const presentClasses = o.classes.filter((c) => rows.some((r) => (r.classPct[c.index] || 0) > 0));
-  if (t.species) cols.push({ key: 'species', id: 'species', w: wOf('species', 150), title: L.species });
+  // V0.31: ichnotaxa can be hidden (style.speciesHide, names) and drawn stacked in one column or each in its own (speciesMode 'separate')
+  const spHide = new Set(st.speciesHide || []), presentClasses = o.classes.filter((c) => !spHide.has(c.name) && rows.some((r) => (r.classPct[c.index] || 0) > 0));
+  if (t.species && st.speciesMode === 'separate') for (const k of presentClasses) { const id = 'sp:' + k.name; cols.push({ key: 'sp1', id, w: wOf(id, 70), title: k.name, cls: k }); }
+  else if (t.species) cols.push({ key: 'species', id: 'species', w: wOf('species', 150), title: L.species });
   if (t.BI) cols.push({ key: 'BI', id: 'BI', w: wOf('BI', 46), title: 'BI' });
   if (t.ii) cols.push({ key: 'ii', id: 'ii', w: wOf('ii', 46), title: 'ii' });
   for (const b of o.bands || []) { const id = 'band:' + (b.key || b.full || b.title); cols.push({ key: 'band', id, w: wOf(id, b.w || 46), title: b.title, full: b.full, band: b }); }
@@ -280,7 +282,7 @@ export function buildLogSVG(o) {
     }
     title(c);
     out.push(`<defs><clipPath id="track-${c.x}"><rect x="${c.x}" y="${top}" width="${c.w}" height="${H}"/></clipPath></defs><g clip-path="url(#track-${c.x})">`);
-    if (['total', 'species', 'BI', 'ii'].includes(c.key)) for (const g of gaps) {
+    if (['total', 'species', 'sp1', 'BI', 'ii'].includes(c.key)) for (const g of gaps) {
       const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to));
       out.push(noDataRect(st, c.x, c.w, ya, yb - ya, L.noData));
     }
@@ -313,6 +315,12 @@ export function buildLogSVG(o) {
           out.push(`<rect x="${f2(Math.min(sx(acc), sx(acc + v)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(acc + v) - sx(acc)))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${k.color}"/>`);
           acc += v;
         }
+      }
+    } else if (c.key === 'sp1') {   // V0.31: one ichnotaxon per column, own scale (editable in the axes table as sp:<name>)
+      const k = c.cls, [, hi] = niceRange(0, Math.max(1, ...rows.map((r) => r.classPct[k.index] || 0))), sx = xScale(c, 0, hi);
+      for (const r of rows) {
+        const v = r.classPct[k.index] || 0; if (!v || (sx.log && v <= 0)) continue;
+        out.push(`<rect x="${f2(Math.min(sx.base, sx(v)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(v) - (sx.base)))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${k.color}"/>`);
       }
     } else if (c.key === 'BI' || c.key === 'ii') {
       const lo = c.key === 'BI' ? 0 : 1;
@@ -398,7 +406,8 @@ export function buildRangeSVG(o) {
   const longest = Math.max(8, ...o.classes.map((c) => String(c.name).length)), top = 46 + Math.min(150, longest * 5.2 * 0.87);   // room for names at 60°
   const y = (v) => f2(top + ((v - from) / span) * H);
   const rows = (o.rows || []).filter((r) => r.a1 > from && r.a0 < to), display = o.display || 'symbols';
-  const cols = o.classes.filter((c) => rows.some((r) => (r.classPct?.[c.index] || 0) > 0) || (o.presence || []).some((p) => p.index === c.index && p.a1 > from && p.a0 < to));
+  const spHide = new Set(o.style?.speciesHide || []);   // V0.31
+  const cols = o.classes.filter((c) => !spHide.has(c.name)).filter((c) => rows.some((r) => (r.classPct?.[c.index] || 0) > 0) || (o.presence || []).some((p) => p.index === c.index && p.a1 > from && p.a0 < to));
   const totW = o.total ? 90 : 0, W = x0 + totW + (o.total ? 14 : 0) + cols.length * colW + 20 + Math.min(110, longest * 5.2 * 0.5), Htot = top + H + 26;
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`,
     `<rect width="${W}" height="${Htot}" fill="#ffffff"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`];

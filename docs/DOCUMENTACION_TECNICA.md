@@ -1781,6 +1781,9 @@ foto por defecto (`style.imgAspect = 'keep'`: ancho = alto del gráfico / (alto/
 secciones; × `imgStretch`) o fijo (`imgW`). Flechas (`fig.arrowSrc` = todas / solo marcas a mano / solo trazas,
 `arrowExcl` grupos excluidos, `objScale` tamaño de las de cada traza, `markScale`, `markStroke(W)`, `labelSize`,
 `labelColor`, `labelHalo`), compartidas por Secciones y la Columna.
+Desde V0.31: `style.speciesHide` (nombres de icnotaxones que no se dibujan en «Por icnotaxón», la distribución y la
+columna lateral) y `style.speciesMode` (`stack` apilados en una columna, `separate` una columna por icnotaxón con su
+escala, editable en la tabla de ejes como `sp:<nombre>`).
 Desde V0.22, `yStep` son las marcas con número; `yMajor` añade marcas largas sin número y `yMinor` marcas cortas, en
 la unidad mostrada (`log.js::extraTicks`; no se repiten donde ya hay una marca con número o larga). `yLabelLen` y
 `yMinorLen` fijan la longitud en px (6 y 3 por defecto; las largas usan `yMajorLen`, 6). Multiproxy › Registros tiene

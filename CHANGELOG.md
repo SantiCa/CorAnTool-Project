@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.31 — 2026-11-05
+- Charts: choose which ichnotaxa are drawn and show them stacked or each in its own column with its own scale.
+
 ## V0.30 — 2026-11-05
 - Traces overlap only when their ichnotaxa differ; same-ichnotaxon overlaps give way to the new trace or are merged when a class change creates them; the brush extends a trace of the active ichnotaxon.
 
