@@ -1,7 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { BI, II, UNIT_TO_CM, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG } from './log.js';
+import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -16,7 +16,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.10';
+const DELIVERY = 'V0.11';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2609,6 +2609,7 @@ function logRecords(D) {
 }
 
 function renderLog() {
+  $('logStage').querySelector('[data-label-editor]')?.remove();
   const box = $('logSvg');
   if (!S.sections.length) { box.innerHTML = `<p class="note" style="padding:24px">${t('log.empty')}</p>`; lastLog = null; return; }
   const D = compositeData(), lv = S.logView;
@@ -2622,16 +2623,18 @@ function renderLog() {
   const boundaries = D.secs.map((s) => ({ a: D.axis === 'age' ? interpAge(D.model, s.top * D.f(s)) : s.top * D.f(s), label: s.name })).filter((b) => b.a != null);
   const { style, label: axisLabel } = logStyleOf(D);
   const marks = compositeMarks(D), idm = idMode();
-  const res = buildLogSVG({
+  let res;
+  try { res = buildLogSVG({
     style, title: S.name, subtitle: idm && !['total', 'species', 'BI', 'ii'].some((k) => lv.tracks[k]) ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
     axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, imageWidth: imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
     marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes : [], marks),
     ...geoOverlay(D.axis),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
     colWidths: (lv.colW ||= {}),
-  });
+  }); } catch (e) { box.innerHTML = `<p class="note">${esc(t('edit.invalidAxis'))}</p>`; lastLog = null; return; }
   box.innerHTML = res.svg;
   lastLog = { ...D, from, to, classes, records, svg: res.svg };
+  editSVGLabels(box, (lv.textEdits ||= {}), (svg) => { if (lastLog) lastLog.svg = svg; });
   const ov = geoOverlay(D.axis);
   logInteract(box, res, { from, to, axisLabel, records, bands: ov.bands || [], widths: lv.colW, onResize: () => { markDirty(); renderLog(); if ($('logStyle')) $('logStyle').innerHTML = styleFormHTML(); },
     extra: (a) => {
@@ -2669,18 +2672,18 @@ function styleFormHTML() {
     ${axesFormHTML()}`;
 }
 /** V0.6: width and axis format of each column at the right of the core (total, ichnotaxa, BI, ii and records). */
-function axesFormHTML() {
+function axesFormHTML(only = null) {
   const lv = S.logView, ax = lv.style?.axes || {}, W = lv.colW || {};
   const recs = [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))];
   const cols = [['total', t('log.total'), 150], ['species', t('log.species'), 150], ['BI', 'BI', 46], ['ii', 'ii', 46], ...recs.map((n) => ['rec:' + n, n, 120])];
-  const cell = (id, k, ph, step = 'any') => `<input type="number" data-ax="${esc(id)}" data-k="${k}" step="${step}" value="${ax[id]?.[k] ?? ''}" placeholder="${ph}" style="width:100%">`;
+  const cell = (id, k, ph, step = 'any') => `<input type="number" data-ax="${esc(id)}" data-k="${k}" step="${step}" value="${ax[id]?.[k] ?? ''}" placeholder="${ph}" aria-label="${esc(id + ' ' + k)}" style="width:100%;min-width:54px">`;
   return `<div class="f"><span>${t('st.axes')}</span><div style="overflow-x:auto"><table class="axtab" style="font-size:11px;border-collapse:collapse;width:100%">
-    <tr><th></th><th>${t('st.ax.w')}</th><th>${t('st.ax.min')}</th><th>${t('st.ax.max')}</th><th>${t('st.ax.div')}</th><th>${t('st.ax.dec')}</th><th title="${esc(t('st.ax.revTip'))}">⇄</th><th title="${esc(t('st.ax.logTip'))}">log</th></tr>
-    ${cols.map(([id, name, w]) => `<tr><td title="${esc(name)}" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</td>
+    <tr><th></th><th>${t('st.ax.w')}</th><th>${t('st.ax.min')}</th><th>${t('st.ax.max')}</th><th>${t('st.ax.div')}</th><th>${t('st.ax.dec')}</th><th>${t('edit.step')}</th><th title="${esc(t('st.ax.revTip'))}">⇄</th><th title="${esc(t('st.ax.logTip'))}">log</th></tr>
+    ${cols.filter(([id]) => !only || only.includes(id)).map(([id, name, w]) => `<tr><td title="${esc(name)}" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</td>
       <td><input type="number" data-axw="${esc(id)}" min="30" max="600" step="10" value="${W[id] ?? ''}" placeholder="${w}" style="width:100%"></td>
-      <td>${cell(id, 'min', 'auto')}</td><td>${cell(id, 'max', 'auto')}</td><td>${cell(id, 'div', 'auto', 1)}</td><td>${cell(id, 'dec', 'auto', 1)}</td>
+      <td>${cell(id, 'min', 'auto')}</td><td>${cell(id, 'max', 'auto')}</td><td>${cell(id, 'div', 'auto', 1)}</td><td>${cell(id, 'dec', 'auto', 1)}</td><td>${cell(id, 'step', 'auto')}</td>
       <td><input type="checkbox" data-ax="${esc(id)}" data-k="rev" ${ax[id]?.rev ? 'checked' : ''}></td>
-      <td>${id.startsWith('rec:') ? `<input type="checkbox" data-ax="${esc(id)}" data-k="log" ${ax[id]?.log ? 'checked' : ''}>` : ''}</td></tr>`).join('')}
+      <td><input type="checkbox" data-ax="${esc(id)}" data-k="log" ${ax[id]?.log ? 'checked' : ''}></td></tr>`).join('')}
     </table></div><p class="note">${t('st.axesNote')}</p></div>`;
 }
 function onStyleInput(e) {
@@ -2688,7 +2691,11 @@ function onStyleInput(e) {
   if (el.dataset.axw != null) { lv.colW ||= {}; const v = +el.value; if (v >= 30) lv.colW[el.dataset.axw] = Math.min(600, v); else delete lv.colW[el.dataset.axw]; markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure(); return; }
   if (el.dataset.ax != null) {
     lv.style ||= {}; lv.style.axes ||= {}; const a = (lv.style.axes[el.dataset.ax] ||= {}), k2 = el.dataset.k;
+    const previous = a[k2];
     a[k2] = el.type === 'checkbox' ? el.checked : el.value === '' ? null : +el.value;
+    const invalid = (a.min != null && a.max != null && !(a.max > a.min)) || (a.log && ((a.min != null && a.min <= 0) || (a.max != null && a.max <= 0)));
+    if (invalid) { a[k2] = previous; el.setCustomValidity(t('edit.invalidAxis')); el.reportValidity(); return; }
+    el.setCustomValidity('');
     markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure(); return;
   }
   const k = el.dataset.st; if (!k) return;
@@ -5413,10 +5420,10 @@ function sectionsSVG() {
   const ab = clsAbbr(), perRow = Math.max(1, Math.floor((x0 + panels.length * (W + gap)) / 190)), legH = legend.length ? Math.ceil(legend.length / perRow) * 16 + 18 : 0;
   const Wt = Math.max(x0 + panels.length * (W + gap) + 8, 360), Ht = top + H + 30 + legH, y = (v) => +(top + ((v - from) / (to - from)) * H).toFixed(2);
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${Wt}" height="${Ht}" viewBox="0 0 ${Wt} ${Ht}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10"><rect width="${Wt}" height="${Ht}" fill="#fff"/>`];
-  out.push(`<text transform="translate(14,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${esc(t('r.depth'))} (${esc(D.base)})</text>`);
+  out.push(`<text transform="translate(14,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${esc(logStyleOf(D).label)}</text>`);
   out.push(`<line x1="${x0 - 8}" y1="${top}" x2="${x0 - 8}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
-  const span = to - from, raw = span / Math.max(3, Math.round(H / 80)), mag = 10 ** Math.floor(Math.log10(raw)), st = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw);
-  for (let v = Math.ceil(from / st) * st; v <= to + 1e-9; v += st) out.push(`<line x1="${x0 - 13}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 15}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${+v.toPrecision(6)}</text>`);
+  const LS = logStyleOf(D);
+  for (const v of verticalTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 13}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 15}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${+(v * LS.style.yFactor).toPrecision(6)}</text>`);
   panels.forEach((p, i) => {
     const X = x0 + i * (W + gap), href = panelDataURL(D, from, to, H, W, p);
     out.push(`<text x="${X}" y="${top - 10}" font-weight="700" fill="#1c2422">${String.fromCharCode(97 + i)}</text><text x="${X + 12}" y="${top - 10}" fill="#1c2422">${esc(t('fig.p.' + p))}</text>`);
@@ -5454,7 +5461,7 @@ function rangeSVG() {
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, index: i, plain: !!c.plain })).filter((c) => S.classes[c.index].id !== 'artifact');
   const presence = [];
   for (const r of D.rows) for (const m of marks) if (m.a >= r.a0 && m.a < r.a1) { const index = S.classes.findIndex((c) => c.id === m.cls); if (!presence.some((p) => p.index === index && p.a0 === r.a0)) presence.push({ a0: r.a0, a1: r.a1, index }); }
-  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(presence.length ? (F.rangeTotal || D.rows.some((r) => r.classPct?.some((v) => v > 0)) ? 'fig.rangeSubBoth' : 'fig.rangeSubId') : 'fig.rangeSub'), axisLabel: D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`,
+  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(presence.length ? (F.rangeTotal || D.rows.some((r) => r.classPct?.some((v) => v > 0)) ? 'fig.rangeSubBoth' : 'fig.rangeSubId') : 'fig.rangeSub'), axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
     from, to, height: F.rangeH, rows: D.rows, classes, presence, total: F.rangeTotal, totalLabel: t('log.total') }).svg;
 }
 
@@ -5481,6 +5488,10 @@ function syncCoreFigSize() {
   if (F.keepRatio && z.r) { F.coreImgW = z.W; F.coreH = z.H; $('figCoreImgW').value = z.W; $('figCoreH').value = z.H; $('figRatioNote').textContent = t('fig.ratioNote', { r: fmt(z.r, 3) }); }
   else $('figRatioNote').textContent = '';
   $('figCoreH').disabled = !!(F.keepRatio && z.r);
+}
+function verticalStyleHTML() {
+  const st = S.logView.style || {};
+  return `<div class="grid2"><label class="f"><span>${t('st.yUnit')}</span><select data-st="yUnit">${['', 'mm', 'cm', 'm'].map((u) => `<option value="${u}" ${(st.yUnit || '') === u ? 'selected' : ''}>${u || t('st.native')}</option>`).join('')}</select></label><label class="f"><span>${t('st.yStep')}</span><input type="number" data-st="yStep" step="any" min="0" value="${st.yStep ?? ''}" placeholder="${t('fig.auto2')}"></label><label class="f"><span>${t('st.yDiv')}</span><input type="number" data-st="yDiv" min="1" step="1" value="${st.yDiv ?? ''}" placeholder="${t('fig.auto2')}"></label></div>`;
 }
 function renderFigPanel() {
   const F = S.fig, box = $('figOpts');
@@ -5538,10 +5549,54 @@ function renderFigPanel() {
   } else if (F.type === 'geolog') {
     box.innerHTML = `<label class="f"><span>${t('geo.core')}</span><select id="figGeoCore">${S.cores.map((c) => `<option value="${c.id}" ${c.id === S.geo.view.core ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label><p class="note">${t('fig.geoNote')}</p>`;
   } else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
+  if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? axesFormHTML(['total', 'species']) : '')}</details>`);
+}
+
+/** Editable SVG labels. Keys include source text and occurrence; offsets use the parent SVG coordinates. */
+function editSVGLabels(box, edits, save) {
+  const svg = box.querySelector('svg'); if (!svg) return;
+  const old = box.parentElement.querySelector('[data-label-editor]'); old?.remove();
+  const seen = new Map(), nodes = [...svg.querySelectorAll('text')].map((node) => {
+    const source = node.textContent, n = seen.get(source) || 0; seen.set(source, n + 1);
+    return { node, key: JSON.stringify([source, n]), source, html: node.innerHTML, transform: node.getAttribute('transform') || '' };
+  });
+  const apply = (q) => {
+    const v = edits[q.key] || {};
+    q.node.innerHTML = q.html;
+    if (v.text != null) q.node.textContent = v.text;
+    q.node.setAttribute('transform', `translate(${v.x || 0} ${v.y || 0}) ${q.transform}`);
+  };
+  nodes.forEach(apply);
+  const ui = document.createElement('details'); ui.dataset.labelEditor = '1'; ui.className = 'mini';
+  ui.innerHTML = `<summary>${t('edit.labels')}</summary><p class="note">${t('edit.hint')}</p><label class="f"><span>${t('edit.label')}</span><select data-label-select>${nodes.map((q, i) => `<option value="${i}">${esc(q.source.slice(0, 90) || '—')} (${i + 1})</option>`).join('')}</select></label><label class="f"><span>${t('edit.text')}</span><input data-label-text type="text"></label><div class="grid2"><label class="f"><span>Δ X (px)</span><input data-label-x type="number" step="any"></label><label class="f"><span>Δ Y (px)</span><input data-label-y type="number" step="any"></label></div><button class="btn small" data-label-reset>${t('edit.reset')}</button>`;
+  box.before(ui);
+  const pick = ui.querySelector('[data-label-select]'), text = ui.querySelector('[data-label-text]'), x = ui.querySelector('[data-label-x]'), y = ui.querySelector('[data-label-y]');
+  const refresh = () => { const q = nodes[+pick.value]; if (!q) return; const v = edits[q.key] || {}; text.value = v.text ?? q.source; x.value = v.x || 0; y.value = v.y || 0; };
+  const persist = () => { markDirty(); save(svg.outerHTML); };
+  pick.onchange = refresh; refresh();
+  for (const input of [text, x, y]) input.onchange = () => {
+    const q = nodes[+pick.value]; if (!q) return;
+    edits[q.key] = { text: text.value, x: Number(x.value) || 0, y: Number(y.value) || 0 }; apply(q); persist();
+  };
+  ui.querySelector('[data-label-reset]').onclick = () => { const q = nodes[+pick.value]; if (!q) return; delete edits[q.key]; apply(q); refresh(); persist(); };
+  nodes.forEach((q, i) => {
+    q.node.addEventListener('pointerdown', (e) => {
+      if (!ui.open || e.button !== 0) return;
+      e.preventDefault(); e.stopPropagation(); pick.value = i; refresh();
+      const matrix = q.node.parentNode.getScreenCTM()?.inverse(); if (!matrix) return;
+      const start = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix), v = { ...(edits[q.key] || {}) };
+      q.node.setPointerCapture(e.pointerId);
+      const move = (ev) => { const p = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(matrix); edits[q.key] = { ...v, x: +( (v.x || 0) + p.x - start.x).toFixed(2), y: +((v.y || 0) + p.y - start.y).toFixed(2) }; apply(q); refresh(); };
+      const end = () => { q.node.removeEventListener('pointermove', move); q.node.removeEventListener('pointerup', end); q.node.removeEventListener('pointercancel', end); persist(); };
+      q.node.addEventListener('pointermove', move); q.node.addEventListener('pointerup', end); q.node.addEventListener('pointercancel', end);
+    });
+  });
+  save(svg.outerHTML);
 }
 
 function renderFigure() {
   if (mode !== 'fig') return;
+  $('figStage').querySelector('[data-label-editor]')?.remove();
   const F = S.fig; let svg = null;
   try {
     if (F.type === 'traces') svg = tracesSVG();
@@ -5554,6 +5609,8 @@ function renderFigure() {
   } catch (e) { $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(e.message)}</p>`; return; }
   figSvgCache = svg ? wrapFigure(svg, F.title, F.caption) : '';
   $('figOut').innerHTML = figSvgCache || `<p class="note" style="padding:20px">${t(F.type === 'traces' ? 'fig.pickFirst' : 'fig.empty')}</p>`;
+  F.textEdits ||= {};
+  editSVGLabels($('figOut'), (F.textEdits[F.type] ||= {}), (edited) => { figSvgCache = edited; });
 }
 let figTimer = 0;
 const scheduleFigure = () => { clearTimeout(figTimer); figTimer = setTimeout(renderFigure, 150); };

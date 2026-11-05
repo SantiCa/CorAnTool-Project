@@ -1229,3 +1229,9 @@ Object.assign(D.en, { 'cmt.title': 'Project comments', 'cmt.author': 'Your name'
 
 Object.assign(D.es, { 'obj.listSelected': 'Trazas seleccionadas ({n})', 'obj.listAll': 'Todas las trazas de esta imagen ({n})', 'obj.listEmpty': 'No hay trazas en esta imagen.', 'obj.listFocus': 'Centrar esta traza', 'obj.listSelect': 'Seleccionar esta traza' });
 Object.assign(D.en, { 'obj.listSelected': 'Selected traces ({n})', 'obj.listAll': 'All traces in this image ({n})', 'obj.listEmpty': 'There are no traces in this image.', 'obj.listFocus': 'Center this trace', 'obj.listSelect': 'Select this trace' });
+
+Object.assign(D.es, { 'edit.step': 'Paso', 'edit.labels': 'Editar textos y posiciones', 'edit.label': 'Etiqueta', 'edit.text': 'Texto', 'edit.reset': 'Restaurar esta etiqueta', 'edit.hint': 'Elige un texto para editarlo o, con este panel desplegado, arrástralo en el gráfico. Los desplazamientos se guardan y se exportan. En los ejes, Paso es la distancia entre marcas (lineal); log requiere límites positivos. Las unidades verticales y el paso se eligen en Estilo de columna.' });
+Object.assign(D.en, { 'edit.step': 'Step', 'edit.labels': 'Edit text and positions', 'edit.label': 'Label', 'edit.text': 'Text', 'edit.reset': 'Reset this label', 'edit.hint': 'Choose a label or drag it in the chart while this panel is open. Offsets are saved and exported. Axis Step is the distance between ticks (linear); log requires positive limits. Choose vertical units and tick spacing in Column style.' });
+
+Object.assign(D.es, { 'edit.invalidAxis': 'El máximo debe ser mayor que el mínimo. En escala logarítmica ambos límites deben ser positivos.' });
+Object.assign(D.en, { 'edit.invalidAxis': 'Maximum must exceed minimum. Logarithmic limits must both be positive.' });

@@ -1661,3 +1661,30 @@ cambia lo que se ve en la imagen de trabajo.
   *Journal of the Geological Society* 150, 141–148.
 
 > Antes de enviar cualquier artículo, comprobar cada referencia con la publicación original.
+
+
+### Edición de escalas y etiquetas (V0.11)
+
+`log.js::verticalTicks` comparte las marcas verticales entre columna, secciones y distribución.
+Las coordenadas de datos permanecen en la unidad original: la etiqueta muestra `v · yFactor`,
+con `yFactor = UNIT_TO_CM[unidad original] / UNIT_TO_CM[unidad mostrada]` para profundidad.
+`yStep` expresa la distancia entre marcas en la unidad mostrada y tiene prioridad sobre `yDiv`.
+El paso explícito se limita a 400 marcas para evitar bloquear el navegador.
+
+`logView.style.axes[id]` admite `min`, `max`, `div`, `dec`, `rev`, `log` y `step`.
+`step` tiene prioridad sobre `div` en ejes lineales. En logaritmos se dibujan potencias de diez;
+los límites deben ser positivos y el máximo mayor que el mínimo. Si el mínimo automático no
+es positivo, se propone máximo/1000. El trazado usa log10 y se recorta con un clipPath por pista;
+los valores no positivos interrumpen las curvas de registros, sin conectarlas a través del hueco.
+Estos ajustes solo afectan a la representación, no a las tablas de resultados ni a los índices.
+
+El editor de etiquetas usa `logView.textEdits` para Columna y `fig.textEdits[tipo]` para Figuras.
+Cada clave combina texto SVG original y número de aparición; el valor contiene texto opcional
+y desplazamientos `x`, `y` en coordenadas SVG del padre. Se aplica una traslación antes de la
+transformación original (incluidas rotaciones). El arrastre convierte coordenadas de pantalla
+con la matriz inversa del padre. El proyecto conserva los ajustes y los SVG/PNG se exportan
+con las modificaciones. Cambiar el contenido o el orden de las etiquetas puede requerir recolocarlas;
+se recomienda ajustar escalas y contenido antes de la composición manual final.
+
+Validación V0.11: 52 pruebas JavaScript y 10 Python superadas; comprobación con el ejemplo público
+en navegador de unidades en metros, marcas cada 1 m, rango logarítmico 1–20 y edición de texto/posición.

@@ -2,6 +2,11 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.11 — 2026-11-05
+- Share vertical units and tick spacing across column, core, section and distribution figures.
+- Enable logarithmic horizontal axes, explicit bounds and linear tick steps; clip data per track and break logarithmic curves at nonpositive values.
+- Edit SVG label text and positions, drag labels and reset individual edits; save adjustments with the project and include them in exports.
+
 ## V0.10 — 2026-11-05
 - List selected traces and center them; browse and select all traces in the current image when none is selected.
 

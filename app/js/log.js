@@ -41,6 +41,17 @@ export function niceTicks(a, b, n = 5) {
   return out;
 }
 
+/** Vertical ticks in displayed units, shared by column and publication figures. */
+export function verticalTicks(from, to, height, style = {}) {
+  const f = +style.yFactor || 1, step = +style.yStep;
+  if (step > 0) {
+    const out = [], a = Math.ceil(from * f / step - 1e-9), b = Math.floor(to * f / step + 1e-9);
+    for (let k = a; k <= b && out.length < 400; k++) out.push(k * step / f || 0);
+    return out;
+  }
+  return niceTicks(from * f, to * f, style.yDiv > 0 ? style.yDiv : Math.max(3, Math.round(height / 70))).map((v) => v / f);
+}
+
 export function niceRange(min, max) {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
   if (min === max) { min -= Math.abs(min) * 0.1 || 1; max += Math.abs(max) * 0.1 || 1; }
@@ -170,9 +181,7 @@ export function buildLogSVG(o) {
     if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
   }
 
-  const fy = +st.yFactor || 1, yTicks = st.yStep > 0
-    ? (() => { const a = Math.ceil((from * fy) / st.yStep - 1e-9), b = Math.floor((to * fy) / st.yStep + 1e-9), out2 = []; for (let k = a; k <= b && out2.length < 400; k++) out2.push((k * st.yStep) / fy); return out2; })()
-    : niceTicks(from * fy, to * fy, st.yDiv > 0 ? st.yDiv : Math.max(3, Math.round(H / 70))).map((v) => v / fy);
+  const fy = +st.yFactor || 1, yTicks = verticalTicks(from, to, H, st);
   const frame = (c) => { if (st.frame) out.push(`<rect x="${c.x}" y="${top}" width="${c.w}" height="${H}" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`); };
   // track names: up to two lines that fit the column width (V25); the full name is in the returned layout
   const title = (c) => {
@@ -185,21 +194,26 @@ export function buildLogSVG(o) {
     if (ax.min != null && ax.min !== '') lo = +ax.min;
     if (ax.max != null && ax.max !== '') hi = +ax.max;
     if (ax.rev) reverse = !reverse;
-    const lg = !!ax.log && lo > 0 && hi > lo, tf = (v) => (lg ? Math.log10(Math.max(v, 1e-12)) : v), L0 = tf(lo), L1 = tf(hi);
+    if (ax.log && !(lo > 0) && ax.min == null) lo = hi > 0 ? hi / 1000 : 0.001;
+    if (!(hi > lo) || (ax.log && !(lo > 0))) throw new Error('Invalid horizontal axis: max > min; logarithmic limits must be positive.');
+    const lg = !!ax.log, tf = (v) => (lg ? Math.log10(Math.max(v, 1e-12)) : v), L0 = tf(lo), L1 = tf(hi);
     const sx = (v) => f2(c.x + ((reverse ? L1 - tf(v) : tf(v) - L0) / (L1 - L0 || 1)) * c.w);
     sx.base = sx(lg ? lo : Math.min(Math.max(0, lo), hi));
-    if (ax.div > 0 || lg) {
+    if (ax.step > 0 && !lg) { ticks = []; for (let v = Math.ceil(lo / ax.step) * ax.step; v <= hi && ticks.length < 400; v += ax.step) ticks.push(v); }
+    else if (ax.div > 0 || lg) {
       if (lg) { ticks = []; for (let e = Math.floor(L0); e <= Math.ceil(L1); e++) { const v = 10 ** e; if (v >= lo * 0.999 && v <= hi * 1.001) ticks.push(v); } }
-      else ticks = Array.from({ length: Math.round(ax.div) + 1 }, (_, k) => lo + ((hi - lo) * k) / Math.round(ax.div));
+      else ticks = Array.from({ length: Math.min(400, Math.round(ax.div)) + 1 }, (_, k) => lo + ((hi - lo) * k) / Math.min(400, Math.round(ax.div)));
     }
     const fmtT = (v) => (ax.dec != null && ax.dec !== '' ? (+v).toFixed(Math.max(0, Math.min(6, +ax.dec))) : lbl(v));
-    for (const tv of ticks || niceTicks(lo, hi, 3)) {
+    out.push('</g><g>');
+    for (const tv of (ticks || niceTicks(lo, hi, 3)).filter((v) => v >= lo && v <= hi)) {
       const xx = sx(tv);
       if (st.grid) out.push(`<line x1="${xx}" y1="${top}" x2="${xx}" y2="${top + H}" stroke="#e3e8e6" stroke-width="0.6"/>`);
       out.push(`<line x1="${xx}" y1="${top - 4}" x2="${xx}" y2="${top}" stroke="#5b6763" stroke-width="0.6"/>`);
       out.push(`<text x="${xx}" y="${top - 7}" text-anchor="middle" fill="#5b6763" font-size="9">${fmtT(tv)}</text>`);
     }
-    return sx;
+    out.push(`</g><g clip-path="url(#track-${c.x})">`);
+    sx.log = lg; return sx;
   };
 
   for (const c of cols) {
@@ -214,7 +228,7 @@ export function buildLogSVG(o) {
       continue;
     }
     title(c);
-    out.push('<g clip-path="url(#plot)">');
+    out.push(`<defs><clipPath id="track-${c.x}"><rect x="${c.x}" y="${top}" width="${c.w}" height="${H}"/></clipPath></defs><g clip-path="url(#track-${c.x})">`);
     if (['total', 'species', 'BI', 'ii'].includes(c.key)) for (const g of gaps) {
       const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to)), h = yb - ya; if (h <= 0) continue;
       out.push(`<rect x="${c.x}" y="${ya}" width="${c.w}" height="${f2(Math.max(0.4, h))}" fill="url(#nodata)"/>`);
@@ -228,7 +242,7 @@ export function buildLogSVG(o) {
       const bars = st.totalStyle === 'barsline' || st.totalStyle === 'bars', line = st.totalStyle === 'barsline' || st.totalStyle === 'line';
       let d = '', prev = null;
       for (const r of rows) {
-        if (r.pct == null) { prev = null; continue; }
+        if (r.pct == null || (sx.log && r.pct <= 0)) { prev = null; continue; }
         if (bars) out.push(`<rect x="${f2(Math.min(sx.base, sx(r.pct)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(r.pct) - sx.base))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${st.barColor}"/>`);
         if (st.totalStyle === 'points') out.push(`<circle cx="${sx(r.pct)}" cy="${f2((y(r.a0) + y(r.a1)) / 2)}" r="2.2" fill="${st.lineColor}"/>`);
         d += prev && Math.abs(r.a0 - prev.a1) < 1e-9 ? `L${sx(r.pct)} ${y(r.a0)}` : `M${sx(r.pct)} ${y(r.a0)}`;
@@ -253,7 +267,7 @@ export function buildLogSVG(o) {
       const sx = xScale(c, 0, 6, false, c.key === 'BI' ? [0, 3, 6] : [1, 3, 6]);
       for (const r of rows) {
         const v = r[c.key];
-        if (v != null && v >= lo) out.push(`<rect x="${f2(Math.min(sx.base, sx(v)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(v) - sx.base))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="#c98a4b"/>`);
+        if (v != null && v >= lo && (!sx.log || v > 0)) out.push(`<rect x="${f2(Math.min(sx.base, sx(v)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(v) - sx.base))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="#c98a4b"/>`);
         const m = t.manual ? r[c.key === 'BI' ? 'BIm' : 'iim'] : null;
         if (m != null) out.push(`<line x1="${sx(m)}" y1="${y(r.a0)}" x2="${sx(m)}" y2="${y(r.a1)}" stroke="#1c2422" stroke-width="2"/>`);
       }
@@ -286,7 +300,10 @@ export function buildLogSVG(o) {
         const [lo, hi] = niceRange(Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[1])));
         const sx = xScale(c, lo, hi, c.rec.reverse);
         for (const g of o.shade || []) if (g.a1 > from && g.a0 < to) out.push(`<rect x="${c.x}" y="${y(Math.max(g.a0, from))}" width="${c.w}" height="${f2(Math.max(0.4, y(Math.min(g.a1, to)) - y(Math.max(g.a0, from))))}" fill="${g.color}" fill-opacity="0.22"/>`);
-        out.push(`<polyline fill="none" stroke="${c.rec.color}" stroke-width="1.1" points="${pts.map((p) => `${sx(p[1])},${y(p[0])}`).join(' ')}"/>`);
+        if (!sx.log) out.push(`<polyline fill="none" stroke="${c.rec.color}" stroke-width="1.1" points="${pts.map((p) => `${sx(p[1])},${y(p[0])}`).join(' ')}"/>`);
+        let path = '', connected = false;
+        for (const p of sx.log ? pts : []) { if (sx.log && p[1] <= 0) { connected = false; continue; } path += `${connected ? 'L' : 'M'}${sx(p[1])} ${y(p[0])}`; connected = true; }
+        if (sx.log) out.push(`<path fill="none" stroke="${c.rec.color}" stroke-width="1.1" d="${path}"/>`);
       }
     }
     out.push('</g>');
@@ -334,16 +351,32 @@ export function buildRangeSVG(o) {
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`,
     `<rect width="${W}" height="${Htot}" fill="#ffffff"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`];
   if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
-  for (const v of niceTicks(from, to, Math.max(3, Math.round(H / 70)))) {
-    out.push(`<line x1="${x0 - 6}" y1="${y(v)}" x2="${x0}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 9}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${lbl(v)}</text>`);
+  for (const v of verticalTicks(from, to, H, o.style)) {
+    out.push(`<line x1="${x0 - 6}" y1="${y(v)}" x2="${x0}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 9}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${lbl(v * (+o.style?.yFactor || 1))}</text>`);
     out.push(`<line x1="${x0}" y1="${y(v)}" x2="${W - 14}" y2="${y(v)}" stroke="#eef1f0" stroke-width="0.6"/>`);
   }
   out.push(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
   out.push(`<text transform="translate(16,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.axisLabel || '')}</text>`);
+  const rangeScale = (id, x, w, defaultMax) => {
+    const ax = o.style?.axes?.[id] || {}, hi = ax.max ?? defaultMax, lo = ax.min ?? (ax.log ? hi / 1000 : 0);
+    if (!(hi > lo) || (ax.log && !(lo > 0))) throw new Error('Invalid horizontal axis: max > min; logarithmic limits must be positive.');
+    const tf = (v) => ax.log ? Math.log10(Math.max(v, 1e-12)) : v;
+    const sx = (v) => x + (ax.rev ? 1 - (tf(v) - tf(lo)) / (tf(hi) - tf(lo)) : (tf(v) - tf(lo)) / (tf(hi) - tf(lo))) * w;
+    let ticks = niceTicks(lo, hi, ax.div || 3);
+    if (ax.log) { ticks = []; for (let e = Math.ceil(Math.log10(lo)); e <= Math.floor(Math.log10(hi)); e++) ticks.push(10 ** e); }
+    else if (ax.step > 0) { ticks = []; for (let k = Math.ceil(lo / ax.step); k * ax.step <= hi && ticks.length < 400; k++) ticks.push(k * ax.step); }
+    else if (ax.div > 0) { const n = Math.min(400, Math.max(1, Math.round(ax.div))); ticks = Array.from({length:n + 1}, (_, i) => lo + i * (hi - lo) / n); }
+    for (const v of (Object.keys(ax).length ? ticks : []).filter((v) => v >= lo && v <= hi)) out.push(`<text x="${f2(sx(v))}" y="${top + H + 14}" text-anchor="middle" font-size="8">${ax.dec != null ? v.toFixed(Math.min(6, Math.max(0, ax.dec))) : lbl(v)}</text>`);
+    out.push(`<defs><clipPath id="range-${x}"><rect x="${x}" y="${top}" width="${id === 'species' && !Object.keys(ax).length ? w + 6 : w}" height="${H}"/></clipPath></defs>`);
+    sx.base = sx(lo); sx.log = !!ax.log; return sx;
+  };
   let x = x0 + 10;
   if (o.total) {
     out.push(`<text x="${x + totW / 2}" y="${top - 8}" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.totalLabel || 'Bioturbation (%)')}</text>`);
-    for (const r of rows) if (r.pct != null) out.push(`<rect x="${x}" y="${y(r.a0)}" width="${f2((r.pct / 100) * totW)}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="#e7c9a5"/>`);
+    const sx = rangeScale('total', x, totW, 100);
+    out.push(`<g clip-path="url(#range-${x})">`);
+    for (const r of rows) if (r.pct != null && (!sx.log || r.pct > 0)) out.push(`<rect x="${f2(Math.min(sx.base, sx(r.pct)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(r.pct) - sx.base))}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="#e7c9a5"/>`);
+    out.push('</g>');
     out.push(`<rect x="${x}" y="${top}" width="${totW}" height="${H}" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`);
     x += totW + 14;
   }
@@ -351,12 +384,16 @@ export function buildRangeSVG(o) {
     const cx = x + colW / 2, max = Math.max(1e-9, ...rows.map((r) => r.classPct?.[c.index] || 0));
     out.push(`<text transform="translate(${cx + 3},${top - 6}) rotate(-60)" font-style="${c.plain ? 'normal' : 'italic'}" font-weight="600" fill="#1c2422">${escXml(c.name)}</text>`);
     out.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${top + H}" stroke="#d5dbd9" stroke-width="0.6"/>`);
+    const sx = rangeScale('species', x, colW - 6, max);
+    out.push(`<g clip-path="url(#range-${x})">`);
     for (const r of rows) {
       const v = r.classPct?.[c.index] || 0; if (!v) continue;
-      const w = Math.max(2, (v / max) * (colW - 6));
-      out.push(`<rect x="${f2(cx - w / 2)}" y="${y(r.a0)}" width="${f2(w)}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="${c.color}"/>`);
+      const custom = Object.keys(o.style?.axes?.species || {}).length > 0;
+      const w = custom ? Math.abs(sx(v) - sx.base) : Math.max(2, (v / max) * (colW - 6));
+      out.push(`<rect x="${f2(custom ? Math.min(sx(v), sx.base) : cx - w / 2)}" y="${y(r.a0)}" width="${f2(w)}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="${c.color}"/>`);
     }
     for (const p of (o.presence || []).filter((q) => q.index === c.index)) out.push(markTri(cx, y((p.a0 + p.a1) / 2) + 4, c.color));
+    out.push('</g>');
     x += colW;
   }
   out.push('</svg>');

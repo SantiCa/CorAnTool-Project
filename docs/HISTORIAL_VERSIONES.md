@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.11 | 05-11-2026 | Aplicación web | Escalas editables, recorte por columna y edición de textos y posiciones en figuras |
 | V0.10 | 05-11-2026 | Aplicación 2.8 | Lista de trazas seleccionadas y desplegable de todas las trazas de la imagen |
 | V0.9 | 05-11-2026 | Aplicación 2.8 | Botón de borrado de icnotaxones alineado en su fila |
 | V0.8 | 05-11-2026 | Aplicación 2.8 | Proyecto compartible con imágenes completas (.corantool), carpeta de proyecto para Drive compartido, comentarios con respuestas |
@@ -633,6 +634,16 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.11 — Escalas y edición de gráficos (05-11-2026)
+
+- **Qué se hizo:** ampliar la edición de Columna y Figuras.
+- **Cambios:** unidades mm/cm/m y paso vertical compartidos por columna, sondeo entero, secciones y distribución; escala horizontal lineal/logarítmica, límites manuales y paso lineal. El dibujo se recorta por columna aunque los límites excluyan datos. Editor de textos SVG y desplazamientos X/Y, con arrastre y restauración por etiqueta; ajustes guardados en el proyecto e incluidos en SVG/PNG.
+- **Por qué:** permitir preparar gráficos y figuras sin depender de una edición externa para los ajustes habituales.
+- **Comprobación:** 52 pruebas JavaScript y 10 Python superadas; archivo offline generado. Comprobación en navegador con ejemplo público: metros, paso de 1 m, eje logarítmico 1–20, cambio de texto y desplazamiento conservados al redibujar.
+- **Pendiente:** ninguno específico. Los ejes logarítmicos requieren límites positivos y omiten muestras no positivas. Conviene fijar escalas y contenidos antes de colocar etiquetas: se identifican por texto original y orden de aparición.
 
 ---
 
