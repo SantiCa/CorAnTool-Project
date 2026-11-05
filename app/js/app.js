@@ -2,7 +2,7 @@
 import { BI, II, UNIT_TO_CM, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
 import { parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG } from './log.js';
-import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta } from './storage.js';
+import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
 import { evalColumn, evalCells, cellName, FUNCTIONS } from './sheet.js';
@@ -15,7 +15,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V32';
+const DELIVERY = 'V33';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -50,7 +50,7 @@ const S = {
   classes: defaultClasses(), active: 'undet',
   sections: [], cur: -1, cores: [], curCore: null, sheet: { columns: [], cells: {} },
   id: '', notes: '', records: [], logView: null,
-  settings: { binPx: 50, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP: 8, clfScope: 'project', ml: { method: 'knn', k: 5, weights: 'distance', trees: 100, maxDepth: 12, minLeaf: 2, balanced: true, priors: 'uniform' } },
+  settings: { binCm: 1, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP: 8, clfScope: 'project', ml: { method: 'knn', k: 5, weights: 'distance', trees: 100, maxDepth: 12, minLeaf: 2, balanced: true, priors: 'uniform' } },
   age: { text: '', units: 'ka', model: null },
   library: [],
   tool: 'select', prevTool: 'select', brushSize: 10, wandTol: 30,
@@ -77,25 +77,133 @@ const keyOf = (c) => { const k = S.classes.indexOf(c); return c.id === 'artifact
 
 /* ───────────── sections ───────────── */
 
-function newSection({ name, file, w, h, orig, ds = 1 }) {
+/**
+ * V33: `file` holds the original picture at full resolution — in memory (`blob`) only until it is written to the
+ * image store (`key`). `crop` is the kept area in full-resolution pixels of the unrotated file (null = whole file);
+ * `full` the file size. The working image is rotate(downsample(crop(file), ds), rot); it is decoded only while needed.
+ * `labels`/`exclude` are packed (RLE) when the section is not in use and unpacked on first access.
+ */
+function newSection({ name, file, w, h, orig, ds = 1, labels = null, exclude = null, full = null }) {
+  if (file.bytes && !file.blob) { file = { name: file.name, type: file.type, blob: new Blob([file.bytes], { type: file.type || 'image/jpeg' }) }; }
   const s = {
-    id: uid(), name, file, rot: 0, ds, logVer: 0, w, h, orig, enh: null,
-    labels: new Int32Array(w * h), exclude: new Uint8Array(w * h), objects: new Map(), nextId: 1,
+    id: uid(), name, file, rot: 0, ds, crop: null, full, logVer: 0, w, h, orig, enh: null,
+    objects: new Map(), nextId: 1,
     top: 0, bottom: 100, units: 'cm', roi: { x0: 0, y0: 0, x1: w, y1: h }, marks: [],
     filters: { ...DEFAULT_FILTERS }, preset: 'none', detect: { ...DEFAULT_DETECT }, manual: [], bins: [], view: null,
   };
+  lazyMask(s, 'labels', Int32Array, labels); lazyMask(s, 'exclude', Uint8Array, exclude);
   enhance(s);
+  if (orig) pxTouch(s);
   return s;
 }
 
+/* ───────────── V33: images on disk, pixels in memory only while a section is in use ───────────── */
+const MEM = { px: [], mask: [], pinned: new Set(), pxBudget: 9e8, maskBudget: 5e8 };
+/** A mask layer stored packed (RLE array) and unpacked on first access; `init` = array, { rle } or null (empty). */
+function lazyMask(s, key, Type, init) {
+  let arr = init && !init.rle ? init : null, rle = init?.rle || null;
+  if (!arr && !rle) arr = new Type(s.w * s.h);
+  Object.defineProperty(s, key, {
+    enumerable: true, configurable: true,
+    get() { if (!arr) { arr = rleDecode(rle, s.w * s.h, Type); rle = null; maskTouch(s); } return arr; },
+    set(v) { arr = v; rle = null; },
+  });
+  (s._mk ||= {})[key] = { pack() { if (arr) { rle = rleEncode(arr); arr = null; } }, rle: () => rle || rleEncode(arr), loaded: () => !!arr };
+}
+const lruPush = (list, s) => { const i = list.indexOf(s); if (i >= 0) list.splice(i, 1); list.push(s); };
+const keepLoaded = (s) => s === sec() || MEM.pinned.has(s) || s._loading;
+function maskTouch(s) {
+  lruPush(MEM.mask, s);
+  const bytes = () => MEM.mask.reduce((a, x) => a + 5 * x.w * x.h, 0);
+  for (let i = 0; i < MEM.mask.length && MEM.mask.length > 3 && bytes() > MEM.maskBudget;) {
+    const x = MEM.mask[i];
+    if (x === s || keepLoaded(x)) { i++; continue; }
+    x._mk.labels.pack(); x._mk.exclude.pack(); MEM.mask.splice(i, 1);
+  }
+}
+function pxTouch(s) {
+  lruPush(MEM.px, s);
+  const bytes = () => MEM.px.reduce((a, x) => a + 8 * x.w * x.h, 0);
+  for (let i = 0; i < MEM.px.length && MEM.px.length > 1 && bytes() > MEM.pxBudget;) {
+    const x = MEM.px[i];
+    if (x === s || keepLoaded(x)) { i++; continue; }
+    x.orig = null; x.enh = null; MEM.px.splice(i, 1);
+  }
+}
+/** The original file of a section as a Blob (from memory if not yet stored, else from the image store on disk). */
+async function sectionBlob(s) {
+  if (s.file.blob) return s.file.blob;
+  const b = s.file.key ? await getImage(s.file.key) : null;
+  if (!b) throw new Error(t('err.imgMissing', { n: s.name }));
+  return b;
+}
+/** Working image of a section at factor k (crop and rotation applied). */
+async function decodeWorking(s, k) {
+  let { w, h, rgba, fw, fh } = await decodeBytes(await sectionBlob(s), s.file.name, s.file.type, { k, crop: s.crop });
+  for (let r = 0; r < ((s.rot % 4) + 4) % 4; r++) { rgba = rotate90(rgba, w, h, 4, 1); [w, h] = [h, w]; }
+  if (!s.full) s.full = { w: fw, h: fh };
+  return { w, h, rgba };
+}
+/** Decode the pixels of a section if they are not in memory. */
+function ensurePixels(s) {
+  if (s.orig) { pxTouch(s); return Promise.resolve(s); }
+  if (s._loading) return s._loading;
+  s._loading = (async () => {
+    const r = await decodeWorking(s, s.ds);
+    if (r.w !== s.w || r.h !== s.h) console.warn('image size differs from the stored masks', s.name, r.w, r.h, s.w, s.h);
+    s.orig = r.rgba; enhance(s);
+    return s;
+  })().catch((e) => { s._pxErr = e.message || String(e); toast(s._pxErr); throw e; }).finally(() => { s._loading = null; if (s.orig) pxTouch(s); });
+  return s._loading;
+}
+/** Sections whose pictures a view asked for while they were not in memory: loaded two at a time, then the views redrawn. */
+const pxWanted = new Set(); let pxBusy = false;
+function needPixels(s) { if (s._pxErr) return; pxWanted.add(s); if (!pxBusy) setTimeout(loadWanted, 0); }
+async function loadWanted() {
+  if (pxBusy) return; pxBusy = true;
+  try {
+    while (pxWanted.size) {
+      const batch = [...pxWanted].slice(0, 2); batch.forEach((x) => pxWanted.delete(x));
+      for (const x of batch) { MEM.pinned.add(x); try { await ensurePixels(x); } catch (e) { console.error(e); } }
+      try { rerenderPixelViews(); } finally { batch.forEach((x) => MEM.pinned.delete(x)); }
+    }
+  } finally { pxBusy = false; }
+}
+function rerenderPixelViews() {
+  requestRender();
+  if (mode === 'log') renderLog();
+  if (mode === 'fig') { renderFigPanel(); renderFigure(); }
+}
+/** Run fn(s) with the section's pixels in memory (they may be released afterwards). */
+async function withPixels(s, fn) { MEM.pinned.add(s); try { await ensurePixels(s); return await fn(s); } finally { MEM.pinned.delete(s); } }
+/** Write to the image store the originals that are still only in memory (new or legacy sections). */
+async function storePendingImages() {
+  for (const c of S.cores) for (const s of c.sections) {
+    if (s.file.key || !s.file.blob) continue;
+    const key = 'img_' + uid();
+    await putImage(key, s.file.blob);
+    s.file = { name: s.file.name, type: s.file.type, key, size: s.file.blob.size };
+  }
+}
+/** Replace inline images (bytes / base64) of a project file by references to the image store. */
+async function internImages(p) {
+  for (const c of p.cores || [{ sections: p.sections }]) for (const q of c.sections || []) {
+    if (q.file.key || !(q.file.bytes || q.file.b64)) continue;
+    const bytes = q.file.bytes ? new Uint8Array(q.file.bytes) : b64decode(q.file.b64), key = 'img_' + uid();
+    await putImage(key, new Blob([bytes], { type: q.file.type || 'image/jpeg' }));
+    q.file = { name: q.file.name, type: q.file.type, key, size: bytes.length };
+  }
+  return p;
+}
+
 function effectiveFilters(s) {
-  const f = s.filters; if (!f.autoLevels && !f.autoGamma) return f;
+  const f = s.filters; if ((!f.autoLevels && !f.autoGamma) || !s.orig) return f;
   const a = autoLevels(s.orig, s.w, s.h, s.roi), out = { ...f };
   if (f.autoLevels) { out.blackPoint = a.blackPoint; out.whitePoint = a.whitePoint; }
   if (f.autoGamma) out.gamma = +gammaForMedian(a.median, out.blackPoint, out.whitePoint).toFixed(2);
   return out;
 }
-function enhance(s) { s.enh = applyFilters(s.orig, s.w, s.h, effectiveFilters(s)); }
+function enhance(s) { s.enh = s.orig ? applyFilters(s.orig, s.w, s.h, effectiveFilters(s)) : null; }
 
 function pxPerCm(s) {
   const span = (s.bottom - s.top) * UNIT_TO_CM[s.units];
@@ -113,9 +221,15 @@ function loadScript(src) {
   });
 }
 
+/**
+ * Decode an image file (Blob or bytes) to the working image: optional crop (full-resolution pixels) and block
+ * averaging by factor k (given, or chosen from maxMP). Returns { w, h, rgba, k, fw, fh } (fw × fh = file size).
+ */
 async function decodeBytes(bytes, name, type, opt = {}) {
   const factor = (w, h) => opt.k ?? Math.max(1, Math.ceil(Math.sqrt((w * h) / ((opt.maxMP || 1e9) * 1e6))));
+  const area = (fw, fh) => { const c = opt.crop; return c ? { x: Math.max(0, c.x0), y: Math.max(0, c.y0), w: Math.min(fw, c.x1) - Math.max(0, c.x0), h: Math.min(fh, c.y1) - Math.max(0, c.y0) } : { x: 0, y: 0, w: fw, h: fh }; };
   if (/\.tiff?$/i.test(name) || /tiff/.test(type || '')) {
+    if (bytes instanceof Blob) bytes = new Uint8Array(await bytes.arrayBuffer());
     if (!window.UTIF) {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js').catch(() => {});
       await loadScript('https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js');
@@ -123,24 +237,28 @@ async function decodeBytes(bytes, name, type, opt = {}) {
     const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     const ifds = window.UTIF.decode(buf);
     window.UTIF.decodeImage(buf, ifds[0], ifds);
-    const rgba = window.UTIF.toRGBA8(ifds[0]), w = ifds[0].width, h = ifds[0].height, k = factor(w, h);
-    const r = downsampleRGBA(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.length), w, h, k);
-    return { ...r, k };
+    const fw = ifds[0].width, fh = ifds[0].height, A = area(fw, fh), k = factor(A.w, A.h);
+    let rgba = window.UTIF.toRGBA8(ifds[0]);
+    rgba = new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.length);
+    if (opt.crop) { const sub = new Uint8ClampedArray(A.w * A.h * 4); for (let y = 0; y < A.h; y++) sub.set(rgba.subarray(((A.y + y) * fw + A.x) * 4, ((A.y + y) * fw + A.x + A.w) * 4), y * A.w * 4); rgba = sub; }
+    const r = downsampleRGBA(rgba, A.w, A.h, k);
+    return { ...r, k, fw, fh };
   }
-  const url = URL.createObjectURL(new Blob([bytes], { type: type || 'image/jpeg' }));
+  const url = URL.createObjectURL(bytes instanceof Blob ? bytes : new Blob([bytes], { type: type || 'image/jpeg' }));
   try {
     const img = new Image(); img.src = url; await img.decode();
-    const w = img.naturalWidth, h = img.naturalHeight, k = factor(w, h);
+    const fw = img.naturalWidth, fh = img.naturalHeight, A = area(fw, fh), w = A.w, h = A.h, k = factor(w, h);
     const W = Math.floor(w / k), Hh = Math.floor(h / k), out = new Uint8ClampedArray(W * Hh * 4);
     const stripH = Math.max(k, Math.floor(Math.min(h, 4e6 / w) / k) * k);
     const c = document.createElement('canvas'); c.width = w; c.height = stripH;
     const x = c.getContext('2d', { willReadFrequently: true });
     for (let y = 0; y < Hh * k; y += stripH) {
       const sh = Math.min(stripH, Hh * k - y);
-      x.clearRect(0, 0, w, stripH); x.drawImage(img, 0, y, w, sh, 0, 0, w, sh);
+      x.clearRect(0, 0, w, stripH); x.drawImage(img, A.x, A.y + y, w, sh, 0, 0, w, sh);
       out.set(downsampleRGBA(x.getImageData(0, 0, w, sh).data, w, sh, k).rgba, (y / k) * W * 4);
     }
-    return { w: W, h: Hh, rgba: out, k };
+    c.width = c.height = 0;
+    return { w: W, h: Hh, rgba: out, k, fw, fh };
   } finally { URL.revokeObjectURL(url); }
 }
 
@@ -155,9 +273,9 @@ async function addFiles(files) {
   for (const file of files) {
     await busy(async () => {
       try {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const { w, h, rgba, k } = await decodeBytes(bytes, file.name, file.type, { maxMP: S.settings.maxMP });
-        const s = newSection({ name: file.name.replace(/\.[^.]+$/, ''), file: { name: file.name, type: file.type, bytes }, w, h, orig: rgba, ds: k });
+        const blob = new Blob([await file.arrayBuffer()], { type: file.type || 'image/jpeg' });
+        const { w, h, rgba, k, fw, fh } = await decodeBytes(blob, file.name, file.type, { maxMP: S.settings.maxMP });
+        const s = newSection({ name: file.name.replace(/\.[^.]+$/, ''), file: { name: file.name, type: file.type, blob }, w, h, orig: rgba, ds: k, full: { w: fw, h: fh } });
         const prev = sec();
         if (prev) { s.units = prev.units; s.top = prev.bottom; s.bottom = prev.bottom + (prev.bottom - prev.top); s.filters = { ...prev.filters }; s.preset = prev.preset; s.detect = { ...prev.detect }; enhance(s); }
         S.sections.push(s);
@@ -174,10 +292,10 @@ async function loadExample() {
       const bytes = new Uint8Array(await (await fetchAsset(url)).arrayBuffer());
       await flushSave(); resetState(); S.name = t('example.name');
       const { w, h, rgba } = await decodeBytes(bytes, url, 'image/jpeg', { k: 1 });
-      const s = newSection({ name: t('example.name'), file: { name: 'idealized_core_0-500cm.jpg', type: 'image/jpeg', bytes }, w, h, orig: rgba });
+      const s = newSection({ name: t('example.name'), file: { name: 'idealized_core_0-500cm.jpg', type: 'image/jpeg', bytes }, w, h, orig: rgba, full: { w, h } });
       s.top = 0; s.bottom = 500; s.units = 'cm';
       s.detect = { ...DEFAULT_DETECT, method: 'global', polarity: 'dark', threshold: 6, minArea: 1, smooth: 0 };
-      S.settings.binPx = 150;
+      S.settings.binCm = 150 / pxPerCm(s);
       S.sections.push(s); syncSettingsForm(); selectSection(S.sections.length - 1, true);
       detectSection(s); updateProjHeader(); renderRecList(); setAge(); await saveToDB();
       return true;
@@ -207,6 +325,7 @@ function effClassId(o) {
 }
 
 function refreshObjects(s, ids, region) {
+  if (!s.orig) return;   // V33: stats are kept from the last time the pixels were in memory
   const R = region ? { x0: Math.max(0, region.x0), y0: Math.max(0, region.y0), x1: Math.min(s.w, region.x1), y1: Math.min(s.h, region.y1) } : null;
   const acc = objectStats(s.labels, s.w, s.h, s.orig, ids, R), ppu = pxPerCm(s);
   for (const id of ids) {
@@ -305,7 +424,7 @@ function selectedIds() { const s = sec(); if (!s) return []; const ids = S.multi
 
 /* ───────────── detection ───────────── */
 
-function runDetection() { const s = sec(); if (s) busy(() => detectSection(s)); }
+function runDetection() { const s = sec(); if (s) busy(() => withPixels(s, detectSection)); }
 
 function detectSection(s) {
   {
@@ -426,13 +545,15 @@ function effClassArray(s) {
 function analyze(s) {
   if (!s) return;
   const counts = rowCounts({ labels: s.labels, width: s.w, roi: s.roi, exclude: s.exclude, effClass: effClassArray(s), nClasses: S.classes.length });
-  s.bins = binRows(counts, { top: s.top, bottom: s.bottom, binPx: Math.max(1, S.settings.binPx) });
+  s.bins = binRows(counts, { top: s.top, bottom: s.bottom, binPx: binRowsOf(s) });
   for (const b of s.bins) {
     b.age = interpAge(S.age.model, b.depth);
     const m = manualAt(s, b.depth); b.BIm = m?.BI ?? null; b.iim = m?.ii ?? null;
   }
 }
 
+/** V33: the analysis interval is set in cm; rows per interval in this section (may be fractional, at least 1). */
+function binRowsOf(s) { return Math.max(1, (S.settings.binCm || 1) * pxPerCm(s)); }
 function manualAt(s, d) { let hit = null; for (const m of s.manual) if (d >= m.from && d < m.to) hit = m; return hit; }
 function setManual(s, b, key, val) {
   let m = s.manual.find((e) => Math.abs(e.from - b.dTop) < 1e-9 && Math.abs(e.to - b.dBottom) < 1e-9);
@@ -475,6 +596,10 @@ function render() {
   const s = sec(), cw = view.width, ch = view.height;
   $('empty').hidden = !!s;
   if (!s) { vctx.fillStyle = '#161a19'; vctx.fillRect(0, 0, cw, ch); return; }
+  if (!s.orig) {   // V33: pixels are being read from disk
+    vctx.fillStyle = '#161a19'; vctx.fillRect(0, 0, cw, ch); vctx.fillStyle = '#9aa7a3'; vctx.font = '14px "IBM Plex Sans", sans-serif'; vctx.textAlign = 'center';
+    vctx.fillText(s._pxErr || t('mem.loading'), cw / 2, ch / 2); vctx.textAlign = 'start'; needPixels(s); return;
+  }
   if (!s.lutFill || s.lutFill.length < s.nextId * 4) rebuildLUT(s);
   if (!imgData || imgData.width !== cw || imgData.height !== ch) imgData = vctx.createImageData(cw, ch);
   const d = imgData.data, src = S.showOrig ? s.orig : s.enh, lab = s.labels, ex = s.exclude;
@@ -620,7 +745,7 @@ function edgeHit(s, sx, sy) {
   return near(ya) ? 'a' : near(yb) ? 'b' : null;
 }
 function startCrop() {
-  const s = sec(); if (!s) return;
+  const s = sec(); if (!s?.orig) return;
   cropState = { s, y0: 0, y1: s.h }; $('cropBar').hidden = false; updateCropInfo(); requestRender();
 }
 function endCrop() { cropState = null; $('cropBar').hidden = true; requestRender(); }
@@ -634,24 +759,29 @@ function updateCropInfo() {
   if (!cropState) return; const s = cropState.s, r = cropResult();
   $('cropInfo').textContent = t('crop.info', { h: cropState.y1 - cropState.y0, H: s.h, a: fmt(r.top, 3), b: fmt(r.bottom, 3), u: s.units });
 }
-/** Remove the rows outside [y0, y1) from the image and its masks; the image is stored again as the cropped picture. */
+/** Rectangle [x0,x1)×[y0,y1) of the working image (rotated frame) → rectangle in full-resolution pixels of the file. */
+function workToFull(s, R) {
+  let w = s.w, h = s.h, x0 = R.x0, y0 = R.y0, x1 = R.x1, y1 = R.y1;
+  for (let r = 0; r < ((s.rot % 4) + 4) % 4; r++) {   // undo one clockwise turn: (x, y) in w×h → (y, w − x) in h×w
+    [x0, y0, x1, y1] = [Math.min(y0, y1), Math.min(w - x0, w - x1), Math.max(y0, y1), Math.max(w - x0, w - x1)]; [w, h] = [h, w];
+  }
+  const c = s.crop || { x0: 0, y0: 0 }, k = s.ds;
+  return { x0: c.x0 + x0 * k, y0: c.y0 + y0 * k, x1: c.x0 + x1 * k, y1: c.y0 + y1 * k };
+}
+/** Remove the rows outside [y0, y1) from the image and its masks. V33: the original file is kept; the crop is stored in full-resolution pixels. */
 async function applyCrop() {
   const c = cropState; if (!c) return; const s = c.s, { y0, y1 } = c;
   if (y0 <= 0 && y1 >= s.h) { endCrop(); return; }
   if (y1 - y0 < 10) { toast(t('crop.small')); return; }
   const r = cropResult(), W = s.w, H = y1 - y0;
+  const crop = workToFull({ w: s.w, h: s.h, rot: s.rot, ds: s.ds, crop: s.crop }, { x0: 0, y0, x1: W, y1 });
   await busy(async () => {
     const cut = (arr, ch) => arr.slice(y0 * W * ch, y1 * W * ch);
     s.orig = cut(s.orig, 4); s.labels = cut(s.labels, 1); s.exclude = cut(s.exclude, 1); s.h = H;
     s.marks = (s.marks || []).filter((m) => m.y >= y0 && m.y < y1).map((m) => ({ ...m, y: m.y - y0 }));
     s.top = r.top; s.bottom = r.bottom; s.roi = r.roi;
-    // keep the stored picture identical to what is analysed (re-encoded once; rotation and downsampling are now built in)
-    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-    cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(s.orig.buffer, s.orig.byteOffset, s.orig.length), W, H), 0, 0);
-    const jpg = /jpe?g/i.test(s.file.type || s.file.name), type = jpg ? 'image/jpeg' : 'image/png';
-    const blob = await new Promise((res) => cv.toBlob(res, type, 0.95));
-    s.file = { name: s.file.name.replace(/(\.[^.]+)?$/, jpg ? '_crop.jpg' : '_crop.png'), type, bytes: new Uint8Array(await blob.arrayBuffer()) };
-    s.rot = 0; s.ds = 1; s.view = null;
+    s.crop = crop; s.logVer++;
+    s.view = null;
     enhance(s); refreshObjects(s, new Set(s.objects.keys()), null);
     S.undo = S.undo.filter((op) => op.s !== s); $('undoBtn').disabled = !S.undo.length;
     endCrop(); selectSection(S.cur, true); afterChange(s);
@@ -765,7 +895,7 @@ function paintSeg(op, a, b) {
 }
 
 view.addEventListener('pointerdown', (e) => {
-  const s = sec(); if (!s) return;
+  const s = sec(); if (!s || !s.orig) return;
   view.setPointerCapture(e.pointerId);
   const p = toImg(e);
   if (e.button === 1 || S.tool === 'pan' || spaceDown) { drag = { type: 'pan', sx: e.clientX, sy: e.clientY, vx: S.view.x, vy: S.view.y }; return; }
@@ -1135,22 +1265,83 @@ $('resTable').addEventListener('change', (e) => {
 function renderSectionForm() {
   const s = sec();
   $('secSel').innerHTML = S.sections.map((x, k) => `<option value="${k}" ${k === S.cur ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
-  for (const id of ['secName', 'secTop', 'secBottom', 'secUnits', 'secDel', 'roiBtn', 'roiReset', 'rotL', 'rotR', 'detectBtn', 'clearCand']) $(id).disabled = !s;
+  for (const id of ['secName', 'secTop', 'secBottom', 'secUnits', 'secDel', 'roiBtn', 'roiReset', 'rotL', 'rotR', 'detectBtn', 'clearCand', 'secRes', 'resAll']) $(id).disabled = !s;
   if (!s) return;
   $('secName').value = s.name; $('secTop').value = s.top; $('secBottom').value = s.bottom; $('secUnits').value = s.units;
   const ppu = pxPerCm(s);
   $('roiInfo').textContent = `x ${s.roi.x0}–${s.roi.x1} · y ${s.roi.y0}–${s.roi.y1} px · ${fmt(ppu * UNIT_TO_CM[s.units], 2)} px/${s.units}`;
-  renderFilterForm(); renderDetectForm(); renderBinNote();
+  renderFilterForm(); renderDetectForm(); renderBinNote(); renderResForm(s);
 }
+
+/* ── V33: working resolution of a section, recomputed from the full-resolution original ── */
+const RES_FACTORS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32];
+function renderResForm(s) {
+  const sel = $('secRes'); sel.disabled = $('resAll').disabled = !s; if (!s) return;
+  const span = s.crop ? { w: s.crop.x1 - s.crop.x0, h: s.crop.y1 - s.crop.y0 } : s.full;
+  const ppcFull = pxPerCm(s) * s.ds;   // px/cm of the original file
+  if (!span) { sel.innerHTML = `<option>${t('sec.resUnknown', { k: s.ds })}</option>`; $('resNote').textContent = ''; return; }
+  const ks = RES_FACTORS.filter((k) => k === s.ds || Math.min(span.w, span.h) / k >= 20);
+  sel.innerHTML = ks.map((k) => {
+    const W = Math.floor(span.w / k), H = Math.floor(span.h / k);
+    return `<option value="${k}" ${k === s.ds ? 'selected' : ''}>${k === 1 ? t('sec.resFull') : '1/' + k} · ${fmt(ppcFull / k, 3)} px/cm · ${fmt((W * H) / 1e6, 2)} MP</option>`;
+  }).join('');
+  $('resNote').textContent = t('sec.resNote', { mb: Math.round((13 * s.w * s.h) / 2 ** 20) });
+}
+/** Recompute the working image of s at factor k2 from the original; masks, marks and analysis area follow (nearest pixel). */
+async function changeResolution(s, k2) {
+  if (!s || k2 === s.ds) return;
+  await withPixels(s, async () => {
+    const k1 = s.ds, turns = ((s.rot % 4) + 4) % 4, r = await decodeWorking(s, k2), q = k1 / k2;
+    const U2 = turns % 2 ? { w: r.h, h: r.w } : { w: r.w, h: r.h };
+    const remap = (arr, Type) => {
+      let a = arr, w = s.w, h = s.h;
+      for (let i = 0; i < turns; i++) { a = rotate90(a, w, h, 1, -1); [w, h] = [h, w]; }
+      const out = new Type(U2.w * U2.h), xs = Int32Array.from({ length: U2.w }, (_, x) => Math.min(w - 1, Math.floor((x + 0.5) / q)));
+      for (let y = 0; y < U2.h; y++) { const sy = Math.min(h - 1, Math.floor((y + 0.5) / q)) * w, o = y * U2.w; for (let x = 0; x < U2.w; x++) out[o + x] = a[sy + xs[x]]; }
+      let b = out; w = U2.w; h = U2.h;
+      for (let i = 0; i < turns; i++) { b = rotate90(b, w, h, 1, 1); [w, h] = [h, w]; }
+      return b;
+    };
+    const pt = (x, y) => {   // continuous coordinates, old working frame → new working frame
+      let w = s.w, h = s.h;
+      for (let i = 0; i < turns; i++) { [x, y] = [y, w - x]; [w, h] = [h, w]; }
+      x *= q; y *= q; w = U2.w; h = U2.h;
+      for (let i = 0; i < turns; i++) { [x, y] = [h - y, x]; [w, h] = [h, w]; }
+      return [x, y];
+    };
+    const clampR = (v, m) => Math.max(0, Math.min(m, Math.round(v)));
+    const labels = remap(s.labels, Int32Array), exclude = remap(s.exclude, Uint8Array);
+    const [ax, ay] = pt(s.roi.x0, s.roi.y0), [bx, by] = pt(s.roi.x1, s.roi.y1);
+    const full = s.roi.x0 === 0 && s.roi.y0 === 0 && s.roi.x1 === s.w && s.roi.y1 === s.h;
+    const roi = full ? { x0: 0, y0: 0, x1: r.w, y1: r.h } : { x0: clampR(Math.min(ax, bx), r.w), y0: clampR(Math.min(ay, by), r.h), x1: clampR(Math.max(ax, bx), r.w), y1: clampR(Math.max(ay, by), r.h) };
+    s.marks = (s.marks || []).map((m) => { const [x, y] = pt(m.x + 0.5, m.y + 0.5); return { ...m, x: Math.min(r.w - 1, Math.floor(x)), y: Math.min(r.h - 1, Math.floor(y)) }; });
+    s.w = r.w; s.h = r.h; s.orig = r.rgba; s.labels = labels; s.exclude = exclude; s.roi = roi; s.ds = k2;
+    s.view = null; s._lc = null; s._lb = null; s._fc = null; s.logVer++;
+    enhance(s); refreshObjects(s, new Set(s.objects.keys()), null);
+    S.undo = S.undo.filter((op) => op.s !== s); $('undoBtn').disabled = !S.undo.length;
+  });
+  pxTouch(s);
+  if (s === sec()) selectSection(S.cur, true);
+  afterChange(s); renderSectionForm();
+}
+$('secRes').addEventListener('change', (e) => { const s = sec(), k = +e.target.value; if (s && k) busy(() => changeResolution(s, k)); });
+$('resAll').addEventListener('click', () => {
+  const s = sec(); if (!s) return; const target = pxPerCm(s);
+  busy(async () => {
+    for (const o of S.sections) if (o !== s) await changeResolution(o, Math.max(1, Math.round((pxPerCm(o) * o.ds) / target)));
+    toast(t('sec.resAllDone', { p: fmt(target, 3) }));
+  });
+});
 
 function selectSection(k, fresh = false) {
   if (cropState) endCrop();
   const prev = sec(); if (prev) prev.view = { ...S.view };
   S.cur = k; S.selected = 0;
   const s = sec();
+  if (s && !s.orig) ensurePixels(s).then(() => { if (sec() === s) { renderSectionForm(); requestRender(); } }).catch(() => requestRender());   // V33
+  else if (s) pxTouch(s);
   renderSectionForm();
   if (s) { rebuildLUT(s); if (s.view && !fresh) { S.view = { ...s.view }; requestRender(); } else requestAnimationFrame(fitView); }
-  $('binPx').max = s ? Math.max(10, Math.min(2000, s.roi.y1 - s.roi.y0)) : 500;
   analyze(s); renderResults(); renderClasses(); renderObject(); renderLearn(); requestRender();
 }
 
@@ -1185,8 +1376,8 @@ function renderDetectForm() {
   document.querySelectorAll('#detectCtl [data-only]').forEach((el) => (el.hidden = !!el.dataset.only && el.dataset.only !== p.method));
 }
 function renderBinNote() {
-  const s = sec(); $('binPx').value = S.settings.binPx; $('binOut').textContent = S.settings.binPx + ' px';
-  $('binNote').textContent = s ? t('a.binNote', { v: fmt(S.settings.binPx / (pxPerCm(s) * UNIT_TO_CM[s.units]), 3), u: s.units }) : '';
+  const s = sec(), cm = S.settings.binCm || 1; $('binCm').value = +cm.toPrecision(6);
+  $('binNote').textContent = s ? t('a.binNote', { n: fmt(cm * pxPerCm(s), 3), p: fmt(pxPerCm(s), 3), m: Math.ceil((s.roi.y1 - s.roi.y0) / binRowsOf(s)) }) + (cm * pxPerCm(s) < 1 ? ' ' + t('a.binMin') : '') : '';
 }
 
 let filterTimer = 0;
@@ -1225,7 +1416,7 @@ function rankPresets(s) {
   }).sort((a, b) => b.eta - a.eta);
 }
 $('presetBest').addEventListener('click', () => busy(() => {
-  const s = sec(); if (!s) return;
+  const s = sec(); if (!s?.orig) return;
   const r = rankPresets(s), best = r[0];
   s.preset = best.id; s.filters = { ...best.filters }; if (best.detect) s.detect = { ...DEFAULT_DETECT, ...best.detect };
   renderFilterForm(); renderDetectForm(); refilter();
@@ -1292,7 +1483,7 @@ $('detectBtn').addEventListener('click', runDetection);
 $('clearCand').addEventListener('click', clearCandidates);
 
 $('maxMP').addEventListener('change', (e) => { S.settings.maxMP = +e.target.value; });
-$('binPx').addEventListener('input', (e) => { S.settings.binPx = +e.target.value; renderBinNote(); scheduleAnalysis(); });
+$('binCm').addEventListener('change', (e) => { const v = +e.target.value; if (!(v > 0)) { renderBinNote(); return; } S.settings.binCm = v; markDirty(); renderBinNote(); scheduleAnalysis(); scheduleLog(); });
 $('inclPred').addEventListener('change', (e) => { S.settings.includePred = e.target.checked; scheduleAnalysis(); renderClasses(); });
 $('countCand').addEventListener('change', (e) => { S.settings.countCandidates = e.target.checked; scheduleAnalysis(); renderClasses(); });
 $('predThr').addEventListener('input', (e) => { S.settings.predThr = +e.target.value; $('thrOut').textContent = Math.round(S.settings.predThr * 100) + '%'; for (const s of S.sections) rebuildLUT(s); renderLearn(); renderClasses(); scheduleAnalysis(); requestRender(); });
@@ -1321,7 +1512,7 @@ $('secDel').addEventListener('click', (e) => {
 $('roiBtn').addEventListener('click', () => setTool('roi'));
 $('roiReset').addEventListener('click', () => { const s = sec(); if (s) setRoi(s, { x0: 0, y0: 0, x1: s.w, y1: s.h }); });
 for (const [id, dir] of [['rotL', -1], ['rotR', 1]]) $(id).addEventListener('click', () => {
-  const s = sec(); if (!s) return;
+  const s = sec(); if (!s?.orig) return;
   busy(() => {
     s.orig = rotate90(s.orig, s.w, s.h, 4, dir); s.labels = rotate90(s.labels, s.w, s.h, 1, dir); s.exclude = rotate90(s.exclude, s.w, s.h, 1, dir);
     s.marks = (s.marks || []).map((m) => (dir > 0 ? { ...m, x: s.h - 1 - m.y, y: m.x } : { ...m, x: m.y, y: s.w - 1 - m.x }));
@@ -1600,44 +1791,62 @@ $('cdDel').addEventListener('click', () => {
 
 /* ───────────── projects: serialisation ───────────── */
 
-function serSection(s, binary) {
+/**
+ * One section in a project. V33 (format v4): the image is a reference to the image store (`file.key`), or, before it
+ * is stored, the Blob itself (`file.blob`); `portableProject` turns both into base64 for files. Object statistics
+ * (`st`) are saved so that a section can be used without decoding its picture.
+ */
+function serSection(s) {
+  const o2 = (o) => ({ id: o.id, cls: o.cls, src: o.src, ...(o.nt ? { nt: 1 } : {}), ...(o.stats ? { st: o.stats } : {}), ...(o.cls && o._thumb ? { th: o._thumb } : {}) });
   return {
-    id: s.id, name: s.name, ds: s.ds, rot: s.rot, w: s.w, h: s.h,
-    file: { name: s.file.name, type: s.file.type, ...(binary ? { bytes: s.file.bytes } : { b64: b64encode(s.file.bytes) }) },
+    id: s.id, name: s.name, ds: s.ds, rot: s.rot, w: s.w, h: s.h, crop: s.crop || null, full: s.full || null,
+    file: s.file.key ? { name: s.file.name, type: s.file.type, key: s.file.key, size: s.file.size } : { name: s.file.name, type: s.file.type, blob: s.file.blob },
     top: s.top, bottom: s.bottom, units: s.units, roi: s.roi, filters: s.filters, preset: s.preset, detect: s.detect, manual: s.manual,
-    nextId: s.nextId, objects: [...s.objects.values()].map((o) => ({ id: o.id, cls: o.cls, src: o.src, ...(o.nt ? { nt: 1 } : {}) })),
-    labels: rleEncode(s.labels), exclude: rleEncode(s.exclude), marks: s.marks || [],
+    nextId: s.nextId, objects: [...s.objects.values()].map(o2),
+    labels: s._mk.labels.rle(), exclude: s._mk.exclude.rle(), marks: s.marks || [],
   };
 }
 
 /** Project file, format v3: project → cores (images, imported data, records, age model, intervals by core id). */
-function serialize(binary) {
+function serialize() {
   const { cores: _c, ...geo } = S.geo;
   return {
-    app: APP, kind: 'project', version: 3, appVersion: VERSION, delivery: DELIVERY, saved: new Date().toISOString(),
+    app: APP, kind: 'project', version: 4, appVersion: VERSION, delivery: DELIVERY, saved: new Date().toISOString(),
     id: S.id, name: S.name, notes: S.notes, classes: S.classes, active: S.active, settings: S.settings, library: S.library,
     projectKind: S.kind || 'normal', multiSource: S.multiSource || null, models: projectModels(),
     geo, sheet: S.sheet, fig: S.fig, curCore: S.curCore, plots: S.plots || [], plotCur: S.plotCur || 0,
     cores: S.cores.map((c) => ({
       id: c.id, name: c.name, lat: c.lat, lon: c.lon, waterDepth: c.waterDepth ?? null, units: c.units, source: c.source || null, notes: c.notes || '',
       imp: c.imp, user: c.user || {}, records: c.records, logView: c.logView, age: { text: c.ageModel.text, units: c.ageModel.units },
-      sections: c.sections.map((q) => serSection(q, binary)),
+      sections: c.sections.map((q) => serSection(q)),
     })),
   };
 }
 
+/** V33: a section is opened without decoding its picture; files from older versions are decoded once (sizes, object statistics). */
 async function loadSection(q) {
-  const bytes = q.file.bytes ? new Uint8Array(q.file.bytes) : b64decode(q.file.b64);
-  let { w, h, rgba } = await decodeBytes(bytes, q.file.name, q.file.type, { k: q.ds || 1 });
-  for (let k = 0; k < ((q.rot % 4) + 4) % 4; k++) { rgba = rotate90(rgba, w, h, 4, 1); [w, h] = [h, w]; }
-  const s = newSection({ name: q.name, file: { name: q.file.name, type: q.file.type, bytes }, w, h, orig: rgba, ds: q.ds || 1 });
-  Object.assign(s, { id: q.id, rot: q.rot, top: q.top, bottom: q.bottom, units: q.units, roi: q.roi, filters: q.filters, preset: q.preset, detect: q.detect, manual: q.manual || [], nextId: q.nextId });
-  enhance(s);
-  s.labels = rleDecode(q.labels, w * h, Int32Array); s.exclude = rleDecode(q.exclude, w * h, Uint8Array); s.marks = q.marks || [];
-  for (const o of q.objects) s.objects.set(o.id, { id: o.id, cls: o.cls, src: o.src, nt: !!o.nt, pred: null, conf: 0, area: 0, bbox: null, stats: null, feat: null });
-  refreshObjects(s, new Set(s.objects.keys()), null);
+  const f = q.file, legacy = !f.key;
+  const file = legacy ? { name: f.name, type: f.type, blob: f.blob || new Blob([f.bytes ? new Uint8Array(f.bytes) : b64decode(f.b64)], { type: f.type || 'image/jpeg' }) } : { name: f.name, type: f.type, key: f.key, size: f.size };
+  let w = q.w, h = q.h, orig = null;
+  const mk = (s) => Object.assign(s, { id: q.id, rot: q.rot || 0, crop: q.crop || null, top: q.top, bottom: q.bottom, units: q.units, roi: q.roi, filters: q.filters, preset: q.preset, detect: q.detect, manual: q.manual || [], nextId: q.nextId, marks: q.marks || [] });
+  if (!w || !h) {   // very old files without sizes
+    const tmp = mk(newSection({ name: q.name, file, w: 1, h: 1, orig: null, ds: q.ds || 1 }));
+    const r = await decodeWorking(tmp, q.ds || 1); ({ w, h } = r); orig = r.rgba;
+  }
+  const s = mk(newSection({ name: q.name, file, w, h, orig, ds: q.ds || 1, full: q.full || null, labels: { rle: q.labels }, exclude: { rle: q.exclude } }));
+  const ppu = pxPerCm(s);
+  for (const o of q.objects) {
+    const st = o.st || null;
+    s.objects.set(o.id, { id: o.id, cls: o.cls, src: o.src, nt: !!o.nt, pred: null, conf: 0, area: st?.n || 0, bbox: st ? [st.x0, st.y0, st.x1, st.y1] : null, stats: st, feat: st ? features(st, ppu) : null, ...(o.th ? { _thumb: o.th } : {}) });
+  }
+  if (q.objects.some((o) => !o.st)) {   // older files: object statistics need the pixels once
+    await withPixels(s, (x) => refreshObjects(x, new Set(x.objects.keys()), null));
+    s._mk.labels.pack(); s._mk.exclude.pack();
+  }
+  if (legacy) loadMigrated = true;
   return s;
 }
+let loadMigrated = false;
 
 /** v1/v2 files → v3 structure: the images become one core; the geochemistry cores become further cores. */
 function upgradeProject(p) {
@@ -1656,7 +1865,7 @@ function upgradeProject(p) {
 
 async function loadProject(p) {
   blankStart = false;
-  resetState(); loading = true;
+  resetState(); loading = true; loadMigrated = false;
   try {
     p = upgradeProject(p);
     S.id = p.id || uid(); S.name = p.name || APP; S.notes = p.notes || '';
@@ -1673,6 +1882,11 @@ async function loadProject(p) {
       S.cores.push(c);
     }
     if (!S.cores.length) S.cores.push(makeCore({ name: t('core.first') }));
+    if (S.settings.binPx != null) {   // V33: before V33 the interval was given in pixel rows
+      const s0 = S.cores.flatMap((c) => c.sections)[0];
+      if (p.settings?.binCm == null) S.settings.binCm = s0 ? S.settings.binPx / pxPerCm(s0) : 1;
+      delete S.settings.binPx;
+    }
   } finally { loading = false; }
   const cur = S.cores.find((c) => c.id === p.curCore) || S.cores[0];
   activateCore(cur.id, true);
@@ -1681,16 +1895,18 @@ async function loadProject(p) {
   if (S.geo.trained) setTimeout(() => { geoTrain(true).catch(() => { /* retrained on demand */ }); }, 0); else scheduleGeo(0);
   try { localStorage.setItem('ichantool.last', S.id); } catch { /* storage blocked */ }
   dirty = false; setSaveState(storageOK ? 'saved' : 'off');
+  if (loadMigrated) markDirty();   // V33: move images of older projects to the image store
 }
 
 function resetState() {
   blankStart = false;
   const maxMP = S.settings.maxMP || 8;
   S.id = uid(); S.name = t('proj.untitled'); S.notes = '';
+  MEM.px.length = 0; MEM.mask.length = 0; pxWanted.clear();   // V33: pictures of the previous project can be freed
   S.undo = []; S.selected = 0; S.multi.clear(); S.library = []; S.sheet = { columns: [], cells: {} }; S.fig = defaultFig(); S.kind = 'normal'; S.multiSource = null; S.plots = []; S.plotCur = 0; S.coreModels = {};
   S.geo = defaultGeo(); geoReset();
   S.classes = defaultClasses(); S.active = 'undet';
-  S.settings = { binPx: 50, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP, clfScope: 'project', ml: { ...ML_DEFAULT } };
+  S.settings = { binCm: 1, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP, clfScope: 'project', ml: { ...ML_DEFAULT } };
   $('undoBtn').disabled = true; $('detectStatus').textContent = '';
   S.cores = [makeCore({ name: t('core.first') })];
   activateCore(S.cores[0].id, true);
@@ -1720,7 +1936,8 @@ async function saveToDB() {
   savePromise = (async () => {
     try {
       setSaveState('saving'); dirty = false;
-      await putProject(projectMeta(), serialize(true));
+      await storePendingImages();
+      await putProject(projectMeta(), serialize());
       try { await putLite(S.id, liteSnapshot()); } catch { /* lite index is optional */ }
       broadcast({ type: 'saved', id: S.id });
       try { localStorage.setItem('ichantool.last', S.id); } catch { /* storage blocked */ }
@@ -1849,7 +2066,7 @@ $('newProjBtn').addEventListener('click', async () => {
 });
 $('openTest').addEventListener('click', async () => { hideHome(); await openTestProject(); });
 $('openIdeal').addEventListener('click', async () => { hideHome(); await busy(loadExample); });
-$('expProj').addEventListener('click', () => busy(() => saveFile(`${safe(S.name)}.corantool.json`, JSON.stringify(serialize(false)), 'application/json')));
+$('expProj').addEventListener('click', () => busy(async () => saveFile(`${safe(S.name)}.corantool.json`, JSON.stringify(await portableProject(serialize())), 'application/json')));
 $('impProj').addEventListener('change', async (e) => {
   const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
   hideHome();
@@ -1876,20 +2093,20 @@ async function openTestProject() {
         const path = `U1385I-1H/web/397-U1385I-1H-${i}-A_50pxcm.jpg`;
         const bytes = new Uint8Array(await (await fetchAsset(path)).arrayBuffer());
         const { w, h, rgba } = await decodeBytes(bytes, path, 'image/jpeg', { k: 1 });
-        const s = newSection({ name: `U1385I-1H-${i}`, file: { name: path.split('/').pop(), type: 'image/jpeg', bytes }, w, h, orig: rgba });
+        const s = newSection({ name: `U1385I-1H-${i}`, file: { name: path.split('/').pop(), type: 'image/jpeg', bytes }, w, h, orig: rgba, full: { w, h } });
         const m = Math.round(w * 0.1);
         Object.assign(s, { top, bottom, units: 'm', roi: { x0: m, y0: 0, x1: w - m, y1: h }, preset: 'levels', filters: { ...FILTER_PRESETS.levels } });
         s.detect = { ...DEFAULT_DETECT, offset: 14, radius: 50, minArea: 20, smooth: 2 };
         enhance(s);
         S.sections.push(s);
       }
-      S.settings.binPx = 100;
+      if (S.sections[0]) S.settings.binCm = 100 / pxPerCm(S.sections[0]);
       $('ageText').value = TEST_CORE.age; $('ageUnits').value = 'ka';
       for (const [path, name] of TEST_CORE.records) {
         const tab = parseTable(await (await fetchAsset(path)).text());
         addRecordFromTable(name, tab, 0, 'depth', tab.headers.map((_, i) => i).slice(1));
       }
-      for (const s of S.sections) detectSection(s);
+      for (const s of S.sections) await withPixels(s, detectSection);
     } catch (e) { toast(t('err.image', { m: e.message || e })); }
     finally { loading = false; }
     syncSettingsForm(); setAge(); selectSection(0, true); learnNow(); updateProjHeader(); refreshOtherExamples(); setTimeout(updateTip, 0); renderRecList(); renderLogPanel(); scheduleLog(0); refreshAllCores();
@@ -1901,6 +2118,7 @@ async function startup() {
   storageOK = await storageAvailable();
   setSaveState(storageOK ? 'saved' : 'off');
   if (VIEW_ONLY) { await startWindow(); return; }
+  if (storageOK) setTimeout(() => gcImages().catch(() => {}), 15000);   // V33: images of deleted sections
   await loadPresets(); await initBackups();
   const firstRun = storageOK && !(await listProjects().catch(() => [])).length;
   if (storageOK && PRELOAD_THESIS) await ensureThesisProject();
@@ -1971,7 +2189,7 @@ async function backupNow() {
   if (backupState !== 'ok' || !backupDir) return;
   try {
     if (S.sections.length || S.records.length) {
-      const text = JSON.stringify(serialize(false)), base = `${safe(S.name)}__${S.id}`;
+      const text = JSON.stringify(await portableProject(serialize())), base = `${safe(S.name)}__${S.id}`;
       await writeText(backupDir, `${base}.corantool.json`, text);
       const hist = await backupDir.getDirectoryHandle('historial', { create: true });
       await writeText(hist, `${base}__${today()}.corantool.json`, text);
@@ -1999,14 +2217,21 @@ for (const id of ['bkReactivate', 'bkReactivateTop']) $(id).addEventListener('cl
 
 /** One file with every project of the library plus the user settings. */
 async function portableProject(d) {
-  const port = (list) => (list || []).map((q) => (q.file.bytes ? { ...q, file: { name: q.file.name, type: q.file.type, b64: b64encode(new Uint8Array(q.file.bytes)) } } : q));
-  return { ...d, sections: port(d.sections), ...(d.cores ? { cores: d.cores.map((c) => ({ ...c, sections: port(c.sections) })) } : {}) };
+  const one = async (q) => {
+    const f = q.file; if (f.b64) return q;
+    const bytes = f.bytes ? new Uint8Array(f.bytes) : new Uint8Array(await (f.blob || await getImage(f.key) || new Blob()).arrayBuffer());
+    return { ...q, file: { name: f.name, type: f.type, b64: b64encode(bytes) } };
+  };
+  const port = async (list) => { const out = []; for (const q of list || []) out.push(await one(q)); return out; };
+  const cores = d.cores ? [] : null;
+  for (const c of d.cores || []) cores.push({ ...c, sections: await port(c.sections) });
+  return { ...d, sections: await port(d.sections), ...(cores ? { cores } : {}) };
 }
 $('bkFull').addEventListener('click', () => busy(async () => {
   await flushSave();
   const projects = [];
   if (storageOK) for (const m of await listProjects()) { const d = await getProject(m.id); if (d) projects.push(await portableProject(d)); }
-  else projects.push(serialize(false));
+  else projects.push(await portableProject(serialize()));
   await saveFile(`corantool_copia_${today()}.json`, JSON.stringify({ app: APP, kind: 'backup', version: 1, created: new Date().toISOString(), projects, settings: settingsBundle() }), 'application/json');
 }));
 
@@ -2018,7 +2243,7 @@ async function restoreFiles(files) {
     if (!p.id || existing.has(p.id)) { p.id = uid(); if (existing.size) p.name = `${p.name || APP} (${t('bk.restored')})`; }
     existing.add(p.id);
     const nSec = p.cores ? p.cores.reduce((n, c) => n + (c.sections || []).length, 0) : (p.sections || []).length;
-    if (storageOK) await putProject({ id: p.id, name: p.name, updated: Date.now(), sections: nSec, cores: p.cores?.length || 1, coreNames: p.cores?.map((c) => c.name) }, p);
+    if (storageOK) await putProject({ id: (await internImages(p)).id, name: p.name, updated: Date.now(), sections: nSec, cores: p.cores?.length || 1, coreNames: p.cores?.map((c) => c.name) }, p);
     lastLoaded = p; nProj++;
   };
   for (const f of files) {
@@ -2073,32 +2298,43 @@ function compositeData() {
   return { secs, base, f, model, axis, rows };
 }
 
+/**
+ * Column strip of a section (≤ 512 px wide). V33: the reduced picture (original or treated) is cached apart from the
+ * coloured traces, so changing overlay settings only needs the masks, not the picture on disk.
+ */
 function sectionCanvas(s) {
-  const lv = S.logView, key = `${s.logVer}|${lv.imgMode}|${lv.overlay}|${lv.hideExcl}|${S.ovAlpha}|${S.settings.predThr}|${S.settings.includePred}|${S.settings.countCandidates}`;
+  const lv = S.logView, key = `${s.logVer}|${lv.imgMode}|${lv.overlay}|${lv.hideExcl}|${S.ovAlpha}|${S.settings.predThr}|${S.settings.includePred}|${S.settings.countCandidates}|${s.w}x${s.h}`;
   if (s._lc?.key === key) return s._lc.canvas;
-  const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
-  const ctx = c.getContext('2d'), im = ctx.createImageData(s.w, s.h), d = im.data;
-  d.set(lv.imgMode === 'orig' ? s.orig : s.enh);
-  if (lv.overlay) {
-    const eff = effClassArray(s), cols = S.classes.map((k) => hex(k.color)), a = Math.max(0.35, S.ovAlpha);
-    for (let i = 0; i < s.labels.length; i++) {
-      const id = s.labels[i]; if (!id || s.exclude[i]) continue;
-      const k = eff[id]; if (k < 0) continue;
-      const j = i * 4, col = cols[k];
-      d[j] += (col[0] - d[j]) * a; d[j + 1] += (col[1] - d[j + 1]) * a; d[j + 2] += (col[2] - d[j + 2]) * a;
+  const k = Math.min(1, 512 / s.w), sw = Math.max(1, Math.round(s.w * k)), sh = Math.max(1, Math.round(s.h * k));
+  const bkey = `${lv.imgMode}|${s.ds}|${s.w}x${s.h}|${s.rot}|${JSON.stringify(s.crop)}|${lv.imgMode === 'orig' ? '' : JSON.stringify(s.filters) + JSON.stringify(s.roi)}`;
+  if (s._lb?.key !== bkey) {
+    if (!s.orig) {   // grey strip until the picture is read from disk
+      needPixels(s); const p = document.createElement('canvas'); p.width = sw; p.height = sh;
+      const g = p.getContext('2d'); g.fillStyle = '#cfd4d2'; g.fillRect(0, 0, sw, sh); s._lc = { key: 'pending', canvas: p, k: sw / s.w }; return p;
     }
+    const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
+    const src = lv.imgMode === 'orig' ? s.orig : s.enh;
+    c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(src.buffer, src.byteOffset, src.length), s.w, s.h), 0, 0);
+    const b = document.createElement('canvas'); b.width = sw; b.height = sh;
+    const bc = b.getContext('2d'); bc.imageSmoothingQuality = 'high'; bc.drawImage(c, 0, 0, sw, sh); c.width = c.height = 0;
+    s._lb = { key: bkey, canvas: b };
   }
-  if (lv.hideExcl) { const ex = s.exclude; for (let i = 0; i < ex.length; i++) if (ex[i]) { const j = i * 4; d[j] = d[j + 1] = d[j + 2] = 255; } }   // V31: excluded zones left blank
-  ctx.putImageData(im, 0, 0);
-  // V31 (memory): keep only a reduced copy (≤ 512 px wide) for the column strip instead of a full-resolution canvas per section
-  const k = Math.min(1, 512 / s.w);
-  if (k < 1) {
-    const small = document.createElement('canvas'); small.width = Math.max(1, Math.round(s.w * k)); small.height = Math.max(1, Math.round(s.h * k));
-    const sc = small.getContext('2d'); sc.imageSmoothingQuality = 'high'; sc.drawImage(c, 0, 0, small.width, small.height);
-    c.width = c.height = 0;   // release the full-size canvas now
-    s._lc = { key, canvas: small, k: small.width / s.w };
-  } else s._lc = { key, canvas: c, k: 1 };
-  return s._lc.canvas;
+  const out = document.createElement('canvas'); out.width = sw; out.height = sh;
+  const oc = out.getContext('2d'); oc.drawImage(s._lb.canvas, 0, 0);
+  if (lv.overlay || lv.hideExcl) {   // traces (alpha a) and blank excluded zones, drawn at full resolution then reduced
+    const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
+    const ctx = c.getContext('2d'), im = ctx.createImageData(s.w, s.h), d = im.data, L = s.labels, ex = s.exclude;
+    const eff = lv.overlay ? effClassArray(s) : null, cols = S.classes.map((q) => hex(q.color)), a = Math.round(255 * Math.max(0.35, S.ovAlpha));
+    for (let i = 0; i < L.length; i++) {
+      const j = i * 4;
+      if (ex[i]) { if (lv.hideExcl) { d[j] = d[j + 1] = d[j + 2] = d[j + 3] = 255; } continue; }   // V31: excluded zones left blank
+      if (!eff) continue; const id = L[i]; if (!id) continue; const q = eff[id]; if (q < 0) continue;
+      const col = cols[q]; d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; d[j + 3] = a;
+    }
+    ctx.putImageData(im, 0, 0); oc.imageSmoothingQuality = 'high'; oc.drawImage(c, 0, 0, sw, sh); c.width = c.height = 0;
+  }
+  s._lc = { key, canvas: out, k: sw / s.w };
+  return out;
 }
 
 /** Core image strip for the window, resampled row by row onto the depth or age axis. */
@@ -2138,7 +2374,7 @@ function renderLog() {
   const axisLabel = D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`;
   const marks = compositeMarks(D), idm = idMode();
   const res = buildLogSVG({
-    title: S.name, subtitle: idm ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: S.settings.binPx, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
+    title: S.name, subtitle: idm ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
     axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: idm ? { ...lv.tracks, total: false, species: false, BI: false, ii: false, manual: false } : lv.tracks, image, imageWidth: imgW, records, boundaries,
     marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes : [], marks),
     ...geoOverlay(D.axis),
@@ -3979,7 +4215,7 @@ async function buildTutorialProject() {
   const bytes = new Uint8Array(await (await fetchAsset('tutorial/tutorial_core.jpg')).arrayBuffer());
   const truth = JSON.parse(await txt('tutorial_truth.json'));
   const { w, h, rgba } = await decodeBytes(bytes, 'tutorial_core.jpg', 'image/jpeg', { k: 1 });
-  const s = newSection({ name: 'ENT-03 · 0-150 cm', file: { name: 'tutorial_core.jpg', type: 'image/jpeg', bytes }, w, h, orig: rgba });
+  const s = newSection({ name: 'ENT-03 · 0-150 cm', file: { name: 'tutorial_core.jpg', type: 'image/jpeg', bytes }, w, h, orig: rgba, full: { w, h } });
   s.top = truth.top_cm; s.bottom = truth.bottom_cm; s.units = 'cm';
   s.detect = { ...DEFAULT_DETECT, method: 'global', polarity: 'dark', threshold: 105, minArea: 12, smooth: 1 };
   S.sections.push(s); syncSettingsForm(); selectSection(S.sections.length - 1, true);
@@ -4600,6 +4836,11 @@ let figSvgCache = '';
 
 /** Crop of one trace (padding 15 %), scaled to `size` px on its long side, with optional outline in the class colour. */
 function traceCanvas(s, o, size, img, outline) {
+  if (!s.orig) {   // V33: placeholder until the section's picture is read from disk
+    needPixels(s); const p = document.createElement('canvas'); p.width = p.height = Math.max(1, Math.round(size * 0.5));
+    const g = p.getContext('2d'); g.fillStyle = '#cfd4d2'; g.fillRect(0, 0, p.width, p.height);
+    return { canvas: p, pxPerCm: pxPerCm(s), depth: depthAtRow(s, (o.bbox[1] + o.bbox[3]) / 2), units: s.units };
+  }
   const [x0, y0, x1, y1] = o.bbox, pad = Math.round(Math.max(x1 - x0, y1 - y0) * 0.15) + 2;
   const X0 = Math.max(0, x0 - pad), Y0 = Math.max(0, y0 - pad), X1 = Math.min(s.w - 1, x1 + pad), Y1 = Math.min(s.h - 1, y1 + pad);
   const cw = X1 - X0 + 1, ch = Y1 - Y0 + 1, src = img === 'orig' ? s.orig : s.enh, lab = s.labels;
@@ -4690,6 +4931,7 @@ function coreSVG() {
 function sectionModeCanvas(s, mode) {
   const F = S.fig, key = `${s.logVer}|${mode}|${F.alpha}|${F.hideExcl}|${S.settings.predThr}|${S.settings.includePred}`;
   s._fc ||= new Map(); if (s._fc.get(mode)?.key === key) return s._fc.get(mode);
+  if (!s.orig && !['mask', 'bw'].includes(mode)) { needPixels(s); const p = document.createElement('canvas'); p.width = 1; p.height = Math.max(1, Math.round(s.h / s.w)); const g = p.getContext('2d'); g.fillStyle = '#e4e7e6'; g.fillRect(0, 0, 1, p.height); return { key: 'pending', canvas: p, k: 1 / s.w }; }
   const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
   const ctx = c.getContext('2d'), im = ctx.createImageData(s.w, s.h), d = im.data, lab = s.labels, ex = s.exclude, W = s.w;
   const eff = effClassArray(s), cols = S.classes.map((k) => hex(k.color)), photo = !['mask', 'bw'].includes(mode);

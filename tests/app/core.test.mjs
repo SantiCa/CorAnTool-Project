@@ -71,3 +71,12 @@ test('classifier learns, estimates accuracy and flags novelties', () => {
   assert.equal(c.predict([0.02, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]).y, 'A');
   assert.equal(c.predict([50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]).y, null);
 });
+
+test('V33: fractional rows per bin (interval in cm) keep boundaries without drift', () => {
+  const n = 100, counts = { nRows: n, valid: new Float64Array(n).fill(10), bio: new Float64Array(n).fill(5), cls: new Float64Array(0), nClasses: 0 };
+  const b = binRows(counts, { top: 0, bottom: 10, binPx: 12.5 });
+  assert.deepEqual(b.map((x) => [x.r0, x.r1]), [[0, 13], [13, 25], [25, 38], [38, 50], [50, 63], [63, 75], [75, 88], [88, 100]]);
+  assert.equal(b[3].dBottom, 5);
+  const i = binRows(counts, { top: 0, bottom: 10, binPx: 30 });   // integer: classic bins, partial kept
+  assert.deepEqual(i.map((x) => [x.r0, x.r1]), [[0, 30], [30, 60], [60, 90], [90, 100]]);
+});

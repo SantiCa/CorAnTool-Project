@@ -1170,3 +1170,23 @@ Object.assign(D.en, {
   'fig.rangeNote': 'One column per ichnotaxon: bars proportional to its percentage per interval (own scale) or triangles where it was identified (identification mode).',
   'fig.rangeSub': 'Relative abundance per interval (each column scaled to its maximum)', 'fig.rangeSubId': 'Presence of identified ichnotaxa per interval',
 });
+
+/* V33: images on disk, working resolution per section, interval in cm */
+Object.assign(D.es, {
+  'a.bin': 'Intervalo de análisis (cm)', 'a.binNote': '≈ {n} filas de píxeles en esta sección ({p} px/cm) · {m} datos', 'a.binMin': 'Por debajo de 1 píxel se usa 1 fila.',
+  'log.subtitle': '{n} secciones · intervalos de {b} cm · ventana {from}–{to} {u}',
+  'mem.loading': 'Cargando la imagen desde el disco…', 'err.imgMissing': 'No se encuentra la imagen original de «{n}».',
+  'sec.res': 'Resolución de trabajo de esta sección', 'sec.resFull': 'Completa', 'sec.resUnknown': '1/{k} (se conocerá al abrir la imagen)',
+  'sec.resNote': 'El archivo original se guarda completo. Al cambiar la resolución se recalcula la imagen y las máscaras se adaptan; al reducirla pueden desaparecer trazas muy pequeñas. Memoria de esta sección: ~{mb} MB.',
+  'sec.resAll': 'Igualar todas las secciones a esta resolución (px/cm)', 'sec.resAllDone': 'Secciones ajustadas a ≈ {p} px/cm',
+  'sec.maxMPNote': 'Las imágenes mayores se reducen promediando píxeles. El archivo original se guarda completo y la resolución se puede cambiar después por sección.',
+});
+Object.assign(D.en, {
+  'a.bin': 'Analysis interval (cm)', 'a.binNote': '≈ {n} pixel rows in this section ({p} px/cm) · {m} data points', 'a.binMin': 'Below 1 pixel, 1 row is used.',
+  'log.subtitle': '{n} sections · {b} cm intervals · window {from}–{to} {u}',
+  'mem.loading': 'Loading the image from disk…', 'err.imgMissing': 'The original image of “{n}” is missing.',
+  'sec.res': 'Working resolution of this section', 'sec.resFull': 'Full', 'sec.resUnknown': '1/{k} (known once the image is opened)',
+  'sec.resNote': 'The original file is kept at full resolution. Changing the resolution recomputes the image and adapts the masks; reducing it may remove very small traces. Memory for this section: ~{mb} MB.',
+  'sec.resAll': 'Set all sections to this resolution (px/cm)', 'sec.resAllDone': 'Sections set to ≈ {p} px/cm',
+  'sec.maxMPNote': 'Larger images are reduced by pixel averaging. The original file is kept at full resolution and the resolution can be changed later for each section.',
+});

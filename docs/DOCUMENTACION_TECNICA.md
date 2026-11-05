@@ -132,9 +132,24 @@ Para cada fila `r` de la zona de análisis:
 - `C_r,k` = píxeles válidos de la clase `k`.
 
 ### 3.2 Por intervalo
-Los intervalos agrupan `N` filas consecutivas (parámetro «píxeles por intervalo», `bin_px`). El
-intervalo `j` abarca las filas `[jN, min((j+1)N, R))`. **El último intervalo puede ser
-incompleto y se conserva** (en Python se puede descartar con `keep_partial=False`).
+Desde V33 el usuario fija el **intervalo de análisis en centímetros** (`binCm`, 1 cm por defecto;
+en Python `bin_cm`). En cada sección se convierte en filas por intervalo:
+
+    N = max(1, binCm · ppcm)          (ppcm = filas por cm de la zona de análisis, §2.3)
+
+`N` puede ser fraccionario. El intervalo `j` abarca las filas
+
+    [⌊j·N + ½⌋, min(⌊(j+1)·N + ½⌋, R))
+
+así los límites no se desplazan a lo largo de la sección (el error de cada límite es < ½ fila). Con
+`N` entero se obtienen los intervalos clásicos `[jN, (j+1)N)` (parámetro `bin_px` en Python).
+**El último intervalo puede ser incompleto y se conserva** (en Python se puede descartar con
+`keep_partial=False`). Implementación: `core.js::binRows`/`binEdge`, `app.js::binRowsOf`,
+`pipeline.py::bin_edges`.
+
+Los proyectos anteriores a V33 guardaban `binPx` (filas); al abrirlos se convierte a
+`binCm = binPx / ppcm` de la primera sección, de modo que esa sección conserva exactamente sus
+intervalos.
 
     %bioturbación_j = 100 · Σ B_r / Σ V_r
     %clase_k,j      = 100 · Σ C_r,k / Σ V_r
@@ -740,8 +755,20 @@ B). Se descartan las últimas `ancho mod k` columnas y `alto mod k` filas, es de
 píxeles originales en el borde inferior y derecho. La lectura se hace por franjas de altura
 múltiplo de `k`, sin cargar la imagen completa en memoria.
 
-- El **archivo original** se guarda intacto en el proyecto, junto con `k` (`ds`). Al reabrir el
-  proyecto se aplica el mismo `k`, así que las máscaras coinciden píxel a píxel.
+- El **archivo original** se guarda intacto (resolución completa) en el proyecto, junto con `k` (`ds`).
+  Al reabrir el proyecto se aplica el mismo `k`, así que las máscaras coinciden píxel a píxel.
+- **Recorte (V33):** se guarda como rectángulo `crop = [x0, x1) × [y0, y1)` en píxeles del archivo
+  original sin girar; el archivo no se vuelve a codificar. La imagen de trabajo es
+  `girar(promediar(recortar(original), k), rot)`. El recorte se hace en múltiplos de `k`, así que
+  coincide exactamente con las máscaras recortadas.
+- **Cambiar la resolución de una sección (V33)** (`app.js::changeResolution`): se recalcula la imagen
+  con el nuevo factor `k₂` desde el original. Las máscaras (trazas y exclusiones) se pasan al nuevo
+  tamaño por **vecino más próximo** en el marco sin girar: el píxel nuevo `(x, y)` toma el valor del
+  píxel antiguo `(⌊(x+½)·k₂/k₁⌋, ⌊(y+½)·k₂/k₁⌋)`. La zona de análisis y las marcas se transforman
+  con la misma escala (bordes redondeados al píxel). Las estadísticas de objetos se recalculan; al
+  reducir pueden desaparecer trazas de menos de un píxel nuevo. Al aumentar, los bordes de las trazas
+  ya dibujadas quedan escalonados (resolución de la máscara original). «Igualar todas las secciones»
+  elige en cada sección `k = max(1, round(ppcm_original / ppcm_objetivo))`.
 - La escala de profundidad (§2.3) se calcula sobre la imagen de trabajo, así que el porcentaje no
   depende de `k`. Lo que cambia es el tamaño mínimo de traza que se puede distinguir.
 
@@ -766,12 +793,27 @@ Implementación: `storage.js` y `app.js` (bloque *projects*).
   - ejemplos importados;
   - registros externos;
   - vista del registro.
-- Se guarda en **IndexedDB** del navegador, en dos almacenes: `meta` (lista ligera: nombre, número
-  de secciones, fecha) y `data` (el proyecto completo, con las imágenes como bytes).
+- Se guarda en **IndexedDB** (en el programa de escritorio, en la carpeta de datos del usuario, en
+  disco). Almacenes: `meta` (lista ligera), `data` (el proyecto sin imágenes), `lite`, `prefs` e
+  `images` (V33).
+- **Imágenes en disco (V33, formato de proyecto v4):** cada archivo original se escribe **una sola
+  vez** en `images` y la sección guarda solo la referencia (`file.key`). El guardado automático ya no
+  reescribe las imágenes. Los proyectos anteriores se migran solos al abrirlos y guardarse.
+- **Memoria (V33):** al abrir un proyecto no se decodifica ninguna imagen. Los píxeles (original y
+  realzada, 8 bytes/px) se leen del disco al trabajar con una sección y se liberan las menos recientes
+  por encima de ~0,9 GB (siempre se conserva la sección activa). Las máscaras (5 bytes/px) se
+  guardan comprimidas (RLE, §12) en las secciones que no se usan y se descomprimen al acceder a ellas
+  (límite ~0,5 GB). Las estadísticas de objetos (`st`) y las miniaturas de ejemplos se guardan en el
+  proyecto, así que la clasificación, los índices y la columna no necesitan las imágenes. La columna
+  guarda una copia reducida (≤ 512 px) de cada sección; cambiar colores o umbrales solo usa las
+  máscaras. Las figuras que necesitan píxeles leen las secciones de dos en dos.
+- Al borrar un proyecto se borran sus imágenes; las de secciones eliminadas se limpian al arrancar
+  (si tienen más de una hora).
 - **Guardado automático** 1,5 s después de cualquier cambio. El estado se muestra junto al nombre
   del proyecto. Al abrir la aplicación se abre el último proyecto usado.
-- Exportar e importar usa el mismo contenido en JSON, con las imágenes en base64 (§12). Al importar
-  se asigna un identificador nuevo para no sobrescribir otro proyecto.
+- Exportar e importar usa el mismo contenido en JSON, con las imágenes originales en base64 (§12).
+  Al importar se asigna un identificador nuevo para no sobrescribir otro proyecto y las imágenes
+  pasan al almacén `images`.
 - Si el navegador no permite almacenamiento (ventana privada o datos bloqueados), la aplicación lo
   indica y hay que exportar el proyecto a mano.
 

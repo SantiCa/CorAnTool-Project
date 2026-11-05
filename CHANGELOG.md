@@ -2,6 +2,11 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V33 — App 2.3 — 2026-11-05
+- Original images stored once on disk (separate image store); pixels loaded only for the sections in use.
+- Full-resolution originals kept; per-section working resolution can be changed later (masks follow). Crop no longer re-encodes.
+- Analysis interval set in cm (fractional rows per interval, same rule in JS and Python `bin_cm`). Project format v4.
+
 ## V32 — App 2.2 — 2026-11-05
 - Identification mode: mark traces without quantifying; column shows triangles and identified ichnotaxa per interval.
 - Ichnotaxa colour legend in the column and core figures; abbreviations (Ch, Pl, Th, Zo…).

@@ -49,6 +49,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V33 | 05-11-2026 | Aplicación 2.3 | Imágenes en disco y en memoria solo al usarlas; resolución completa guardada y resolución de trabajo cambiable por sección; recorte sin perder resolución; intervalo de análisis en cm |
 | V32 | 05-11-2026 | Aplicación 2.2 | Modo identificación (marcas de trazas sin cuantificar, triángulos y lista de icnotaxones por tramo en la columna), leyenda de icnotaxones en columna y figuras, figura de secciones lado a lado (original, tratada, trazas, flechas…) y gráfico de distribución de icnotaxones |
 
 ---
@@ -621,6 +622,49 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V33 — Imágenes en disco, resolución por sección e intervalos en cm (05-11-2026)
+
+**Qué se hizo.**
+- Las imágenes originales se guardan **una vez** en un almacén aparte en disco (IndexedDB `images`) y
+  el proyecto solo guarda la referencia. Al abrir un proyecto no se decodifica ninguna imagen: los
+  píxeles se cargan al trabajar con una sección y se liberan los de las secciones que no se usan.
+- Se conserva siempre el **original a resolución completa**. Cada sección tiene un selector
+  «Resolución de trabajo» (completa, 1/2, 1/3…, con px/cm y MP) que recalcula la imagen desde el
+  original y adapta máscaras, zona de análisis y marcas. Botón para igualar todas las secciones a
+  los mismos px/cm.
+- El **recorte** ya no vuelve a codificar la imagen reducida: guarda el rectángulo en píxeles del
+  original.
+- El **intervalo de análisis se fija en cm** (antes en píxeles), igual para todas las secciones.
+
+**Cambios.**
+- `storage.js`: base de datos versión 4 con almacén `images`; `putImage`, `getImage`, `gcImages`;
+  borrar un proyecto borra sus imágenes.
+- `app.js`: `decodeBytes` acepta Blob y recorte; residencia en memoria (`ensurePixels`,
+  `withPixels`, `needPixels`, límites de memoria); máscaras empaquetadas (`lazyMask`); formato de
+  proyecto v4 (`file.key`, `crop`, `full`, estadísticas `st` y miniaturas `th` de objetos);
+  migración automática de proyectos anteriores; exportación y copias con las imágenes en base64;
+  `changeResolution` y `renderResForm`; columna con imagen reducida separada de las trazas;
+  `binCm`, `binRowsOf` y conversión de `binPx` antiguos.
+- `core.js::binRows` y `pipeline.py` (`bin_edges`, `bin_cm`): filas por intervalo fraccionarias con
+  la misma regla en JS y Python.
+- Pruebas: 1 nueva en JS y 1 en Python.
+
+**Por qué.** Petición de Santiago: proyectos con muchas imágenes grandes sin agotar la memoria,
+poder cambiar la resolución con que se ve cada sección sin perder la original, e intervalos en cm.
+
+**Comprobación.** `npm test` (46) y `pytest` (10) correctos; archivo sin conexión generado. Sin
+pruebas en navegador en esta entrega: las hace Santiago al usar el programa.
+
+**Pendiente o problemas conocidos.**
+- Probar con proyectos reales grandes y con proyectos de versiones anteriores (migración).
+- Las figuras de trazas y de secciones necesitan los píxeles; la primera vez leen las secciones de
+  dos en dos y tardan más.
+- Al aumentar la resolución, las trazas ya dibujadas mantienen el escalonado de la resolución
+  anterior.
+- Los límites de memoria son fijos (~0,9 GB píxeles, ~0,5 GB máscaras); podrían pasar a ajustes.
 
 ---
 

@@ -88,3 +88,16 @@ def test_cli(tmp_path):
     pal.write_text(json.dumps({"A": "#000000"}))
     assert main(["analyze", str(p), "--top", "0", "--bottom", "20", "--palette", str(pal),
                  "-o", str(tmp_path / "o.xlsx")]) == 0
+
+
+def test_bin_cm_fractional_edges_match_web_app():
+    """V33: interval in cm → fractional rows per bin with the same edges as binRows in the web app."""
+    from ichantool.pipeline import bin_edges
+    assert bin_edges(100, 12.5) == [(0, 13), (13, 25), (25, 38), (38, 50), (50, 63), (63, 75), (75, 88), (88, 100)]
+    assert bin_edges(100, 30) == [(0, 30), (30, 60), (60, 90), (90, 100)]
+    assert bin_edges(100, 30, keep_partial=False) == [(0, 30), (30, 60), (60, 90)]
+    mask = np.zeros((100, 4), dtype=int)
+    mask[:50, :2] = 1
+    sec = analyze_mask(mask, 0, 10, units="cm", bin_cm=1.25)   # 10 px/cm → 12.5 rows per interval
+    assert len(sec.data) == 8
+    assert sec.data["bioturbation_pct"].iloc[0] == 50

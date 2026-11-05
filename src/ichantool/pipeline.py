@@ -31,27 +31,48 @@ class CoreSection:
         return self
 
 
-def _binned_mean(values: np.ndarray, bin_px: int, keep_partial: bool) -> np.ndarray:
-    n = values.shape[0]
-    full = n // bin_px
-    out = values[: full * bin_px].reshape(full, bin_px, *values.shape[1:]).mean(axis=1)
-    if keep_partial and n % bin_px:
-        out = np.concatenate([out, values[full * bin_px:].mean(axis=0, keepdims=True)])
+def _edge(j: int, bin_px: float) -> int:
+    return int(np.floor(j * bin_px + 0.5))
+
+
+def bin_edges(n: int, bin_px: float, keep_partial: bool = True) -> list[tuple[int, int]]:
+    """Row ranges of the bins: bin j spans [floor(j*bin_px + 0.5), floor((j+1)*bin_px + 0.5)).
+
+    Same rule as ``binRows`` in the web app (V33). bin_px may be fractional (interval in cm × px/cm);
+    an integer bin_px gives the classic fixed-size bins. The last bin is clipped at n (dropped if
+    keep_partial is False).
+    """
+    out, j = [], 0
+    while _edge(j, bin_px) < n:
+        end = _edge(j + 1, bin_px)
+        if end > n and not keep_partial:
+            break
+        out.append((_edge(j, bin_px), min(n, end)))
+        j += 1
     return out
 
 
+def _binned_mean(values: np.ndarray, bin_px: float, keep_partial: bool) -> np.ndarray:
+    rng = bin_edges(values.shape[0], bin_px, keep_partial)
+    return np.array([values[a:b].mean(axis=0) for a, b in rng]).reshape(len(rng), *values.shape[1:])
+
+
 def analyze_mask(mask: np.ndarray, top: float, bottom: float, *, units: str = "cm",
-                 bin_px: int = 1, class_names: Sequence[str] | None = None,
+                 bin_px: float = 1, bin_cm: float | None = None, class_names: Sequence[str] | None = None,
                  schemes: Sequence[IndexScheme] = DEFAULT_SCHEMES,
                  keep_partial: bool = True, name: str = "section_1") -> CoreSection:
     """Compute bioturbation percentage (total and per class) along depth.
 
     mask: 2-D int array, 0 = matrix, 1..n = bioturbation classes; row 0 = top.
-    bin_px: number of pixel rows averaged into each data point.
+    bin_px: number of pixel rows averaged into each data point (may be fractional).
+    bin_cm: interval thickness in cm; if given, bin_px = bin_cm × pixel rows per cm (as in the web app).
     """
     mask = np.asarray(mask)
     if mask.ndim != 2:
         raise ValueError("mask must be 2-D")
+    if bin_cm is not None:
+        span_cm = (bottom - top) * {"mm": 0.1, "cm": 1.0, "m": 100.0}[units]
+        bin_px = bin_cm * mask.shape[0] / span_cm
     if bin_px < 1:
         raise ValueError("bin_px must be >= 1")
     n_rows, n_cols = mask.shape

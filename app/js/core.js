@@ -47,13 +47,19 @@ export function rowCounts({ labels, width, roi, exclude, effClass, nClasses }) {
   return { nRows, valid, bio, cls, nClasses };
 }
 
-/** Aggregate rows into bins of binPx rows (last partial bin kept, as in the Python package). */
+/**
+ * Aggregate rows into bins of binPx rows (last partial bin kept, as in the Python package).
+ * V33: binPx may be fractional (an interval given in cm × px/cm); bin j spans rows
+ * [⌊j·binPx + ½⌋, ⌊(j+1)·binPx + ½⌋), so the boundaries never drift. Integer binPx gives the old bins.
+ */
+export const binEdge = (j, binPx) => Math.floor(j * binPx + 0.5);
 export function binRows(counts, { top, bottom, binPx }) {
   const { nRows, valid, bio, cls, nClasses } = counts;
   const step = (bottom - top) / nRows;
   const out = [];
-  for (let r0 = 0; r0 < nRows; r0 += binPx) {
-    const r1 = Math.min(nRows, r0 + binPx);
+  binPx = Math.max(1, binPx);
+  for (let j = 0, r0 = 0; r0 < nRows; j++, r0 = binEdge(j, binPx)) {
+    const r1 = Math.min(nRows, binEdge(j + 1, binPx));
     let v = 0, b = 0;
     const c = new Array(nClasses).fill(0);
     for (let r = r0; r < r1; r++) {

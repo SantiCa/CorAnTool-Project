@@ -611,6 +611,9 @@ details.mini[open] { display: grid; gap: 6px; }
             <div class="row"><button class="btn small" id="roiBtn" data-i18n="roi.draw"></button><button class="btn small" id="roiReset" data-i18n="roi.reset"></button>
               <button class="btn small" id="cropBtn" data-i18n="crop.btn" data-i18n-title="crop.tip"></button><button class="btn small" id="rotL" data-i18n-title="sec.rotate">⟲</button><button class="btn small" id="rotR" data-i18n-title="sec.rotate">⟳</button></div>
             <p class="note" id="roiInfo"></p>
+            <label class="f"><span data-i18n="sec.res"></span><select id="secRes"></select></label>
+            <button class="btn small" id="resAll" data-i18n="sec.resAll"></button>
+            <p class="note" id="resNote"></p>
           </div>
           <div class="f"><span data-i18n="age.title"></span>
             <textarea id="ageText" data-i18n-ph="age.ph" rows="3"></textarea>
@@ -652,7 +655,7 @@ details.mini[open] { display: grid; gap: 6px; }
       <details class="step" open>
         <summary><span class="n">4</span><span data-i18n="s4"></span></summary>
         <div class="body">
-          <div class="slider"><span data-i18n="a.bin"></span><output id="binOut"></output><input type="range" id="binPx" min="1" max="500" step="1"></div>
+          <label class="f"><span data-i18n="a.bin"></span><input type="number" id="binCm" min="0.001" step="0.1"></label>
           <p class="note" id="binNote"></p>
           <label class="chk"><input type="checkbox" id="inclPred"><span data-i18n="a.inclPred"></span></label>
           <label class="chk"><input type="checkbox" id="countCand"><span data-i18n="a.countCand"></span></label>

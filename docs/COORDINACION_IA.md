@@ -45,6 +45,9 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V33, 05-11-2026 (Claude):** imágenes originales en un almacén aparte en disco y píxeles en memoria solo para las
+  secciones en uso; resolución de trabajo cambiable por sección desde el original; recorte sin recodificar; intervalo de
+  análisis en cm (`binCm`, Python `bin_cm`). Formato de proyecto v4. Sin pruebas en navegador (las hace Santiago).
 - **V32, 05-11-2026 (Claude):** modo identificación (marcas de trazas, columna con triángulos y lista por tramo),
   leyenda de icnotaxones en columna y figuras, figura de secciones lado a lado y gráfico de distribución de icnotaxones.
   Las descargas de escritorio se publican creando la release `V32` en GitHub (o subiendo la etiqueta).
