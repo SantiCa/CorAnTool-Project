@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTable, guessAxisColumn, niceTicks, invertModel, toAxis, compositeRows, buildLogSVG, windowCSV, wrapTitle, abbrevs, buildRangeSVG, verticalTicks } from '../../app/js/log.js';
+import { parseTable, guessAxisColumn, niceTicks, invertModel, toAxis, compositeRows, buildLogSVG, windowCSV, wrapTitle, abbrevs, buildRangeSVG, verticalTicks, traceSymbolPath } from '../../app/js/log.js';
 import { downsampleRGBA } from '../../app/js/imageproc.js';
 
 test('parseTable: comma, semicolon with decimal comma, whitespace, comments', () => {
@@ -92,9 +92,28 @@ test('V0.11: logarithmic records break at nonpositive samples', () => {
 
 
 test('V0.11: distribution figures share converted ticks and bounded horizontal axes', () => {
-  const svg = buildRangeSVG({from:0,to:200,height:300,rows:[{a0:0,a1:100,pct:80,classPct:[50]}],classes:[{name:'A',index:0,color:'#f00'}],total:true,style:{yFactor:0.01,yStep:1,axes:{total:{min:1,max:10,log:true},species:{min:10,max:40,step:10}}}}).svg;
+  const svg = buildRangeSVG({display:'bars',from:0,to:200,height:300,rows:[{a0:0,a1:100,pct:80,classPct:[50]}],classes:[{name:'A',index:0,color:'#f00'}],total:true,style:{yFactor:0.01,yStep:1,axes:{total:{min:1,max:10,log:true},species:{min:10,max:40,step:10}}}}).svg;
   assert.match(svg, /clip-path="url\(#range-/);
   assert.doesNotMatch(svg, /NaN|Infinity/);
   assert.match(svg, />30<\/text>/);
   assert.match(svg, />2<\/text>/);
+});
+
+
+test('V0.12: distribution defaults to symbols, deduplicates measured and marked presence', () => {
+  const base = {from:0,to:10,height:200,rows:[{a0:0,a1:5,classPct:[20]}],classes:[{name:'A',index:0,color:'#123456',symbol:'circle'}],presence:[{a0:0,a1:5,index:0}]};
+  const svg = buildRangeSVG(base).svg;
+  assert.equal((svg.match(/fill="#123456"/g)||[]).length,1);
+  assert.ok(svg.includes(`d="${traceSymbolPath('circle')}"`));
+  assert.doesNotMatch(svg, /<rect[^>]*fill="#123456"/);
+  const bars = buildRangeSVG({...base,display:'bars'}).svg;
+  assert.match(bars, /<rect[^>]*fill="#123456"/);
+  assert.doesNotMatch(bars, /<path[^>]*fill="#123456"/);
+});
+
+test('V0.12: marker choice follows identification marks into the core column', () => {
+  const svg = buildLogSVG({from:0,to:10,height:100,rows:[],classes:[],tracks:{},records:[],marks:[{a:2,xf:0.5,color:'#123456',symbol:'diamond'}]}).svg;
+  assert.ok(svg.includes(`d="${traceSymbolPath('diamond')}"`));
+  const range = buildRangeSVG({from:0,to:5,height:100,rows:[],classes:[{name:'Outside',color:'#123456',index:0}],presence:[{a0:10,a1:11,index:0}]}).svg;
+  assert.doesNotMatch(range, /Outside/);
 });

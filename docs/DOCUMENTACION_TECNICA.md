@@ -1688,3 +1688,22 @@ se recomienda ajustar escalas y contenido antes de la composición manual final.
 
 Validación V0.11: 52 pruebas JavaScript y 10 Python superadas; comprobación con el ejemplo público
 en navegador de unidades en metros, marcas cada 1 m, rango logarítmico 1–20 y edición de texto/posición.
+
+
+### Símbolos de distribución e identificación (V0.12)
+
+`fig.rangeDisplay` controla la distribución: `symbols` (predeterminado), `bars` o `both`.
+En símbolos se representa una presencia por intervalo con `classPct[index] > 0` o con marcas
+identificadas; si coinciden ambas fuentes en el mismo intervalo no se duplica el símbolo.
+El símbolo se sitúa en el centro del tramo visible del intervalo. Solo se incluyen icnotaxones
+presentes en la ventana. El modo barras conserva la abundancia relativa; cambiar la representación
+no modifica los resultados ni los datos guardados.
+
+Cada clase admite `symbol`: `triDown` (predeterminado compatible con proyectos anteriores),
+`tri`, `circle`, `square`, `diamond`, `star` o `cross`. `log.js::traceSymbolPath` comparte la geometría
+entre SVG y el lienzo de marcas de identificación. La selección se guarda en `classes` y se aplica
+a distribución, marcas identificadas de la imagen/columna y leyendas de la columna. Los indicadores
+de la figura de secciones conservan su selector de estilo propio.
+
+Validación V0.12: 54 pruebas JavaScript y 10 Python superadas; comprobación de distribución
+solo con símbolos y cambio de triángulos a círculos en navegador con el ejemplo público.

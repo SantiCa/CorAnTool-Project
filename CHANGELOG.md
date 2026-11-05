@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.12 — 2026-11-05
+- Show symbols by default in ichnotaxon distribution figures; retain optional abundance bars or both.
+- Choose a symbol per ichnotaxon, shared with identification marks and core-column legends; save it in projects and exports.
+
 ## V0.11 — 2026-11-05
 - Share vertical units and tick spacing across column, core, section and distribution figures.
 - Enable logarithmic horizontal axes, explicit bounds and linear tick steps; clip data per track and break logarithmic curves at nonpositive values.

@@ -99,8 +99,17 @@ export function rowsRange(rows) {
   return [Math.min(...rows.map((r) => r.a0)), Math.max(...rows.map((r) => r.a1))];
 }
 
-/** Small downward triangle marking an identified trace (tip on the trace). */
-const markTri = (x, y, color) => `<path d="M${f2(x)} ${f2(y)}l-4.5 -8h9z" fill="${color}" stroke="#ffffff" stroke-width="0.8"/>`;
+/** Identification marker: its reference point remains at the trace depth. */
+export function traceSymbolPath(kind = 'triDown') {
+  if (kind === 'circle') return 'M4.5 -4a4.5 4.5 0 1 0 -9 0a4.5 4.5 0 1 0 9 0';
+  if (kind === 'square') return 'M-4 -8h8v8h-8z';
+  if (kind === 'diamond') return 'M0 -9L5 -4L0 1L-5 -4z';
+  if (kind === 'tri') return 'M0 -8L4.5 0h-9z';
+  if (kind === 'cross') return 'M-5 -7L-3 -9L0 -6L3 -9L5 -7L2 -4L5 -1L3 1L0 -2L-3 1L-5 -1L-2 -4z';
+  if (kind === 'star') return Array.from({length:10}, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 2.2 : 5.5; return `${i ? 'L' : 'M'}${f2(r * Math.cos(a))} ${f2(-4 + r * Math.sin(a))}`; }).join('') + 'z';
+  return 'M0 0l-4.5 -8h9z';
+}
+const traceSymbol = (x, y, color, kind) => `<path transform="translate(${f2(x)} ${f2(y)})" d="${traceSymbolPath(kind)}" fill="${color}" stroke="#ffffff" stroke-width="0.8"/>`;
 const escXml = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[m]);
 const f2 = (v) => +(+v).toFixed(2);
 const lbl = (v) => String(+(+v).toPrecision(6));
@@ -236,7 +245,7 @@ export function buildLogSVG(o) {
     }
     if (c.key === 'image') {
       out.push(`<image x="${c.x}" y="${top}" width="${c.w}" height="${H}" preserveAspectRatio="none" href="${o.image.href}" xlink:href="${o.image.href}"/>`);
-      for (const m of o.marks || []) if (m.a >= from && m.a <= to) out.push(markTri(c.x + Math.min(1, Math.max(0, m.xf)) * c.w, y(m.a), m.color));
+      for (const m of o.marks || []) if (m.a >= from && m.a <= to) out.push(traceSymbol(c.x + Math.min(1, Math.max(0, m.xf)) * c.w, y(m.a), m.color, m.symbol));
     } else if (c.key === 'total') {
       const nd = Math.max(1, Math.min(20, Math.round(st.pctDiv) || 4)), sx = xScale(c, 0, 100, false, Array.from({ length: nd + 1 }, (_, k) => +((100 * k) / nd).toFixed(4)));
       const bars = st.totalStyle === 'barsline' || st.totalStyle === 'bars', line = st.totalStyle === 'barsline' || st.totalStyle === 'line';
@@ -293,7 +302,7 @@ export function buildLogSVG(o) {
         }
       }
     } else if (c.key === 'marks') {
-      for (const m of o.marks) if (m.a >= from && m.a <= to) out.push(markTri(c.x + c.w / 2, y(m.a), m.color));
+      for (const m of o.marks) if (m.a >= from && m.a <= to) out.push(traceSymbol(c.x + c.w / 2, y(m.a), m.color, m.symbol));
     } else if (c.key === 'rec') {
       const pts = c.rec.pts.filter((p) => p[0] != null && p[1] != null && p[0] >= from - span * 0.02 && p[0] <= to + span * 0.02);
       if (pts.length) {
@@ -316,7 +325,7 @@ export function buildLogSVG(o) {
   }
   legendItems.forEach((k, i) => {
     const lx = 8 + (i % perRow) * 170, ly = top + H + 22 + Math.floor(i / perRow) * 16;
-    out.push(`<rect x="${lx}" y="${ly}" width="10" height="10" fill="${k.color}"/><text x="${lx + 14}" y="${ly + 9}" fill="#1c2422">${escXml(k.name)}</text>`);
+    out.push(`${k.symbol ? traceSymbol(lx + 5, ly + 9, k.color, k.symbol) : `<rect x="${lx}" y="${ly}" width="10" height="10" fill="${k.color}"/>`}<text x="${lx + 14}" y="${ly + 9}" fill="#1c2422">${escXml(k.name)}</text>`);
   });
   out.push('</svg>');
   return { svg: out.join(''), width: W, height: Htot, plotTop: top, plotHeight: H,
@@ -345,8 +354,8 @@ export function buildRangeSVG(o) {
   const H = o.height, from = o.from, to = o.to, span = to - from || 1, colW = 30, x0 = 72;
   const longest = Math.max(8, ...o.classes.map((c) => String(c.name).length)), top = 46 + Math.min(150, longest * 5.2 * 0.87);   // room for names at 60°
   const y = (v) => f2(top + ((v - from) / span) * H);
-  const rows = (o.rows || []).filter((r) => r.a1 > from && r.a0 < to);
-  const cols = o.classes.filter((c) => rows.some((r) => (r.classPct?.[c.index] || 0) > 0) || (o.presence || []).some((p) => p.index === c.index));
+  const rows = (o.rows || []).filter((r) => r.a1 > from && r.a0 < to), display = o.display || 'symbols';
+  const cols = o.classes.filter((c) => rows.some((r) => (r.classPct?.[c.index] || 0) > 0) || (o.presence || []).some((p) => p.index === c.index && p.a1 > from && p.a0 < to));
   const totW = o.total ? 90 : 0, W = x0 + totW + (o.total ? 14 : 0) + cols.length * colW + 20 + Math.min(110, longest * 5.2 * 0.5), Htot = top + H + 26;
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`,
     `<rect width="${W}" height="${Htot}" fill="#ffffff"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`];
@@ -358,7 +367,7 @@ export function buildRangeSVG(o) {
   out.push(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
   out.push(`<text transform="translate(16,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.axisLabel || '')}</text>`);
   const rangeScale = (id, x, w, defaultMax) => {
-    const ax = o.style?.axes?.[id] || {}, hi = ax.max ?? defaultMax, lo = ax.min ?? (ax.log ? hi / 1000 : 0);
+    const ax = id === 'species' && display === 'symbols' ? {} : o.style?.axes?.[id] || {}, hi = ax.max ?? defaultMax, lo = ax.min ?? (ax.log ? hi / 1000 : 0);
     if (!(hi > lo) || (ax.log && !(lo > 0))) throw new Error('Invalid horizontal axis: max > min; logarithmic limits must be positive.');
     const tf = (v) => ax.log ? Math.log10(Math.max(v, 1e-12)) : v;
     const sx = (v) => x + (ax.rev ? 1 - (tf(v) - tf(lo)) / (tf(hi) - tf(lo)) : (tf(v) - tf(lo)) / (tf(hi) - tf(lo))) * w;
@@ -386,13 +395,19 @@ export function buildRangeSVG(o) {
     out.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${top + H}" stroke="#d5dbd9" stroke-width="0.6"/>`);
     const sx = rangeScale('species', x, colW - 6, max);
     out.push(`<g clip-path="url(#range-${x})">`);
-    for (const r of rows) {
+    for (const r of display === 'symbols' ? [] : rows) {
       const v = r.classPct?.[c.index] || 0; if (!v) continue;
       const custom = Object.keys(o.style?.axes?.species || {}).length > 0;
       const w = custom ? Math.abs(sx(v) - sx.base) : Math.max(2, (v / max) * (colW - 6));
       out.push(`<rect x="${f2(custom ? Math.min(sx(v), sx.base) : cx - w / 2)}" y="${y(r.a0)}" width="${f2(w)}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="${c.color}"/>`);
     }
-    for (const p of (o.presence || []).filter((q) => q.index === c.index)) out.push(markTri(cx, y((p.a0 + p.a1) / 2) + 4, c.color));
+    const presence = [...(o.presence || []).filter((q) => q.index === c.index)];
+    for (const r of rows) if ((r.classPct?.[c.index] || 0) > 0 && !presence.some((p) => p.a0 === r.a0 && p.a1 === r.a1)) presence.push({a0:r.a0,a1:r.a1});
+    if (display !== 'bars') for (const p of presence) {
+      if (p.a1 <= from || p.a0 >= to) continue;
+      const mid = (Math.max(from, p.a0) + Math.min(to, p.a1)) / 2;
+      out.push(traceSymbol(cx, y(mid) + 4, c.color, c.symbol));
+    }
     out.push('</g>');
     x += colW;
   }

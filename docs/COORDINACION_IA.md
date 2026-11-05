@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.12, 05-11-2026:** distribución solo con símbolos por defecto y símbolo editable por icnotaxón; 54 pruebas JS y 10 Python superadas, offline generado y comprobación visual.
+
 - **V0.11, 05-11-2026:** escalas, recorte de datos por columna y edición manual de textos/posiciones; 52 pruebas JS y 10 Python, offline y comprobación en navegador.
 
 - **V0.10, 05-11-2026:** lista de trazas seleccionadas o de todas las de la imagen; 48 pruebas JavaScript y 10 Python superadas, pendiente comprobación visual.
@@ -76,6 +78,34 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 - Pendientes de producto: siguen en `docs/TRASPASO_CLAUDE_CODE.md`; ninguno se inicia
   por el mero hecho de crear los chats.
 - Validación: secciones V30 y V31 de `docs/HISTORIAL_VERSIONES.md`.
+
+### Para continuar en Claude tras V0.12
+
+- **V0.11:** unidades mm/cm/m y marcas verticales compartidas entre Columna, sondeo entero,
+  secciones y distribución. Ejes horizontales con límites manuales, log/lineal y paso lineal;
+  recorte por pista para no dibujar sobre columnas vecinas. Los registros logarítmicos se
+  interrumpen en valores no positivos. `log.js::verticalTicks`, `buildLogSVG`, `buildRangeSVG`;
+  controles en `app.js::styleFormHTML`, `axesFormHTML`, `verticalStyleHTML`.
+- **Textos y posiciones:** editor sobre el gráfico en Columna y todos los tipos de Figuras,
+  con cambio de texto, desplazamientos X/Y, arrastre y restauración por etiqueta.
+  `app.js::editSVGLabels`; guardado en `logView.textEdits` y `fig.textEdits[tipo]`.
+  Se aplica al SVG exportado y al PNG de Figuras. Las claves usan texto original y orden
+  de aparición: fijar escalas y contenido antes de la composición manual final.
+- **V0.12:** Distribución de icnotaxones usa solo símbolos por defecto; permite barras o ambas.
+  Una presencia por intervalo cuantificado o con marcas, sin duplicar coincidencias.
+  `fig.rangeDisplay` y `classes[].symbol` se guardan con el proyecto. Selector de siete formas
+  por icnotaxón en Figuras > Distribución > Símbolo de cada icnotaxón. Geometría compartida
+  por `log.js::traceSymbolPath`: distribución, marcas de imagen/columna y leyendas de Columna.
+  La figura de secciones conserva su selector propio de indicadores.
+- **Validación final:** 54 pruebas JS y 10 Python superadas; offline V0.12 generado en `dist/`
+  (ignorado). Navegador con ejemplo público: escalas m/paso 1 m/log 1–20, textos y posiciones,
+  distribución solo con símbolos y cambio de triángulo a círculo. No repetir pruebas por
+  este añadido de traspaso: el código no ha cambiado desde la validación de V0.12.
+- **Entrega:** commits en `master`, que es la rama principal del remoto; no crear `main`.
+  La sincronización de código no genera instaladores: las releases de escritorio requieren
+  una etiqueta `V0.<n>`, que no se ha solicitado en este encargo.
+- **Alcance:** cambios de representación; índices, algoritmos de análisis y paquete Python
+  sin modificar. Ningún pendiente antiguo se inicia por este traspaso.
 
 ## Créditos y elección de modelo
 

@@ -1,7 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { BI, II, UNIT_TO_CM, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks } from './log.js';
+import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -16,7 +16,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.11';
+const DELIVERY = 'V0.12';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -799,7 +799,7 @@ function drawMarks(s, toS) {
     const c = clsById(m.cls); if (!c || hid.has(c.id)) continue;
     const [x, y] = toS(m.x, m.y);
     vctx.fillStyle = c.color; vctx.strokeStyle = '#fff'; vctx.lineWidth = 1.5;
-    vctx.beginPath(); vctx.moveTo(x, y); vctx.lineTo(x - 7, y - 13); vctx.lineTo(x + 7, y - 13); vctx.closePath(); vctx.fill(); vctx.stroke();
+    vctx.save(); vctx.translate(x, y); vctx.scale(1.6, 1.6); const shape = new Path2D(traceSymbolPath(c.symbol)); vctx.fill(shape); vctx.stroke(shape); vctx.restore();
     const lab = ab.get(c.name) || ''; vctx.lineWidth = 3; vctx.strokeStyle = 'rgba(0,0,0,.75)'; vctx.strokeText(lab, x + 9, y - 9); vctx.fillStyle = '#fff'; vctx.fillText(lab, x + 9, y - 9);
   }
 }
@@ -814,7 +814,7 @@ function compositeMarks(D) {
   for (const s of D.secs) for (const m of s.marks || []) {
     const c = clsById(m.cls); if (!c || m.y < s.roi.y0 || m.y >= s.roi.y1) continue;
     const d = depthAtRow(s, m.y) * D.f(s), a = D.axis === 'age' ? interpAge(D.model, d) : d; if (a == null) continue;
-    out.push({ a, xf: (m.x - s.roi.x0) / Math.max(1, s.roi.x1 - s.roi.x0), color: c.color, abbr: ab.get(c.name), name: c.name, plain: !!c.plain, cls: c.id });
+    out.push({ a, xf: (m.x - s.roi.x0) / Math.max(1, s.roi.x1 - s.roi.x0), color: c.color, abbr: ab.get(c.name), name: c.name, symbol: c.symbol || 'triDown', plain: !!c.plain, cls: c.id });
   }
   return out.sort((p, q) => p.a - q.a);
 }
@@ -833,7 +833,7 @@ function idListOf(rows, marks) {
 /** Colour legend of the ichnotaxa shown (traced, predicted or marked). */
 function legendOf(classes, marks) {
   const names = new Set(marks.map((m) => m.name));
-  return S.classes.filter((c) => c.id !== 'artifact' && (names.has(c.name) || classes.some((k) => k.name === c.name))).map((c) => ({ name: c.name, color: c.color }));
+  return S.classes.filter((c) => c.id !== 'artifact' && (names.has(c.name) || classes.some((k) => k.name === c.name))).map((c) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown' }));
 }
 
 /* ── V31: Start/End markers of the analysed interval and the crop lines ── */
@@ -2617,7 +2617,7 @@ function renderLog() {
   let from = lv.from ?? r0, to = lv.to ?? r1;
   if (!(to > from)) { from = r0; to = r1; }
   $('logFrom').value = +from.toPrecision(6); $('logTo').value = +to.toPrecision(6);
-  const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, index: i, counts: c.counts })).filter((c) => c.counts);
+  const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, counts: c.counts })).filter((c) => c.counts);
   const records = logRecords(D), imgW = 64;
   const image = lv.tracks.image ? { href: stripDataURL(D, from, to, lv.height, imgW * 2) } : null;
   const boundaries = D.secs.map((s) => ({ a: D.axis === 'age' ? interpAge(D.model, s.top * D.f(s)) : s.top * D.f(s), label: s.name })).filter((b) => b.a != null);
@@ -5261,7 +5261,7 @@ function coreSVG() {
   if (!S.sections.length && !S.records.length) return null;
   const D = compositeData(), [from, to] = figAxisWin(D), F = S.fig, lv = { ...S.logView, tracks: F.tracks || S.logView.tracks };
   const { W: imgW, H } = coreFigSize(D);
-  const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, index: i, counts: c.counts })).filter((c) => c.counts);
+  const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, counts: c.counts })).filter((c) => c.counts);
   const image = S.sections.length && lv.tracks.image ? { href: stripDataURL(D, from, to, H, Math.max(64, imgW * 2)) } : null;
   const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
   const LS = logStyleOf(D);
@@ -5458,11 +5458,11 @@ function sectionsSVG() {
 function rangeSVG() {
   if (!S.sections.length) return null;
   const F = S.fig, D = compositeData(), [from, to] = figAxisWin(D), marks = compositeMarks(D);
-  const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, index: i, plain: !!c.plain })).filter((c) => S.classes[c.index].id !== 'artifact');
+  const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, plain: !!c.plain })).filter((c) => S.classes[c.index].id !== 'artifact');
   const presence = [];
   for (const r of D.rows) for (const m of marks) if (m.a >= r.a0 && m.a < r.a1) { const index = S.classes.findIndex((c) => c.id === m.cls); if (!presence.some((p) => p.index === index && p.a0 === r.a0)) presence.push({ a0: r.a0, a1: r.a1, index }); }
-  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(presence.length ? (F.rangeTotal || D.rows.some((r) => r.classPct?.some((v) => v > 0)) ? 'fig.rangeSubBoth' : 'fig.rangeSubId') : 'fig.rangeSub'), axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
-    from, to, height: F.rangeH, rows: D.rows, classes, presence, total: F.rangeTotal, totalLabel: t('log.total') }).svg;
+  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(F.rangeDisplay === 'bars' ? 'fig.rangeSub' : F.rangeDisplay === 'both' ? 'fig.rangeSubBoth' : 'fig.rangeSubId'), axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
+    from, to, height: F.rangeH, rows: D.rows, classes, presence, display: F.rangeDisplay || 'symbols', total: F.rangeTotal, totalLabel: t('log.total') }).svg;
 }
 
 /** Adds title and caption around any figure SVG. */
@@ -5533,6 +5533,8 @@ function renderFigPanel() {
     syncSecFigSize();
   } else if (F.type === 'range') {
     box.innerHTML = `${figWinHTML()}<label class="f"><span>${t('log.height')}</span><input type="number" id="figRangeH" min="300" max="6000" step="50" value="${F.rangeH}"></label>
+      <label class="f"><span>${t('fig.rangeDisplay')}</span><select id="figRangeDisplay">${['symbols', 'bars', 'both'].map((v) => `<option value="${v}" ${(F.rangeDisplay || 'symbols') === v ? 'selected' : ''}>${t('fig.rangeDisplay.' + v)}</option>`).join('')}</select></label>
+      <details class="mini"><summary>${t('fig.taxonSymbols')}</summary>${S.classes.filter((c) => c.id !== 'artifact').map((c) => `<label class="f"><span>${esc(c.name)}</span><select data-taxon-symbol="${esc(c.id)}">${['triDown','tri','circle','square','diamond','star','cross'].map((v) => `<option value="${v}" ${(c.symbol || 'triDown') === v ? 'selected' : ''}>${t('fig.ms.' + v)}</option>`).join('')}</select></label>`).join('')}</details>
       <label class="chk"><input type="checkbox" id="figRangeTotal" ${F.rangeTotal ? 'checked' : ''}><span>${t('log.total')}</span></label><p class="note">${t('fig.rangeNote')}</p>`;
   } else if (F.type === 'core') {
     const tr = F.tracks || S.logView.tracks, names = [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))], shown = F.recs || S.records.flatMap((r) => r.series.filter((x) => x.show).map((x) => x.name));
@@ -5635,6 +5637,8 @@ $('figPanel').addEventListener('change', (e) => {
   else if (el.id === 'figMarkStyle') { F.markStyle = el.value; renderFigPanel(); } else if (el.id === 'figOverlap') F.overlap = el.value;
   else if (el.dataset.panel) { const set = new Set(F.panels); if (el.checked) set.add(el.dataset.panel); else set.delete(el.dataset.panel); F.panels = FIG_PANELS.filter((p) => set.has(p)); }
   else if (el.id === 'figAlpha') F.alpha = +el.value; else if (el.id === 'figMinArea') F.minArea = Math.max(0, +el.value || 0); else if (el.id === 'figHideExcl') F.hideExcl = el.checked;
+  else if (el.id === 'figRangeDisplay') { F.rangeDisplay = el.value; renderFigPanel(); }
+  else if (el.dataset.taxonSymbol) { const c = clsById(el.dataset.taxonSymbol); if (c) c.symbol = el.value; requestRender(); scheduleLog(); }
   else if (el.id === 'figRangeH') F.rangeH = Math.max(300, +el.value || 900); else if (el.id === 'figRangeTotal') F.rangeTotal = el.checked;
   else if (el.dataset.key) {
     const cls = el.closest('.thumbs').dataset.cls, set = new Set(F.picks[cls] || []);
