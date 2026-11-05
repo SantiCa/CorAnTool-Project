@@ -1171,7 +1171,7 @@ Object.assign(D.en, {
   'fig.rangeSub': 'Relative abundance per interval (each column scaled to its maximum)', 'fig.rangeSubId': 'Presence of identified ichnotaxa per interval',
 });
 
-/* V33: images on disk, working resolution per section, interval in cm */
+/* V0.1: images on disk, working resolution per section, interval in cm */
 Object.assign(D.es, {
   'a.bin': 'Intervalo de análisis (cm)', 'a.binNote': '≈ {n} filas de píxeles en esta sección ({p} px/cm) · {m} datos', 'a.binMin': 'Por debajo de 1 píxel se usa 1 fila.',
   'log.subtitle': '{n} secciones · intervalos de {b} cm · ventana {from}–{to} {u}',

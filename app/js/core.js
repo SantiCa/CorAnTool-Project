@@ -49,7 +49,7 @@ export function rowCounts({ labels, width, roi, exclude, effClass, nClasses }) {
 
 /**
  * Aggregate rows into bins of binPx rows (last partial bin kept, as in the Python package).
- * V33: binPx may be fractional (an interval given in cm × px/cm); bin j spans rows
+ * V0.1: binPx may be fractional (an interval given in cm × px/cm); bin j spans rows
  * [⌊j·binPx + ½⌋, ⌊(j+1)·binPx + ½⌋), so the boundaries never drift. Integer binPx gives the old bins.
  */
 export const binEdge = (j, binPx) => Math.floor(j * binPx + 0.5);

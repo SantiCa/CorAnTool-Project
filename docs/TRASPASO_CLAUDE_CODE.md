@@ -7,7 +7,7 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
 (reglas) y `docs/HISTORIAL_VERSIONES.md` (qué se hizo en cada entrega).
 
 ## Estado
-- Última entrega: **V33** (`DELIVERY` en `app/js/app.js`; aplicación 2.3 y programa de escritorio; imágenes en disco, resolución por sección, intervalo en cm).
+- Última entrega: **V0.1** (`DELIVERY` en `app/js/app.js`; aplicación 2.3 y programa de escritorio; imágenes en disco, resolución por sección, intervalo en cm).
 - Pruebas: `npm test` (44, Node) y `pytest` (9, Python). Deben pasar antes de cada commit.
 - Rama de trabajo: `master`. Remoto: `https://github.com/SantiCa/IchAnTool-Project.git` (público).
 
@@ -16,7 +16,7 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
 - Archivo sin conexión: `python tools/build_standalone.py` → `dist/CorAnTool_V<n>.html` (incluye los datos privados
   si existen en `examples/tesis_casanova/privado/`; `dist/` no se sube a git).
 - Programa de escritorio: `cd desktop && npm ci && npm start` (probar) o `npm run dist` (instaladores del sistema actual).
-  Las descargas de GitHub se generan al subir la etiqueta `V<n>`.
+  Las descargas de GitHub se generan al subir la etiqueta `V0.<n>`.
 - Publicaciones en Word y LaTeX: `python tools/export_publications.py` (necesita pandoc).
 - Python: `pip install -e ".[dev]"` (incluye pytest, openpyxl y matplotlib) y `pytest`.
 
@@ -36,7 +36,7 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
    mapas, figuras) sin cambiar el comportamiento; añadirlos a `ORDER`.
 2. Nombres de columna fijos al desplazar en vertical las curvas (Columna y Multiproxy).
 3. Importación de datos unificada; modelo de edad dentro del diálogo del sondeo.
-4. ~~Imágenes en disco cargadas por sección~~ (hecho en V33); fuentes incrustadas.
+4. ~~Imágenes en disco cargadas por sección~~ (hecho en V0.1); fuentes incrustadas.
 5. Mapa de varianza del kriging; importancia de variables por permutación (también para la red neuronal).
 6. Evitar sesgo de selección de modelo: opción de reservar sondeos para una prueba final independiente.
 

@@ -27,7 +27,7 @@ The resulting series can be correlated directly with geochemical, mineralogical 
 
 ## Download (desktop program)
 Windows, macOS and Linux installers are published with every delivery under
-[Releases](https://github.com/SantiCa/IchAnTool-Project/releases/latest) (`CorAnTool-V<n>-…`). The desktop program is
+[Releases](https://github.com/SantiCa/IchAnTool-Project/releases/latest) (`CorAnTool-V0.<n>-…`). The desktop program is
 the same application in its own window, with more memory than a browser tab and the projects stored on disk. It is not
 code-signed: Windows shows “Windows protected your PC” (More info → Run anyway) and macOS needs right-click → Open the
 first time. Build it yourself with `cd desktop && npm ci && npm run dist`.

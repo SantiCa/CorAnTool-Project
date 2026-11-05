@@ -78,7 +78,7 @@ const keyOf = (c) => { const k = S.classes.indexOf(c); return c.id === 'artifact
 /* ───────────── sections ───────────── */
 
 /**
- * V33: `file` holds the original picture at full resolution — in memory (`blob`) only until it is written to the
+ * V0.1: `file` holds the original picture at full resolution — in memory (`blob`) only until it is written to the
  * image store (`key`). `crop` is the kept area in full-resolution pixels of the unrotated file (null = whole file);
  * `full` the file size. The working image is rotate(downsample(crop(file), ds), rot); it is decoded only while needed.
  * `labels`/`exclude` are packed (RLE) when the section is not in use and unpacked on first access.
@@ -97,7 +97,7 @@ function newSection({ name, file, w, h, orig, ds = 1, labels = null, exclude = n
   return s;
 }
 
-/* ───────────── V33: images on disk, pixels in memory only while a section is in use ───────────── */
+/* ───────────── V0.1: images on disk, pixels in memory only while a section is in use ───────────── */
 const MEM = { px: [], mask: [], pinned: new Set(), pxBudget: 9e8, maskBudget: 5e8 };
 /** A mask layer stored packed (RLE array) and unpacked on first access; `init` = array, { rle } or null (empty). */
 function lazyMask(s, key, Type, init) {
@@ -325,7 +325,7 @@ function effClassId(o) {
 }
 
 function refreshObjects(s, ids, region) {
-  if (!s.orig) return;   // V33: stats are kept from the last time the pixels were in memory
+  if (!s.orig) return;   // V0.1: stats are kept from the last time the pixels were in memory
   const R = region ? { x0: Math.max(0, region.x0), y0: Math.max(0, region.y0), x1: Math.min(s.w, region.x1), y1: Math.min(s.h, region.y1) } : null;
   const acc = objectStats(s.labels, s.w, s.h, s.orig, ids, R), ppu = pxPerCm(s);
   for (const id of ids) {
@@ -552,7 +552,7 @@ function analyze(s) {
   }
 }
 
-/** V33: the analysis interval is set in cm; rows per interval in this section (may be fractional, at least 1). */
+/** V0.1: the analysis interval is set in cm; rows per interval in this section (may be fractional, at least 1). */
 function binRowsOf(s) { return Math.max(1, (S.settings.binCm || 1) * pxPerCm(s)); }
 function manualAt(s, d) { let hit = null; for (const m of s.manual) if (d >= m.from && d < m.to) hit = m; return hit; }
 function setManual(s, b, key, val) {
@@ -596,7 +596,7 @@ function render() {
   const s = sec(), cw = view.width, ch = view.height;
   $('empty').hidden = !!s;
   if (!s) { vctx.fillStyle = '#161a19'; vctx.fillRect(0, 0, cw, ch); return; }
-  if (!s.orig) {   // V33: pixels are being read from disk
+  if (!s.orig) {   // V0.1: pixels are being read from disk
     vctx.fillStyle = '#161a19'; vctx.fillRect(0, 0, cw, ch); vctx.fillStyle = '#9aa7a3'; vctx.font = '14px "IBM Plex Sans", sans-serif'; vctx.textAlign = 'center';
     vctx.fillText(s._pxErr || t('mem.loading'), cw / 2, ch / 2); vctx.textAlign = 'start'; needPixels(s); return;
   }
@@ -768,7 +768,7 @@ function workToFull(s, R) {
   const c = s.crop || { x0: 0, y0: 0 }, k = s.ds;
   return { x0: c.x0 + x0 * k, y0: c.y0 + y0 * k, x1: c.x0 + x1 * k, y1: c.y0 + y1 * k };
 }
-/** Remove the rows outside [y0, y1) from the image and its masks. V33: the original file is kept; the crop is stored in full-resolution pixels. */
+/** Remove the rows outside [y0, y1) from the image and its masks. V0.1: the original file is kept; the crop is stored in full-resolution pixels. */
 async function applyCrop() {
   const c = cropState; if (!c) return; const s = c.s, { y0, y1 } = c;
   if (y0 <= 0 && y1 >= s.h) { endCrop(); return; }
@@ -1273,7 +1273,7 @@ function renderSectionForm() {
   renderFilterForm(); renderDetectForm(); renderBinNote(); renderResForm(s);
 }
 
-/* ── V33: working resolution of a section, recomputed from the full-resolution original ── */
+/* ── V0.1: working resolution of a section, recomputed from the full-resolution original ── */
 const RES_FACTORS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32];
 function renderResForm(s) {
   const sel = $('secRes'); sel.disabled = $('resAll').disabled = !s; if (!s) return;
@@ -1338,7 +1338,7 @@ function selectSection(k, fresh = false) {
   const prev = sec(); if (prev) prev.view = { ...S.view };
   S.cur = k; S.selected = 0;
   const s = sec();
-  if (s && !s.orig) ensurePixels(s).then(() => { if (sec() === s) { renderSectionForm(); requestRender(); } }).catch(() => requestRender());   // V33
+  if (s && !s.orig) ensurePixels(s).then(() => { if (sec() === s) { renderSectionForm(); requestRender(); } }).catch(() => requestRender());   // V0.1
   else if (s) pxTouch(s);
   renderSectionForm();
   if (s) { rebuildLUT(s); if (s.view && !fresh) { S.view = { ...s.view }; requestRender(); } else requestAnimationFrame(fitView); }
@@ -1792,7 +1792,7 @@ $('cdDel').addEventListener('click', () => {
 /* ───────────── projects: serialisation ───────────── */
 
 /**
- * One section in a project. V33 (format v4): the image is a reference to the image store (`file.key`), or, before it
+ * One section in a project. V0.1 (format v4): the image is a reference to the image store (`file.key`), or, before it
  * is stored, the Blob itself (`file.blob`); `portableProject` turns both into base64 for files. Object statistics
  * (`st`) are saved so that a section can be used without decoding its picture.
  */
@@ -1823,7 +1823,7 @@ function serialize() {
   };
 }
 
-/** V33: a section is opened without decoding its picture; files from older versions are decoded once (sizes, object statistics). */
+/** V0.1: a section is opened without decoding its picture; files from older versions are decoded once (sizes, object statistics). */
 async function loadSection(q) {
   const f = q.file, legacy = !f.key;
   const file = legacy ? { name: f.name, type: f.type, blob: f.blob || new Blob([f.bytes ? new Uint8Array(f.bytes) : b64decode(f.b64)], { type: f.type || 'image/jpeg' }) } : { name: f.name, type: f.type, key: f.key, size: f.size };
@@ -1882,7 +1882,7 @@ async function loadProject(p) {
       S.cores.push(c);
     }
     if (!S.cores.length) S.cores.push(makeCore({ name: t('core.first') }));
-    if (S.settings.binPx != null) {   // V33: before V33 the interval was given in pixel rows
+    if (S.settings.binPx != null) {   // V0.1: before V0.1 (V33) the interval was given in pixel rows
       const s0 = S.cores.flatMap((c) => c.sections)[0];
       if (p.settings?.binCm == null) S.settings.binCm = s0 ? S.settings.binPx / pxPerCm(s0) : 1;
       delete S.settings.binPx;
@@ -1895,14 +1895,14 @@ async function loadProject(p) {
   if (S.geo.trained) setTimeout(() => { geoTrain(true).catch(() => { /* retrained on demand */ }); }, 0); else scheduleGeo(0);
   try { localStorage.setItem('ichantool.last', S.id); } catch { /* storage blocked */ }
   dirty = false; setSaveState(storageOK ? 'saved' : 'off');
-  if (loadMigrated) markDirty();   // V33: move images of older projects to the image store
+  if (loadMigrated) markDirty();   // V0.1: move images of older projects to the image store
 }
 
 function resetState() {
   blankStart = false;
   const maxMP = S.settings.maxMP || 8;
   S.id = uid(); S.name = t('proj.untitled'); S.notes = '';
-  MEM.px.length = 0; MEM.mask.length = 0; pxWanted.clear();   // V33: pictures of the previous project can be freed
+  MEM.px.length = 0; MEM.mask.length = 0; pxWanted.clear();   // V0.1: pictures of the previous project can be freed
   S.undo = []; S.selected = 0; S.multi.clear(); S.library = []; S.sheet = { columns: [], cells: {} }; S.fig = defaultFig(); S.kind = 'normal'; S.multiSource = null; S.plots = []; S.plotCur = 0; S.coreModels = {};
   S.geo = defaultGeo(); geoReset();
   S.classes = defaultClasses(); S.active = 'undet';
@@ -2118,7 +2118,7 @@ async function startup() {
   storageOK = await storageAvailable();
   setSaveState(storageOK ? 'saved' : 'off');
   if (VIEW_ONLY) { await startWindow(); return; }
-  if (storageOK) setTimeout(() => gcImages().catch(() => {}), 15000);   // V33: images of deleted sections
+  if (storageOK) setTimeout(() => gcImages().catch(() => {}), 15000);   // V0.1: images of deleted sections
   await loadPresets(); await initBackups();
   const firstRun = storageOK && !(await listProjects().catch(() => [])).length;
   if (storageOK && PRELOAD_THESIS) await ensureThesisProject();
@@ -2299,7 +2299,7 @@ function compositeData() {
 }
 
 /**
- * Column strip of a section (≤ 512 px wide). V33: the reduced picture (original or treated) is cached apart from the
+ * Column strip of a section (≤ 512 px wide). V0.1: the reduced picture (original or treated) is cached apart from the
  * coloured traces, so changing overlay settings only needs the masks, not the picture on disk.
  */
 function sectionCanvas(s) {
@@ -4836,7 +4836,7 @@ let figSvgCache = '';
 
 /** Crop of one trace (padding 15 %), scaled to `size` px on its long side, with optional outline in the class colour. */
 function traceCanvas(s, o, size, img, outline) {
-  if (!s.orig) {   // V33: placeholder until the section's picture is read from disk
+  if (!s.orig) {   // V0.1: placeholder until the section's picture is read from disk
     needPixels(s); const p = document.createElement('canvas'); p.width = p.height = Math.max(1, Math.round(size * 0.5));
     const g = p.getContext('2d'); g.fillStyle = '#cfd4d2'; g.fillRect(0, 0, p.width, p.height);
     return { canvas: p, pxPerCm: pxPerCm(s), depth: depthAtRow(s, (o.bbox[1] + o.bbox[3]) / 2), units: s.units };

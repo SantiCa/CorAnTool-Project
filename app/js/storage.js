@@ -12,7 +12,7 @@ function openDB() {
       if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('data')) db.createObjectStore('data', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('prefs')) db.createObjectStore('prefs', { keyPath: 'key' });
-      if (!db.objectStoreNames.contains('images')) db.createObjectStore('images', { keyPath: 'key' }); // V33: original image files, written once
+      if (!db.objectStoreNames.contains('images')) db.createObjectStore('images', { keyPath: 'key' }); // V0.1: original image files, written once
       if (!db.objectStoreNames.contains('lite')) db.createObjectStore('lite', { keyPath: 'id' }); // numeric data only, for the all-projects view
     };
     req.onsuccess = () => { const d = req.result; d.onversionchange = () => { d.close(); dbPromise = null; }; resolve(d); };
@@ -54,7 +54,7 @@ export const deleteProject = (id) => run(['meta', 'data', 'lite', 'images'], 're
   tx.objectStore('meta').delete(id);
   tx.objectStore('lite').delete(id);
 });
-/** V33: original image files live in their own store (on disk) and are read only when a section needs its pixels. */
+/** V0.1: original image files live in their own store (on disk) and are read only when a section needs its pixels. */
 export const putImage = (key, blob) => run(['images'], 'readwrite', (tx) => tx.objectStore('images').put({ key, blob, t: Date.now() }));
 export const getImage = (key) => run(['images'], 'readonly', (tx) => tx.objectStore('images').get(key)).then((r) => r?.blob || null);
 /** Delete images that no project references (sections removed), if older than one hour. */

@@ -91,7 +91,7 @@ def test_cli(tmp_path):
 
 
 def test_bin_cm_fractional_edges_match_web_app():
-    """V33: interval in cm → fractional rows per bin with the same edges as binRows in the web app."""
+    """V0.1: interval in cm → fractional rows per bin with the same edges as binRows in the web app."""
     from ichantool.pipeline import bin_edges
     assert bin_edges(100, 12.5) == [(0, 13), (13, 25), (25, 38), (38, 50), (50, 63), (63, 75), (75, 88), (88, 100)]
     assert bin_edges(100, 30) == [(0, 30), (30, 60), (60, 90), (90, 100)]

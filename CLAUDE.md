@@ -4,13 +4,13 @@ Owner: Santiago Casanova-Arenillas. Communicate in Spanish.
 
 ## Documentation is part of every change
 Every delivery that changes code, algorithms, defaults or files must, in the same commit:
-1. Get the next delivery number **V0.<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V0.1) and mention it in the reply. Since 05-11-2026 the numbering is V0.<n> (V33 = V0.1); V1 is reserved for when Santiago declares the program fully functional. Below, `V<n>` means this number.
-2. Add a `V<n>` section to `docs/HISTORIAL_VERSIONES.md` (Qué se hizo / Cambios / Por qué / Comprobación / Pendiente) and a row in its summary table.
+1. Get the next delivery number **V0.<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V0.1) and mention it in the reply. Since 05-11-2026 the numbering is V0.<n> (V33 = V0.1); V1 is reserved for when Santiago declares the program fully functional. Below, `V0.<n>` means this number.
+2. Add a `V0.<n>` section to `docs/HISTORIAL_VERSIONES.md` (Qué se hizo / Cambios / Por qué / Comprobación / Pendiente) and a row in its summary table.
 3. Update `docs/DOCUMENTACION_TECNICA.md` if any algorithm, formula, default value, file format or validation result changes. Formulas there must match the code exactly.
 4. Update `publications/METODOS_Y_DEFENSA.md` if the change affects what a paper can claim.
 5. Add a short English entry to `CHANGELOG.md`.
 6. Set `DELIVERY` in `app/js/app.js` to the new V<n> (shown in the app; used for the offline file name `dist/CorAnTool_V<n>.html` and the desktop version).
-7. To publish desktop downloads, push the tag `V<n>` (GitHub Actions builds Windows/macOS/Linux and creates the Release).
+7. To publish desktop downloads, push the tag `V0.<n>` (GitHub Actions builds Windows/macOS/Linux and creates the Release).
 
 ## Handoff
 - Shared Claude/Codex workflow and current editing turn: read `docs/COORDINACION_IA.md` before editing. Only one editor at a time in the shared checkout; other chats review read-only. Do not start old pending tasks without a concrete request.

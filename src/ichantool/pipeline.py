@@ -38,7 +38,7 @@ def _edge(j: int, bin_px: float) -> int:
 def bin_edges(n: int, bin_px: float, keep_partial: bool = True) -> list[tuple[int, int]]:
     """Row ranges of the bins: bin j spans [floor(j*bin_px + 0.5), floor((j+1)*bin_px + 0.5)).
 
-    Same rule as ``binRows`` in the web app (V33). bin_px may be fractional (interval in cm × px/cm);
+    Same rule as ``binRows`` in the web app (V0.1). bin_px may be fractional (interval in cm × px/cm);
     an integer bin_px gives the classic fixed-size bins. The last bin is clipped at n (dropped if
     keep_partial is False).
     """
