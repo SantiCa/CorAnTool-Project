@@ -811,7 +811,8 @@ Implementación: `storage.js` y `app.js` (bloque *projects*).
   (si tienen más de una hora).
 - **Guardado automático** 1,5 s después de cualquier cambio. El estado se muestra junto al nombre
   del proyecto. Al abrir la aplicación se abre el último proyecto usado.
-- Exportar e importar usa el mismo contenido en JSON, con las imágenes originales en base64 (§12).
+- **Desde V0.8** exportar crea un paquete `.corantool` (ZIP sin compresión: `project.json` con `file.path = images/<id de sección><ext>` y las imágenes originales). La copia automática escribe una carpeta por proyecto (`project.json`, `images/`, `historial/`). Los archivos JSON antiguos (imágenes en base64) se siguen importando.
+- Exportar e importar usaba antes el mismo contenido en JSON, con las imágenes originales en base64 (§12).
   Al importar se asigna un identificador nuevo para no sobrescribir otro proyecto y las imágenes
   pasan al almacén `images`.
 - Si el navegador no permite almacenamiento (ventana privada o datos bloqueados), la aplicación lo

@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.8 | 05-11-2026 | Aplicación 2.8 | Proyecto compartible con imágenes completas (.corantool), carpeta de proyecto para Drive compartido, comentarios con respuestas |
 | V0.7 | 05-11-2026 | Aplicación 2.7 | Figura de trazas: varias versiones de cada traza lado a lado (tratada, original, solo la traza, silueta, contorno…) y escala configurable |
 | V0.6 | 05-11-2026 | Aplicación 2.6.1 | Ancho y formato del eje de cada columna de la derecha (bioturbación, icnotaxones, BI, ii, registros) |
 | V0.5 | 05-11-2026 | Aplicación 2.6 | Estilo configurable de la columna y su figura; indicadores de trazas (flecha, triángulo…) con leyenda y manejo de etiquetas que se tocan |
@@ -630,6 +631,38 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.8 — Proyectos compartibles y comentarios (05-11-2026)
+
+**Qué se hizo.**
+- **Exportar este proyecto** crea un archivo `.corantool` (ZIP) con `project.json` y las **imágenes originales a
+  resolución completa** en `images/`. Se abre en cualquier ordenador (Windows, macOS, Linux o navegador) con «Importar
+  archivo…». La copia completa de la biblioteca usa el mismo formato (un `pN/project.json` por proyecto).
+- **Copia automática en carpeta** (p. ej. una carpeta compartida de Drive): cada proyecto se escribe como carpeta
+  `<nombre>__<id>/` con `project.json`, `images/` (cada imagen una sola vez) e `historial/<fecha>.json`. Botón nuevo
+  **«Abrir carpeta de proyecto…»** para abrirla en otro ordenador.
+- **Trabajo por turnos:** al abrir un proyecto que ya está en la biblioteca, se pregunta si sustituir la versión local
+  (mismo proyecto) o importarlo como copia. Al sustituir, los comentarios de las dos versiones se conservan.
+- **Comentarios** (botón 💬): autor, fecha y hora, generales o vinculados a una sección y a un punto de la imagen
+  (globo numerado sobre la imagen, botón «Ir»), respuestas, resolver/reabrir y borrar comentarios y respuestas.
+
+**Cambios.** `zip.js` (nuevo, sin dependencias: escritura sin compresión, lectura stored/deflate, CRC-32; límite 4 GB).
+`app.js`: `projectForExport`, `packageProjects`, `writeProjectFolder`, `openProjectFolder`, `restoreFolders`,
+`internImages` con rutas, `restoreFiles` (ZIP y sustitución), comentarios (`mergeComments`, `drawComments`,
+`renderComments`, `addComment`). Formato de proyecto: `comments`. `index.html`, `i18n.js`, `build_standalone.py` (ORDER).
+
+**Por qué.** Petición de Santiago: compartir proyectos completos entre ordenadores y trabajar en equipo.
+
+**Comprobación.** `npm test` (48, con prueba de ida y vuelta del ZIP y CRC-32 de referencia). Prueba sin pantalla en
+Chromium: comentario y respuesta, exportación (`unzip -l` lee el paquete: project.json, 6 imágenes, settings.json),
+importación con sustitución; comentarios conservados; sin errores. La carpeta de proyecto no se ha probado (requiere
+elegir carpeta a mano).
+
+**Pendiente.** No hay bloqueo entre usuarios: si dos personas editan a la vez, la última versión que se abre sustituye a
+la otra (salvo los comentarios, que se unen). Paquetes de más de 4 GB no soportados. Los comentarios borrados pueden
+reaparecer al unir con una versión antigua que aún los tenga.
 
 ---
 

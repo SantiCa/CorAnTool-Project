@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.8 — 2026-11-05
+- Shareable project package (.corantool, ZIP) with full-resolution images; automatic copy as project folders (e.g. shared Drive) and "Open project folder"; replace-or-copy when the same project is opened again.
+- Comments with author, date, replies, resolve and delete; linked to a section and point of the image.
+
 ## V0.7 — 2026-11-05
 - Traces figure: several versions of each trace side by side (treated, original, trace only, silhouette, outline…) and configurable scale (bar, divided bar, line, none; position, length, colours).
 

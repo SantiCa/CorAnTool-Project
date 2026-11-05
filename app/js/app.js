@@ -8,6 +8,7 @@ import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from 
 import { evalColumn, evalCells, cellName, FUNCTIONS } from './sheet.js';
 import { Classifier, TaxonModel, evaluateModels, vec, FEATURES } from './learn.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
+import { zipFiles, unzipBlob } from './zip.js';
 import { coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, colStats, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidate, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
 
 /** App name (V16: IchAnTool → CorAnTool). Files written by IchAnTool are still accepted; browser storage keys keep the old name. */
@@ -15,7 +16,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.7';
+const DELIVERY = 'V0.8';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -188,9 +189,20 @@ async function storePendingImages() {
     s.file = { name: s.file.name, type: s.file.type, key, size: s.file.blob.size };
   }
 }
-/** Replace inline images (bytes / base64) of a project file by references to the image store. */
-async function internImages(p) {
+/**
+ * Replace inline images (bytes / base64) of a project file by references to the image store. V0.8: images of a
+ * package or project folder (`file.path`) are read with getBlob(path).
+ */
+async function internImages(p, getBlob = null) {
   for (const c of p.cores || [{ sections: p.sections }]) for (const q of c.sections || []) {
+    if (q.file.path && getBlob) {
+      const blob = await getBlob(q.file.path); if (!blob) throw new Error(t('err.imgMissing', { n: q.name }));
+      const b = new Blob([blob], { type: q.file.type || 'image/jpeg' });
+      if (storageOK) { const key = 'img_' + uid(); await putImage(key, b); q.file = { name: q.file.name, type: q.file.type, key, size: b.size }; }
+      else q.file = { name: q.file.name, type: q.file.type, blob: b };
+      continue;
+    }
+    if (!storageOK) continue;
     if (q.file.key || !(q.file.bytes || q.file.b64)) continue;
     const bytes = q.file.bytes ? new Uint8Array(q.file.bytes) : b64decode(q.file.b64), key = 'img_' + uid();
     await putImage(key, new Blob([bytes], { type: q.file.type || 'image/jpeg' }));
@@ -711,7 +723,7 @@ function render() {
     vctx.strokeStyle = S.tool === 'brush' ? clsById(S.active)?.color || '#fff' : '#fff'; vctx.lineWidth = 1.5;
     vctx.beginPath(); vctx.arc(a, b2, Math.max(2, S.brushSize * z), 0, Math.PI * 2); vctx.stroke();
   }
-  drawMarks(s, toS);
+  drawMarks(s, toS); drawComments(s, toS);
   drawRuler(s, ch);
   drawEdges(s, ch, cw, toS);
   vctx.restore();
@@ -729,6 +741,54 @@ function toggleMark(s, p, remove) {
   if (hit >= 0) s.marks.splice(hit, 1);
   else if (!remove) { const c = clsById(S.active); if (!c || c.id === 'artifact') { toast(t('id.pickCls')); return; } s.marks.push({ id: uid(), x: Math.round(p.x), y: Math.round(p.y), cls: c.id }); }
   s.logVer++; markDirty(); scheduleLog(); renderClasses(); requestRender();
+}
+/* ───────────── V0.8: comments with date, replies, resolve and delete (team work) ───────────── */
+const authorName = () => { try { return localStorage.getItem('corantool.author') || ''; } catch { return ''; } };
+/** Union of two comment lists by id (replies too); for the same comment the most recently edited state wins. */
+function mergeComments(a, b) {
+  const by = new Map();
+  for (const c of [...a, ...b]) {
+    const o = by.get(c.id);
+    if (!o) { by.set(c.id, { ...c, replies: [...(c.replies || [])] }); continue; }
+    const newer = (c.edited || c.date) > (o.edited || o.date) ? c : o, reps = new Map([...o.replies, ...(c.replies || [])].map((r) => [r.id, r]));
+    by.set(c.id, { ...newer, replies: [...reps.values()].sort((x, y) => (x.date < y.date ? -1 : 1)) });
+  }
+  return [...by.values()].sort((x, y) => (x.date < y.date ? -1 : 1));
+}
+function drawComments(s, toS) {
+  const list = (S.comments || []).filter((c) => c.sec === s.id && c.x != null && !c.done); if (!list.length) return;
+  vctx.font = '600 10px "IBM Plex Sans", sans-serif'; vctx.textBaseline = 'middle'; vctx.textAlign = 'center';
+  for (const c of list) {
+    const [x, y] = toS(c.x, c.y), n = S.comments.indexOf(c) + 1;
+    vctx.fillStyle = '#2f6fdf'; vctx.strokeStyle = '#fff'; vctx.lineWidth = 1.5;
+    vctx.beginPath(); vctx.arc(x, y - 12, 9, 0, Math.PI * 2); vctx.moveTo(x - 4, y - 5); vctx.lineTo(x, y); vctx.lineTo(x + 4, y - 5); vctx.fill(); vctx.stroke();
+    vctx.fillStyle = '#fff'; vctx.fillText(String(n), x, y - 12);
+  }
+  vctx.textAlign = 'start';
+}
+function renderComments() {
+  const box = $('cmtBody'); if (!box) return;
+  const s = sec(), f = $('cmtFilter')?.value || 'all', fmtD = (d) => new Date(d).toLocaleString();
+  const list = (S.comments || []).map((c, i) => ({ c, n: i + 1 })).filter(({ c }) => f === 'all' || (f === 'open' && !c.done) || (f === 'sec' && s && c.sec === s.id));
+  const where = (c) => { const q = c.sec && S.cores.flatMap((k) => k.sections.map((x) => ({ k, x }))).find((o) => o.x.id === c.sec); return q ? `${esc(q.k.name)} · ${esc(q.x.name)}${c.depth != null ? ` · ${fmt(c.depth, 4)} ${esc(q.x.units)}` : ''}` : esc(t('cmt.general')); };
+  box.innerHTML = list.length ? list.map(({ c, n }) => `<div class="cmt ${c.done ? 'done' : ''}" data-id="${c.id}" style="border:1px solid var(--line,#d7ddda);border-radius:8px;padding:8px;margin:6px 0;${c.done ? 'opacity:.6' : ''}">
+      <div class="row" style="justify-content:space-between;gap:6px"><b>#${n} ${esc(c.author || '—')}</b><span class="note">${fmtD(c.date)}</span></div>
+      <div class="note">${where(c)} ${c.sec ? `<button class="btn small" data-act="go">${t('cmt.go')}</button>` : ''}</div>
+      <div style="white-space:pre-wrap;margin:4px 0">${esc(c.text)}</div>
+      ${(c.replies || []).map((r) => `<div data-rid="${r.id}" style="margin-left:14px;border-left:3px solid var(--line,#d7ddda);padding-left:8px;margin-top:4px"><div class="row" style="justify-content:space-between"><b>${esc(r.author || '—')}</b><span class="note">${fmtD(r.date)} <button class="btn small ghost" data-act="delr" title="${esc(t('cmt.del'))}">✕</button></span></div><div style="white-space:pre-wrap">${esc(r.text)}</div></div>`).join('')}
+      <div class="row" style="gap:6px;margin-top:6px"><input type="text" data-reply placeholder="${esc(t('cmt.replyPh'))}" style="flex:1"><button class="btn small" data-act="reply">${t('cmt.reply')}</button>
+      <button class="btn small" data-act="done">${t(c.done ? 'cmt.reopen' : 'cmt.resolve')}</button><button class="btn small danger" data-act="del">${t('cmt.del')}</button></div></div>`).join('')
+    : `<p class="note">${t('cmt.none')}</p>`;
+  $('cmtBtn').textContent = `💬 ${(S.comments || []).filter((c) => !c.done).length || ''}`.trim();
+}
+function openComments() { $('cmtAuthor').value = authorName(); $('cmtLink').disabled = !sec(); renderComments(); $('cmtDlg').showModal(); }
+function addComment() {
+  const text = $('cmtText').value.trim(); if (!text) return;
+  const author = $('cmtAuthor').value.trim(); try { localStorage.setItem('corantool.author', author); } catch { /* storage blocked */ }
+  const s = sec(), link = $('cmtLink').checked && s, now = new Date().toISOString();
+  const cx = link ? Math.round(S.view.x + view.width / 2 / S.view.zoom) : null, cy = link ? Math.round(S.view.y + view.height / 2 / S.view.zoom) : null;
+  (S.comments ||= []).push({ id: uid(), author, date: now, edited: now, text, sec: link ? s.id : null, x: cx, y: cy, depth: link ? depthAtRow(s, cy) : null, done: false, replies: [] });
+  $('cmtText').value = ''; markDirty(); renderComments(); requestRender();
 }
 function drawMarks(s, toS) {
   if (!s.marks?.length) return;
@@ -1866,7 +1926,7 @@ $('cdDel').addEventListener('click', () => {
 
 /**
  * One section in a project. V0.1 (format v4): the image is a reference to the image store (`file.key`), or, before it
- * is stored, the Blob itself (`file.blob`); `portableProject` turns both into base64 for files. Object statistics
+ * is stored, the Blob itself (`file.blob`); `projectForExport` turns both into image files of a package or folder. Object statistics
  * (`st`) are saved so that a section can be used without decoding its picture.
  */
 function serSection(s) {
@@ -1885,7 +1945,7 @@ function serialize() {
   const { cores: _c, ...geo } = S.geo;
   return {
     app: APP, kind: 'project', version: 4, appVersion: VERSION, delivery: DELIVERY, saved: new Date().toISOString(),
-    id: S.id, name: S.name, notes: S.notes, classes: S.classes, active: S.active, settings: S.settings, library: S.library,
+    id: S.id, name: S.name, notes: S.notes, comments: S.comments || [], classes: S.classes, active: S.active, settings: S.settings, library: S.library,
     projectKind: S.kind || 'normal', multiSource: S.multiSource || null, models: projectModels(),
     geo, sheet: S.sheet, fig: S.fig, curCore: S.curCore, plots: S.plots || [], plotCur: S.plotCur || 0,
     cores: S.cores.map((c) => ({
@@ -1941,7 +2001,7 @@ async function loadProject(p) {
   resetState(); loading = true; loadMigrated = false;
   try {
     p = upgradeProject(p);
-    S.id = p.id || uid(); S.name = p.name || APP; S.notes = p.notes || '';
+    S.id = p.id || uid(); S.name = p.name || APP; S.notes = p.notes || ''; S.comments = p.comments || [];
     S.classes = p.classes || defaultClasses(); S.active = p.active || 'undet';
     Object.assign(S.settings, p.settings || {}); S.library = p.library || []; S.kind = p.projectKind || 'normal'; S.multiSource = p.multiSource || null; S.plots = p.plots || []; S.plotCur = p.plotCur || 0; S.coreModels = p.models?.cores || {};
     S.sheet = { columns: [], cells: {}, ...(p.sheet || {}) };
@@ -1969,12 +2029,13 @@ async function loadProject(p) {
   try { localStorage.setItem('ichantool.last', S.id); } catch { /* storage blocked */ }
   dirty = false; setSaveState(storageOK ? 'saved' : 'off');
   if (loadMigrated) markDirty();   // V0.1: move images of older projects to the image store
+  renderComments();
 }
 
 function resetState() {
   blankStart = false;
   const maxMP = S.settings.maxMP || 8;
-  S.id = uid(); S.name = t('proj.untitled'); S.notes = '';
+  S.id = uid(); S.name = t('proj.untitled'); S.notes = ''; S.comments = [];
   MEM.px.length = 0; MEM.mask.length = 0; pxWanted.clear();   // V0.1: pictures of the previous project can be freed
   S.undo = []; S.selected = 0; S.multi.clear(); S.library = []; S.sheet = { columns: [], cells: {} }; S.fig = defaultFig(); S.kind = 'normal'; S.multiSource = null; S.plots = []; S.plotCur = 0; S.coreModels = {};
   S.geo = defaultGeo(); geoReset();
@@ -2140,7 +2201,29 @@ $('newProjBtn').addEventListener('click', async () => {
 });
 $('openTest').addEventListener('click', async () => { hideHome(); await openTestProject(); });
 $('openIdeal').addEventListener('click', async () => { hideHome(); await busy(loadExample); });
-$('expProj').addEventListener('click', () => busy(async () => saveFile(`${safe(S.name)}.corantool.json`, JSON.stringify(await portableProject(serialize())), 'application/json')));
+$('expProj').addEventListener('click', () => busy(async () => { await flushSave(); await saveFile(`${safe(S.name)}.corantool`, await packageProjects([serialize()]), 'application/zip'); }));   // V0.8: package with full-resolution images
+$('cmtBtn').addEventListener('click', openComments);
+$('cmtAdd').addEventListener('click', addComment);
+$('cmtFilter').addEventListener('change', renderComments);
+$('cmtClose').addEventListener('click', () => $('cmtDlg').close());
+$('cmtBody').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const box = b.closest('.cmt'), c = S.comments.find((x) => x.id === box.dataset.id); if (!c) return;
+  const act = b.dataset.act, now = new Date().toISOString();
+  if (act === 'go') {
+    const k = S.cores.find((q) => q.sections.some((x) => x.id === c.sec)); if (!k) return;
+    if (k.id !== S.curCore) activateCore(k.id);
+    const i = S.sections.findIndex((x) => x.id === c.sec); $('cmtDlg').close(); setMode('section'); selectSection(i);
+    if (c.x != null) setTimeout(() => { S.view.zoom = Math.max(S.view.zoom, 1); S.view.x = c.x - view.width / 2 / S.view.zoom; S.view.y = c.y - view.height / 2 / S.view.zoom; requestRender(); }, 60);
+    return;
+  }
+  if (act === 'reply') { const inp = box.querySelector('[data-reply]'), text = inp.value.trim(); if (!text) return; const author = $('cmtAuthor').value.trim(); try { localStorage.setItem('corantool.author', author); } catch { /* blocked */ } (c.replies ||= []).push({ id: uid(), author, date: now, text }); c.edited = now; }
+  else if (act === 'done') { c.done = !c.done; c.edited = now; }
+  else if (act === 'del') { if (!confirm(t('cmt.delAsk'))) return; S.comments = S.comments.filter((x) => x !== c); }
+  else if (act === 'delr') { if (!confirm(t('cmt.delAsk'))) return; const rid = b.closest('[data-rid]').dataset.rid; c.replies = c.replies.filter((r) => r.id !== rid); c.edited = now; }
+  markDirty(); renderComments(); requestRender();
+});
+$('openFolder').addEventListener('click', () => { hideHome(); openProjectFolder(); });
 $('impProj').addEventListener('change', async (e) => {
   const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
   hideHome();
@@ -2248,6 +2331,36 @@ function renderBackupState() {
   $('bkReactivateTop').hidden = backupState !== 'needs';
 }
 
+/**
+ * V0.8: project folder (automatic copy, e.g. in a shared Drive folder): <name>__<id>/project.json, the original images
+ * in images/ (each written once) and one copy per day in historial/. Another computer opens it with «Open project folder».
+ */
+async function writeProjectFolder(root, d) {
+  const dir = await root.getDirectoryHandle(`${safe(d.name)}__${d.id}`, { create: true }), imgs = await dir.getDirectoryHandle('images', { create: true });
+  const e = projectForExport(d);
+  for (const im of e.images) {
+    const name = im.path.slice('images/'.length);
+    let have = false; try { await imgs.getFileHandle(name); have = true; } catch { /* not written yet */ }
+    if (have) continue;
+    const blob = await im.get(), fh = await imgs.getFileHandle(name, { create: true }), w = await fh.createWritable(); await w.write(blob); await w.close();
+  }
+  const text = JSON.stringify(e.json);
+  await writeText(dir, 'project.json', text);
+  await writeText(await dir.getDirectoryHandle('historial', { create: true }), `${today()}.json`, text);
+}
+/** Open a project folder written by writeProjectFolder (or its parent with several projects). */
+async function openProjectFolder() {
+  let dir; try { dir = await window.showDirectoryPicker({ id: 'corantool-project', mode: 'read' }); } catch (e) { if (e?.name !== 'AbortError') toast(e.message || String(e)); return; }
+  const dirs = [];
+  try { await dir.getFileHandle('project.json'); dirs.push(dir); } catch { for await (const h of dir.values()) if (h.kind === 'directory') { try { await h.getFileHandle('project.json'); dirs.push(h); } catch { /* not a project */ } } }
+  if (!dirs.length) { toast(t('bk.noFolderProject')); return; }
+  const files = [];
+  for (const d of dirs) {
+    const p = await (await (await d.getFileHandle('project.json')).getFile()).text();
+    files.push({ folder: d, text: p });
+  }
+  await busy(() => restoreFolders(files));
+}
 async function writeText(dir, name, text) {
   const fh = await dir.getFileHandle(name, { create: true });
   const w = await fh.createWritable(); await w.write(text); await w.close();
@@ -2262,12 +2375,7 @@ async function backupNow() {
   clearTimeout(backupTimer);
   if (backupState !== 'ok' || !backupDir) return;
   try {
-    if (S.sections.length || S.records.length) {
-      const text = JSON.stringify(await portableProject(serialize())), base = `${safe(S.name)}__${S.id}`;
-      await writeText(backupDir, `${base}.corantool.json`, text);
-      const hist = await backupDir.getDirectoryHandle('historial', { create: true });
-      await writeText(hist, `${base}__${today()}.corantool.json`, text);
-    }
+    if (S.sections.length || S.records.length) await writeProjectFolder(backupDir, serialize());
     await writeText(backupDir, 'corantool_ajustes.json', JSON.stringify(settingsBundle(), null, 1));
     lastBackup = Date.now(); backupPending = false; setPref('lastBackup', lastBackup).catch(() => {});
   } catch (e) { backupState = 'error'; console.error(e); }
@@ -2289,48 +2397,85 @@ for (const id of ['bkReactivate', 'bkReactivateTop']) $(id).addEventListener('cl
   if (backupState === 'ok') await backupNow(); else renderBackupState();
 });
 
-/** One file with every project of the library plus the user settings. */
-async function portableProject(d) {
-  const one = async (q) => {
-    const f = q.file; if (f.b64) return q;
-    const bytes = f.bytes ? new Uint8Array(f.bytes) : new Uint8Array(await (f.blob || await getImage(f.key) || new Blob()).arrayBuffer());
-    return { ...q, file: { name: f.name, type: f.type, b64: b64encode(bytes) } };
-  };
-  const port = async (list) => { const out = []; for (const q of list || []) out.push(await one(q)); return out; };
-  const cores = d.cores ? [] : null;
-  for (const c of d.cores || []) cores.push({ ...c, sections: await port(c.sections) });
-  return { ...d, sections: await port(d.sections), ...(cores ? { cores } : {}) };
+/* ── V0.8: shareable package (.corantool = ZIP with project.json and the original images at full resolution) ── */
+const imgExt = (f) => (/\.[a-z0-9]{2,5}$/i.exec(f.name || '')?.[0] || (/png/.test(f.type) ? '.png' : /tif/.test(f.type) ? '.tif' : '.jpg'));
+/** Project data → { json, images:[{path, get()}] } with every image referenced as images/<section id><ext>. */
+function projectForExport(d, prefix = '') {
+  const p = JSON.parse(JSON.stringify(d, (k, v) => (v instanceof Blob ? undefined : v))), images = [];
+  const src = new Map(); for (const c of d.cores || [{ sections: d.sections }]) for (const q of c.sections || []) src.set(q.id, q.file);
+  for (const c of p.cores || [{ sections: p.sections }]) for (const q of c.sections || []) {
+    const f = src.get(q.id) || q.file, path = `images/${q.id}${imgExt(f)}`;
+    images.push({ path: prefix + path, get: async () => f.blob || (f.key ? await getImage(f.key) : null) || new Blob([f.bytes ? new Uint8Array(f.bytes) : f.b64 ? b64decode(f.b64) : new Uint8Array()]) });
+    q.file = { name: f.name, type: f.type, path };
+  }
+  return { json: p, images };
 }
+async function packageProjects(list) {
+  const files = [];
+  if (list.length === 1) { const e = projectForExport(list[0]); files.push({ name: 'project.json', data: JSON.stringify(e.json) }); for (const im of e.images) files.push({ name: im.path, data: await im.get() }); }
+  else list.forEach((d, i) => { const e = projectForExport(d, `p${i + 1}/`); files.push({ name: `p${i + 1}/project.json`, data: JSON.stringify(e.json) }, ...e.images.map((im) => ({ name: im.path, lazy: im.get }))); });
+  for (const f of files) if (f.lazy) { f.data = await f.lazy(); delete f.lazy; }
+  files.push({ name: 'settings.json', data: JSON.stringify(settingsBundle()) });
+  return zipFiles(files);
+}
+/** One file with every project of the library plus the user settings. */
 $('bkFull').addEventListener('click', () => busy(async () => {
   await flushSave();
   const projects = [];
-  if (storageOK) for (const m of await listProjects()) { const d = await getProject(m.id); if (d) projects.push(await portableProject(d)); }
-  else projects.push(await portableProject(serialize()));
-  await saveFile(`corantool_copia_${today()}.json`, JSON.stringify({ app: APP, kind: 'backup', version: 1, created: new Date().toISOString(), projects, settings: settingsBundle() }), 'application/json');
+  if (storageOK) for (const m of await listProjects()) { const d = await getProject(m.id); if (d) projects.push(d); }
+  else projects.push(serialize());
+  await saveFile(`corantool_copia_${today()}.corantool`, await packageProjects(projects), 'application/zip');   // V0.8: one package, images included
 }));
 
 /** Restore project files, full backups or settings files (several at once). */
+async function restoreFolders(list) {
+  const files = list.map((x) => { const f = new Blob([x.text]); f.name = 'project.json'; f.folder = x.folder; return f; });
+  return restoreFiles(files);
+}
 async function restoreFiles(files) {
   let nProj = 0, nPre = 0, lastLoaded = null;
   const existing = storageOK ? new Set((await listProjects()).map((m) => m.id)) : new Set();
-  const addProject = async (p) => {
-    if (!p.id || existing.has(p.id)) { p.id = uid(); if (existing.size) p.name = `${p.name || APP} (${t('bk.restored')})`; }
+  const addProject = async (p, getBlob = null) => {
+    if (p.id && existing.has(p.id)) {   // V0.8: the same project (work by turns): replace the local version or keep both
+      const m = await getMeta(p.id).catch(() => null);
+      if (confirm(t('bk.replaceAsk', { n: p.name || APP, a: m?.updated ? new Date(m.updated).toLocaleString() : '?', b: p.saved ? new Date(p.saved).toLocaleString() : '?' }))) {
+        if (p.id === S.id) { clearTimeout(saveTimer); dirty = false; }
+        const mine = p.id === S.id ? S.comments : (await getProject(p.id).catch(() => null))?.comments;
+        p.comments = mergeComments(mine || [], p.comments || []);   // comments of both versions are kept
+      }
+      else { p.id = uid(); p.name = `${p.name || APP} (${t('bk.restored')})`; }
+    } else if (!p.id) p.id = uid();
     existing.add(p.id);
     const nSec = p.cores ? p.cores.reduce((n, c) => n + (c.sections || []).length, 0) : (p.sections || []).length;
-    if (storageOK) await putProject({ id: (await internImages(p)).id, name: p.name, updated: Date.now(), sections: nSec, cores: p.cores?.length || 1, coreNames: p.cores?.map((c) => c.name) }, p);
+    await internImages(p, getBlob);
+    if (storageOK) await putProject({ id: p.id, name: p.name, updated: Date.now(), sections: nSec, cores: p.cores?.length || 1, coreNames: p.cores?.map((c) => c.name) }, p);
     lastLoaded = p; nProj++;
   };
   for (const f of files) {
     let p;
+    const head = new Uint8Array(await f.slice(0, 2).arrayBuffer());
+    if (head[0] === 0x50 && head[1] === 0x4b) {   // V0.8: ZIP package (.corantool)
+      try {
+        const z = await unzipBlob(f), get = (base) => async (path) => { const e = z.get(base + path); return e ? e.get() : null; };
+        for (const [name, e] of z) {
+          if (!name.endsWith('project.json')) continue;
+          const q = JSON.parse(await (await e.get()).text()); if (!APP_NAMES.includes(q.app)) continue;
+          await addProject(q, get(name.slice(0, -'project.json'.length)));
+        }
+        if (z.get('settings.json')) nPre += mergePresets(JSON.parse(await (await z.get('settings.json').get()).text()).presets);
+      } catch (e) { console.error(e); toast(t('err.import', { f: f.name, m: e?.message || String(e) })); }
+      continue;
+    }
     try { p = JSON.parse(await f.text()); } catch { toast(t('err.project')); continue; }
     if (!APP_NAMES.includes(p.app)) { toast(t('err.project')); continue; }
+    const fromFolder = f.folder ? async (path) => { let d = f.folder; const parts = path.split('/'); for (const x of parts.slice(0, -1)) d = await d.getDirectoryHandle(x); return (await d.getFileHandle(parts.at(-1))).getFile(); } : null;
     try {
-      if (p.kind === 'project') await addProject(p);
+      if (p.kind === 'project') await addProject(p, fromFolder);
       else if (p.kind === 'backup') { for (const q of p.projects || []) await addProject(q); nPre += mergePresets(p.settings?.presets); }
       else if (p.kind === 'settings') nPre += mergePresets(p.presets);
     } catch (e) { console.error(e); toast(t('err.import', { f: f.name, m: e?.message || e?.name || String(e) })); continue; }
   }
-  if (lastLoaded) { await flushSave(); await loadProject(lastLoaded); if (!storageOK) dirty = true; }
+  if (lastLoaded) { if (lastLoaded.id !== S.id) await flushSave(); await loadProject(lastLoaded); if (!storageOK) dirty = true; }
   toast(t('bk.restoredN', { p: nProj, s: nPre }));
 }
 
