@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.25';
+const DELIVERY = 'V0.26';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -991,6 +991,7 @@ function render() {
   }
   drawMarks(s, toS); drawComments(s, toS);
   drawRuler(s, ch);
+  drawNav(s, cw, ch);   // V0.26
   drawEdges(s, ch, cw, toS);
   vctx.restore();
   $('zoomLbl').textContent = Math.round(z * 100) + '%';
@@ -1184,6 +1185,52 @@ function niceStep(pxPerUnit, minPx) {
   const steps = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
   return steps.find((v) => v * pxPerUnit >= minPx) || 10000;
 }
+
+/* ───────────── V0.26: navigation strip — the whole analysis area at the right edge of the view; click or drag to move ───────────── */
+let navBox = null;
+function drawNav(s, cw, ch) {
+  navBox = null;
+  if (S.settings.nav === false || !s.orig) return;
+  const roi = s.roi, rh = roi.y1 - roi.y0, rw = roi.x1 - roi.x0, H = ch - 24, z = S.view.zoom;
+  if (H < 80 || rh * z <= ch * 1.05) return;   // the whole section already fits
+  const W = Math.round(Math.max(14, Math.min(48, (H * rw) / rh))), x = cw - W - 10, y = 12;
+  const cv = sectionCanvas(s), kk = s._lc?.k || 1;
+  vctx.fillStyle = 'rgba(14,17,16,.82)'; vctx.fillRect(x - 3, y - 3, W + 6, H + 6);
+  try { vctx.drawImage(cv, roi.x0 * kk, roi.y0 * kk, rw * kk, rh * kk, x, y, W, H); } catch { /* pending */ }
+  const a = Math.max(0, (S.view.y - roi.y0) / rh), b = Math.min(1, (S.view.y + ch / z - roi.y0) / rh);
+  vctx.strokeStyle = '#e0995a'; vctx.lineWidth = 2; vctx.strokeRect(x - 1, y + a * H, W + 2, Math.max(3, (b - a) * H));
+  vctx.fillStyle = 'rgba(224,153,90,.18)'; vctx.fillRect(x, y + a * H, W, Math.max(3, (b - a) * H));
+  navBox = { x: x - 3, y, w: W + 6, h: H, roi };
+}
+function navTo(py) {
+  const s = sec(); if (!s || !navBox) return;
+  const f = Math.min(1, Math.max(0, (py - navBox.y) / navBox.h)), z = S.view.zoom;
+  S.view.y = navBox.roi.y0 + f * (navBox.roi.y1 - navBox.roi.y0) - view.height / (2 * z); clampView(); requestRender();
+}
+view.addEventListener('pointerdown', (e) => {
+  if (!navBox) return;
+  const r = view.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  if (px < navBox.x || px > navBox.x + navBox.w || py < navBox.y - 3 || py > navBox.y + navBox.h + 3) return;
+  e.stopImmediatePropagation(); e.preventDefault(); view.setPointerCapture(e.pointerId); navTo(py);
+  const move = (ev) => navTo(ev.clientY - r.top), up = () => view.removeEventListener('pointermove', move, true);
+  view.addEventListener('pointermove', move, true); view.addEventListener('pointerup', up, { once: true, capture: true });
+}, true);
+/** Whole analysis area in view (height fits). */
+function fitAll() {
+  const s = sec(); if (!s) return;
+  const rh = s.roi.y1 - s.roi.y0, rw = s.roi.x1 - s.roi.x0, z = Math.min(8, Math.max(0.02, Math.min((view.height - 24) / rh, (view.width - 76) / rw)));
+  S.view = { zoom: z, x: s.roi.x0 - (view.width / z - rw) / 2, y: s.roi.y0 - 12 / z }; clampView(); requestRender();
+}
+$('zoomAll').addEventListener('click', fitAll);
+/** Page Up / Page Down move one screen (90 %); Home / End go to the top or bottom of the analysis area. */
+document.addEventListener('keydown', (e) => {
+  if (mode !== 'section' || !sec() || e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+  const s = sec(), z = S.view.zoom, page = (view.height / z) * 0.9;
+  if (e.key === 'PageDown') S.view.y += page; else if (e.key === 'PageUp') S.view.y -= page;
+  else if (e.key === 'Home') S.view.y = s.roi.y0 - 12 / z; else if (e.key === 'End') S.view.y = s.roi.y1 - view.height / z + 12 / z;
+  else return;
+  e.preventDefault(); clampView(); requestRender();
+});
 
 function drawRuler(s, ch) {
   const span = s.bottom - s.top; if (!(span > 0)) return;

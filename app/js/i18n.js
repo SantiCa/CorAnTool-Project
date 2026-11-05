@@ -1732,3 +1732,9 @@ Object.assign(D.es, { 'p.add': '⚙ Columnas', 'p.tracks': 'Columnas', 'p.width'
   'p.addTip': 'Mostrar u ocultar cada columna, su ancho y registros de Datos. Arrastra el borde izquierdo de la columna lateral para cambiar su ancho total; doble clic lo restablece.' });
 Object.assign(D.en, { 'p.add': '⚙ Tracks', 'p.tracks': 'Tracks', 'p.width': 'Width (px); empty = automatic', 'p.widthNote': 'You can also drag the right edge of each track in the header. Bioturbation takes the remaining space unless given a width.',
   'p.addTip': 'Show or hide each track, its width and records from Data. Drag the left edge of the side column to change its total width; double click restores it.' });
+
+// V0.26: navigation
+Object.assign(D.es, { 'view.all': 'Ver todo', 'view.allTip': 'Muestra toda la zona de análisis de la sección. Para moverte: franja de la derecha (clic o arrastrar), rueda, Re Pág / Av Pág e Inicio / Fin.',
+  'h.view.fit': 'Ajusta el zoom al ancho del sondeo.' });
+Object.assign(D.en, { 'view.all': 'Show all', 'view.allTip': 'Shows the whole analysis area of the section. To move: strip on the right (click or drag), wheel, Page Up / Page Down and Home / End.',
+  'h.view.fit': 'Fits the zoom to the core width.' });

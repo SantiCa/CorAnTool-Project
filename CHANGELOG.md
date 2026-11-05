@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.26 — 2026-11-05
+- Layout: the page no longer scrolls (only the panels), panel widths adapt to the screen, status bar always visible.
+- Navigation: overview strip to click or drag through the section, «Show all», Page Up/Down and Home/End.
+
 ## V0.25 — 2026-11-05
 - Every figure with a core image: width, several versions side by side, and show or hide excluded zones (Core figure and Multiproxy added).
 

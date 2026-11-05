@@ -59,6 +59,7 @@ La descripción detallada de los algoritmos está en
 | V0.23 | 05-11-2026 | Figuras | Paneles de imagen en Columna con proporción real, estilo de SIN DATOS, tamaño y borde de símbolos, flechas solo de marcas a mano, grupos excluidos y etiquetas |
 | V0.24 | 05-11-2026 | Columna lateral | Ancho propio y ocultar cada columna (bioturbación, BI, ii, registros) |
 | V0.25 | 05-11-2026 | Figuras | Ancho, paneles uno junto a otro y ocultar zonas excluidas en todas las figuras con sondeo |
+| V0.26 | 05-11-2026 | Interfaz | La página ya no se desplaza (solo los paneles), paneles que se adaptan al ancho de pantalla, barra de estado visible, franja de navegación, «Ver todo» y Re Pág/Av Pág/Inicio/Fin |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -649,6 +650,23 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.26 — Paneles adaptados a la pantalla y mejor navegación por el sondeo (05-11-2026)
+
+- **Qué se hizo:**
+  - La página entera ya no se desplaza (en pantallas de más de 860 px): solo se desplaza cada panel lateral, y al
+    llegar a su final no arrastra la página. Antes, en pantallas bajas el documento era más alto que la ventana
+    (938 px en una de 900) y al bajar desaparecían la cabecera y los ajustes.
+  - Anchos por defecto que se adaptan a la pantalla: paneles izquierdo (250–380 px), derecho (280–420 px) y columna
+    lateral (200–340 px), según el ancho de la ventana; siguen pudiéndose arrastrar.
+  - Barra de estado con altura fija (se cortaba a 9 px).
+  - Franja de navegación a la derecha de la imagen con toda la zona de análisis y el tramo visible; clic o arrastre
+    para moverse. «Ver todo» encaja la sección entera; Re Pág / Av Pág bajan o suben una pantalla; Inicio / Fin.
+- **Cambios:** `index.html` (CSS), `app.js` (`drawNav`, `navTo`, `fitAll`, teclas), `i18n.js`. `DELIVERY` = V0.26.
+- **Por qué:** Santiago veía los paneles cortados en pantallas grandes y perdía los ajustes al bajar.
+- **Comprobación:** 68 pruebas JS; en Chrome a 2560×1440, 1920×1080, 1440×900 y 1280×720 el documento mide lo mismo
+  que la ventana; franja, «Ver todo» y Av Pág comprobados; sin errores.
+- **Pendiente / no probado:** comprobar en el programa de escritorio y en la pantalla de Santiago.
 
 ## V0.25 — Opciones de imagen del sondeo en todas las figuras (05-11-2026)
 
