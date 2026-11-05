@@ -1138,3 +1138,35 @@ Object.assign(D.en, {
   'log.hideExcl': 'Hide excluded zones', 'log.hideExclTip': 'Zones marked with “Exclude” are left blank in the column image',
   'proj.thesis': 'Thesis project (private data)',
 });
+
+// V32: identification mode, legends, section and range figures
+Object.assign(D.es, {
+  'tool.mark': 'Marcar traza identificada (M): clic = marca del icnotaxón activo; clic sobre una marca o Alt+clic = quitarla',
+  'id.mode': 'Modo identificación', 'id.tip': 'Para sondeos donde no se puede cuantificar la bioturbación: solo se marcan las trazas que se reconocen. La columna muestra triángulos en su posición y la lista de icnotaxones por tramo, sin porcentajes ni BI/ii.',
+  'id.on': 'Modo identificación: elige un icnotaxón y haz clic sobre cada traza que reconozcas.', 'id.off': 'Modo cuantificación: vuelven los porcentajes y los índices.',
+  'id.pickCls': 'Elige primero un icnotaxón en la lista.', 'id.count': '{n} marcas', 'id.marks': 'Trazas', 'id.list': 'Icnotaxones identificados',
+  'id.subtitle': 'Modo identificación · {n} trazas marcadas · ventana {from}–{to} {u}',
+  'fig.t.sections': 'Secciones del sondeo (paneles lado a lado)', 'fig.t.range': 'Distribución de icnotaxones',
+  'fig.p.orig': 'Original', 'fig.p.enh': 'Tratada', 'fig.p.fill': 'Trazas coloreadas', 'fig.p.alpha': 'Trazas con transparencia', 'fig.p.outline': 'Contornos',
+  'fig.p.mask': 'Solo trazas', 'fig.p.bw': 'Trazas en negro', 'fig.p.arrows': 'Flechas e icnotaxones',
+  'fig.from': 'Desde', 'fig.to': 'Hasta', 'fig.auto2': 'todo', 'fig.panelW': 'Ancho de panel (px)', 'fig.panelH': 'Alto (px)', 'fig.panels': 'Versiones del sondeo',
+  'fig.alpha': 'Opacidad de las trazas', 'fig.minArea': 'Flechas: tamaño mínimo (px)', 'fig.minAreaTip': 'Solo se señalan con flecha las trazas de al menos este área (más las marcas del modo identificación)',
+  'fig.secNote': 'Figura habitual en artículos de icnología de sondeos: el mismo tramo original, tratado y con las trazas resaltadas por icnotaxón. Deja «Desde» y «Hasta» vacíos para todo el sondeo; para una figura nítida, elige un tramo corto.',
+  'fig.rangeNote': 'Una columna por icnotaxón: barras proporcionales a su porcentaje en cada intervalo (escala propia) o triángulos donde se identificó (modo identificación).',
+  'fig.rangeSub': 'Abundancia relativa por intervalo (cada columna escalada a su máximo)', 'fig.rangeSubId': 'Presencia de icnotaxones identificados por intervalo',
+});
+Object.assign(D.en, {
+  'tool.mark': 'Mark identified trace (M): click = mark of the active ichnotaxon; click a mark or Alt+click = remove it',
+  'id.mode': 'Identification mode', 'id.tip': 'For cores where bioturbation cannot be quantified: only the traces you recognise are marked. The column shows triangles at their position and the ichnotaxa per interval, without percentages or BI/ii.',
+  'id.on': 'Identification mode: choose an ichnotaxon and click each trace you recognise.', 'id.off': 'Quantification mode: percentages and indices are back.',
+  'id.pickCls': 'Choose an ichnotaxon in the list first.', 'id.count': '{n} marks', 'id.marks': 'Traces', 'id.list': 'Identified ichnotaxa',
+  'id.subtitle': 'Identification mode · {n} traces marked · window {from}–{to} {u}',
+  'fig.t.sections': 'Core sections (panels side by side)', 'fig.t.range': 'Ichnotaxa distribution',
+  'fig.p.orig': 'Original', 'fig.p.enh': 'Treated', 'fig.p.fill': 'Coloured traces', 'fig.p.alpha': 'Traces with transparency', 'fig.p.outline': 'Outlines',
+  'fig.p.mask': 'Traces only', 'fig.p.bw': 'Traces in black', 'fig.p.arrows': 'Arrows and ichnotaxa',
+  'fig.from': 'From', 'fig.to': 'To', 'fig.auto2': 'all', 'fig.panelW': 'Panel width (px)', 'fig.panelH': 'Height (px)', 'fig.panels': 'Core versions',
+  'fig.alpha': 'Trace opacity', 'fig.minArea': 'Arrows: minimum size (px)', 'fig.minAreaTip': 'Only traces of at least this area get an arrow (plus identification-mode marks)',
+  'fig.secNote': 'Common figure in core ichnology papers: the same interval original, treated and with traces highlighted by ichnotaxon. Leave From/To empty for the whole core; pick a short interval for a sharp figure.',
+  'fig.rangeNote': 'One column per ichnotaxon: bars proportional to its percentage per interval (own scale) or triangles where it was identified (identification mode).',
+  'fig.rangeSub': 'Relative abundance per interval (each column scaled to its maximum)', 'fig.rangeSubId': 'Presence of identified ichnotaxa per interval',
+});

@@ -23,6 +23,12 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 - **Mapas:** los valores usan solo datos reales; la interpolación (IDW, kriging, TIN, RBF…; §21.6 ter) mide distancias
   en km y es exploratoria. Los mapas de z por sondeo eliminan el gradiente absoluto entre sondeos: úsense para patrones
   relativos. Los fondos (Esri, GEBCO) son contexto visual y se citan en el pie.
+- **Modo identificación (V32):** registra presencia de icnotaxones (marcas puntuales), no abundancia: con él no se pueden
+  dar porcentajes, BI ni ii, solo distribución de presencias por intervalo. Indicar en los métodos qué tramos se
+  analizaron en este modo.
+- **Figuras de secciones (V32):** paneles original / tratada / trazas resaltadas / flechas, al estilo de Dorador y
+  Rodríguez-Tovar; las trazas resaltadas son las clasificadas en el programa (incluidas las predicciones aceptadas si así
+  está configurado), lo que debe constar en el pie.
 - **Datos de la tesis:** LC06, LC14 y LC20 tienen profundidad supuesta (secciones apiladas, §21.8 ter): no usarlos en
   una figura publicada sin verificarla. Las cifras obtenidas con versiones anteriores a V22 deben recalcularse.
 

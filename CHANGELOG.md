@@ -2,6 +2,12 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V32 — App 2.2 — 2026-11-05
+- Identification mode: mark traces without quantifying; column shows triangles and identified ichnotaxa per interval.
+- Ichnotaxa colour legend in the column and core figures; abbreviations (Ch, Pl, Th, Zo…).
+- New figures: core sections side by side (original, treated, coloured/transparent traces, outlines, traces only, black, arrows) and ichnotaxa distribution chart.
+- Desktop workflow also runs when a release is published on GitHub.
+
 ## V31 — App 2.1 + desktop — 2026-11-05
 - Crop section images (top/bottom) with depth recalculation; draggable Start/End markers for the analysis area.
 - Column: option to hide excluded zones; reduced-size column canvases (memory).

@@ -1,12 +1,19 @@
 # Builds the CorAnTool desktop program for Windows, macOS and Linux and publishes it as a GitHub Release.
-# Runs when a delivery tag (V30, V31…) is pushed, or by hand from the Actions tab (then only as downloadable artifacts).
+# Runs when a delivery tag (V31, V32…) is pushed or a release is published on GitHub, or by hand from the Actions tab
+# (then only as downloadable artifacts).
 # The owner's private thesis data is git-ignored, so it never reaches these builds.
 name: Desktop builds
 
 on:
   push:
     tags: ['V*']
+  release:
+    types: [published]   # also when the release is created from the GitHub web page
   workflow_dispatch:
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -61,3 +68,4 @@ jobs:
           name: CorAnTool ${{ github.ref_name }}
           body_path: desktop/RELEASE_NOTES.md
           files: out/*
+          overwrite_files: true

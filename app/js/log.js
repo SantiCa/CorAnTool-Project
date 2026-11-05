@@ -88,6 +88,8 @@ export function rowsRange(rows) {
   return [Math.min(...rows.map((r) => r.a0)), Math.max(...rows.map((r) => r.a1))];
 }
 
+/** Small downward triangle marking an identified trace (tip on the trace). */
+const markTri = (x, y, color) => `<path d="M${f2(x)} ${f2(y)}l-4.5 -8h9z" fill="${color}" stroke="#ffffff" stroke-width="0.8"/>`;
 const escXml = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[m]);
 const f2 = (v) => +(+v).toFixed(2);
 const lbl = (v) => String(+(+v).toPrecision(6));
@@ -109,7 +111,10 @@ export function wrapTitle(text, w) {
  * o = { title, subtitle, axisLabel, from, to, height, rows, classes:[{name,color,index}],
  *       tracks:{image,total,species,BI,ii,manual}, image:{href}|null, imageWidth,
  *       records:[{name, color, reverse, pts:[[axisValue, y], ...]}], boundaries:[{a,label}], labels:{...},
- *       bands:[{title, full, key, w, segs:[{a0,a1,color,opacity}]}] (key: stable id for widths and clicks), bandLegend, shade:[{a0,a1,color}] (class colours behind the record curves) }
+ *       bands:[{title, full, key, w, segs:[{a0,a1,color,opacity}]}] (key: stable id for widths and clicks),
+ *       marks:[{a, xf, color, abbr}] (identified traces: triangle on the image at relative x xf),
+ *       idList:[{a0, a1, items:[{name, abbr, color, plain}]}] (identified ichnotaxa per interval, column at the right),
+ *       legendClasses:[{name, color}] (ichnotaxa legend, always drawn when given), bandLegend, shade:[{a0,a1,color}] (class colours behind the record curves) }
  */
 export function buildLogSVG(o) {
   const L = { total: 'Bioturbation (%)', species: 'Ichnotaxa (%)', image: 'Core', ...(o.labels || {}) };
@@ -128,10 +133,12 @@ export function buildLogSVG(o) {
   if (t.ii) cols.push({ key: 'ii', w: 46, title: 'ii' });
   for (const b of o.bands || []) { const id = 'band:' + (b.key || b.full || b.title); cols.push({ key: 'band', id, w: wOf(id, b.w || 46), title: b.title, full: b.full, band: b }); }
   for (const r of o.records) { const id = 'rec:' + r.name; cols.push({ key: 'rec', id, w: wOf(id, o.recWidth || 120), title: r.name, rec: r }); }
+  if (o.marks?.length && !(t.image && o.image)) cols.splice(1, 0, { key: 'marks', id: 'marks', w: wOf('marks', 40), title: L.marks || 'Traces' });
+  if (o.idList) cols.push({ key: 'idlist', id: 'idlist', w: wOf('idlist', 150), title: L.idList || 'Identified ichnotaxa' });
   let x = 8;
   for (const c of cols) { c.x = x; x += c.w + 14; }
   const W = x;
-  const legendItems = [...(t.species ? presentClasses : []), ...(o.bandLegend || [])];
+  const seenL = new Set(), legendItems = [...(t.species ? presentClasses : []), ...(o.legendClasses || []), ...(o.bandLegend || [])].filter((k) => !seenL.has(k.name) && seenL.add(k.name));
   const perRow = Math.max(1, Math.floor((W - 16) / 170));
   const legendH = legendItems.length ? Math.ceil(legendItems.length / perRow) * 16 + 14 : 0;
   const Htot = top + H + 22 + legendH;
@@ -175,6 +182,7 @@ export function buildLogSVG(o) {
     out.push('<g clip-path="url(#plot)">');
     if (c.key === 'image') {
       out.push(`<image x="${c.x}" y="${top}" width="${c.w}" height="${H}" preserveAspectRatio="none" href="${o.image.href}" xlink:href="${o.image.href}"/>`);
+      for (const m of o.marks || []) if (m.a >= from && m.a <= to) out.push(markTri(c.x + Math.min(1, Math.max(0, m.xf)) * c.w, y(m.a), m.color));
     } else if (c.key === 'total') {
       const sx = xScale(c, 0, 100, false, [0, 25, 50, 75, 100]);
       let d = '', prev = null;
@@ -212,6 +220,24 @@ export function buildLogSVG(o) {
         if (g.a1 <= from || g.a0 >= to) continue;
         out.push(`<rect x="${c.x}" y="${y(g.a0)}" width="${c.w}" height="${f2(Math.max(0.4, y(g.a1) - y(g.a0)))}" fill="${g.color}"${g.opacity != null ? ` fill-opacity="${g.opacity}"` : ''}/>`);
       }
+    } else if (c.key === 'idlist') {
+      // identified ichnotaxa per interval: thin bracket and one line per taxon (abbreviations if the interval is short)
+      let lastY = -Infinity;
+      for (const g of o.idList) {
+        if (g.a1 <= from || g.a0 >= to || !g.items.length) continue;
+        const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to));
+        out.push(`<path d="M${c.x + 6} ${ya}h-3V${yb}h3" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`);
+        const short = (yb - ya) < g.items.length * 11, lines = short ? [g.items] : g.items.map((k) => [k]);
+        let yy = Math.max(ya + 9, lastY + 11);
+        for (const line of lines) {
+          if (yy > top + H - 2) break;
+          let xx = c.x + 10;
+          out.push(`<text x="${xx}" y="${yy}" fill="#1c2422" font-size="9.5">${line.map((k, i) => `<tspan fill="${k.color}" font-weight="700">■</tspan><tspan font-style="${k.plain ? 'normal' : 'italic'}"> ${escXml(short ? k.abbr : k.name)}${i < line.length - 1 ? ', ' : ''}</tspan>`).join('')}</text>`);
+          lastY = yy; yy += 11;
+        }
+      }
+    } else if (c.key === 'marks') {
+      for (const m of o.marks) if (m.a >= from && m.a <= to) out.push(markTri(c.x + c.w / 2, y(m.a), m.color));
     } else if (c.key === 'rec') {
       const pts = c.rec.pts.filter((p) => p[0] != null && p[1] != null && p[0] >= from - span * 0.02 && p[0] <= to + span * 0.02);
       if (pts.length) {
@@ -236,6 +262,63 @@ export function buildLogSVG(o) {
   out.push('</svg>');
   return { svg: out.join(''), width: W, height: Htot, plotTop: top, plotHeight: H,
     layout: cols.filter((c) => c.key !== 'axis').map((c) => ({ id: c.id || null, key: c.key, x: c.x, w: c.w, title: c.full || c.title, bkey: c.band?.key || null })) };
+}
+
+/** Unique short labels for ichnotaxa (Chondrites → Ch, Planolites → Pl…): 2 letters, 3 if two names collide. */
+export function abbrevs(names) {
+  const out = new Map(), used = new Set();
+  for (const n of names) {
+    const w = String(n).replace(/\(.*?\)/g, '').trim(), letters = w.replace(/[^\p{L}]/gu, '');
+    const cand = [letters.slice(0, 2), letters[0] + (letters[2] || ''), letters.slice(0, 3), letters.slice(0, 4)].map((c) => c && c[0].toUpperCase() + c.slice(1).toLowerCase());
+    let a = cand.find((c) => c && !used.has(c)) || `${letters.slice(0, 2)}${out.size}`;
+    used.add(a); out.set(n, a);
+  }
+  return out;
+}
+
+/**
+ * Ichnotaxa range chart: one column per ichnotaxon along depth or age; bars proportional to its percentage in each
+ * interval (scaled to its own maximum) or, with presence, a mark where it was identified. o = {title, subtitle,
+ * axisLabel, from, to, height, rows:[{a0,a1,classPct}], classes:[{name,color,index,plain}], presence:[{a0,a1,index}],
+ * total: bool (bioturbation % column)}.
+ */
+export function buildRangeSVG(o) {
+  const H = o.height, from = o.from, to = o.to, span = to - from || 1, colW = 30, x0 = 72;
+  const longest = Math.max(8, ...o.classes.map((c) => String(c.name).length)), top = 46 + Math.min(150, longest * 5.2 * 0.87);   // room for names at 60°
+  const y = (v) => f2(top + ((v - from) / span) * H);
+  const rows = (o.rows || []).filter((r) => r.a1 > from && r.a0 < to);
+  const cols = o.classes.filter((c) => rows.some((r) => (r.classPct?.[c.index] || 0) > 0) || (o.presence || []).some((p) => p.index === c.index));
+  const totW = o.total ? 90 : 0, W = x0 + totW + (o.total ? 14 : 0) + cols.length * colW + 20 + Math.min(110, longest * 5.2 * 0.5), Htot = top + H + 26;
+  const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`,
+    `<rect width="${W}" height="${Htot}" fill="#ffffff"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`];
+  if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
+  for (const v of niceTicks(from, to, Math.max(3, Math.round(H / 70)))) {
+    out.push(`<line x1="${x0 - 6}" y1="${y(v)}" x2="${x0}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 9}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${lbl(v)}</text>`);
+    out.push(`<line x1="${x0}" y1="${y(v)}" x2="${W - 14}" y2="${y(v)}" stroke="#eef1f0" stroke-width="0.6"/>`);
+  }
+  out.push(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
+  out.push(`<text transform="translate(16,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.axisLabel || '')}</text>`);
+  let x = x0 + 10;
+  if (o.total) {
+    out.push(`<text x="${x + totW / 2}" y="${top - 8}" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.totalLabel || 'Bioturbation (%)')}</text>`);
+    for (const r of rows) if (r.pct != null) out.push(`<rect x="${x}" y="${y(r.a0)}" width="${f2((r.pct / 100) * totW)}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="#e7c9a5"/>`);
+    out.push(`<rect x="${x}" y="${top}" width="${totW}" height="${H}" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`);
+    x += totW + 14;
+  }
+  for (const c of cols) {
+    const cx = x + colW / 2, max = Math.max(1e-9, ...rows.map((r) => r.classPct?.[c.index] || 0));
+    out.push(`<text transform="translate(${cx + 3},${top - 6}) rotate(-60)" font-style="${c.plain ? 'normal' : 'italic'}" font-weight="600" fill="#1c2422">${escXml(c.name)}</text>`);
+    out.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${top + H}" stroke="#d5dbd9" stroke-width="0.6"/>`);
+    for (const r of rows) {
+      const v = r.classPct?.[c.index] || 0; if (!v) continue;
+      const w = Math.max(2, (v / max) * (colW - 6));
+      out.push(`<rect x="${f2(cx - w / 2)}" y="${y(r.a0)}" width="${f2(w)}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="${c.color}"/>`);
+    }
+    for (const p of (o.presence || []).filter((q) => q.index === c.index)) out.push(markTri(cx, y((p.a0 + p.a1) / 2) + 4, c.color));
+    x += colW;
+  }
+  out.push('</svg>');
+  return { svg: out.join(''), width: W, height: Htot };
 }
 
 /** CSV of the intervals inside the window, plus external records interpolated at each interval centre. */

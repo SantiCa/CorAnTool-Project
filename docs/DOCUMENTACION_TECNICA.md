@@ -1519,6 +1519,28 @@ lista de gráficos (`plots`, `plotCur`).
   (`.github/workflows/desktop.yml`) compila Windows (instalador NSIS y portable), macOS (dmg universal) y Linux
   (AppImage y deb) al subir una etiqueta `V*` y los publica en Releases. Sin firma de código.
 
+### 22.9 Modo identificación, leyendas y nuevas figuras (desde V32)
+- **Modo identificación** (`S.settings.idMode`, casilla en la barra de la sección): para sondeos donde no se puede
+  cuantificar la bioturbación. Herramienta **Marcar** (tecla M): clic = marca `{id, x, y, cls}` del icnotaxón activo en
+  `s.marks` (coordenadas de la imagen; se guardan con la sección y se recortan y giran con ella); clic a ≤ 9 px de pantalla de
+  una marca o Alt+clic = quitarla. En la columna (y en la figura «Sondeo completo») se ocultan bioturbación, icnotaxones (%),
+  BI, ii e índices manuales; cada marca dentro del área de análisis se dibuja como triángulo sobre la imagen en su
+  profundidad (o edad) y posición horizontal relativa, y una columna «Icnotaxones identificados» lista, por intervalo de
+  análisis, los icnotaxones con marcas (intervalos consecutivos con el mismo conjunto se unen; nombres completos o
+  abreviaturas si no caben). Fuera del modo, las marcas también aparecen si existen.
+- **Abreviaturas** (`abbrevs`): 2 primeras letras (Ch, Pl, Th, Zo…); si coinciden, 1.ª + 3.ª letra, luego 3 y 4 letras.
+- **Leyenda de icnotaxones** en la columna y en las figuras de sondeo: icnotaxones con trazas en la ventana (si la imagen
+  muestra la bioturbación superpuesta o la columna de icnotaxones) y los marcados.
+- **Figura «Secciones del sondeo»:** el mismo tramo [desde, hasta) en profundidad en varias versiones lado a lado:
+  original, tratada, trazas coloreadas (opacas), trazas con transparencia (opacidad elegible), contornos, solo trazas en
+  color sobre blanco, trazas en negro y flechas con abreviaturas (centroide de cada traza clasificada de área ≥ mínimo y
+  marcas). Cada sección se dibuja en el estilo pedido reducida a ≤ 900 px de ancho y se remuestrea fila a fila (resolución
+  ×2 del panel); paneles con letra (a, b, c…), eje de profundidad, nota del tramo y leyenda con abreviaturas. Opción de
+  ocultar zonas excluidas.
+- **Figura «Distribución de icnotaxones»** (`buildRangeSVG`): una columna por icnotaxón presente; barra de ancho
+  proporcional a su porcentaje en cada intervalo dividido por su máximo en la ventana; en modo identificación,
+  triángulos en los intervalos con marcas. Columna opcional de bioturbación (%).
+
 ### 22.7 Proyecto de entrenamiento, carteles de ayuda y recorrido guiado (desde V19)
 - **Datos sintéticos** (`tools/make_tutorial.py`, semilla 2026; `examples/tutorial/`): 7 sondeos ficticios
   colocados al azar (±0,8°) alrededor de 7 zonas marinas del Mediterráneo; se rechazan posiciones en tierra con

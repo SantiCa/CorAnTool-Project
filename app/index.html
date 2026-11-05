@@ -566,6 +566,10 @@ details.mini[open] { display: grid; gap: 6px; }
 .cropbar { position: absolute; top: 12px; right: 12px; z-index: 5; width: 280px; display: grid; gap: 6px; padding: 10px 12px; background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); font-size: 12.5px; }
 .cropbar[hidden] { display: none; }
 .cropbar p { margin: 0; }
+
+/* V32: identification mode */
+.opt.idmode { gap: 6px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; }
+.opt.idmode:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -667,6 +671,8 @@ details.mini[open] { display: grid; gap: 6px; }
         <button class="tool" data-tool="exclude" data-i18n-title="tool.exclude"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12l8-8M4 20L20 4M12 20l8-8"/></svg></button>
         <button class="tool" data-tool="include" data-i18n-title="tool.include"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M9 12h6M12 9v6"/></svg></button>
         <button class="tool" data-tool="pan" data-i18n-title="tool.pan"><svg viewBox="0 0 24 24"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6.5a1.5 1.5 0 0 1 3 0v7c0 4-2.5 6.5-6 6.5-2.4 0-3.8-1-5-3l-2-3.5a1.5 1.5 0 0 1 2.5-1.6L8 13"/></svg></button>
+        <button class="tool" data-tool="mark" data-i18n-title="tool.mark"><svg viewBox="0 0 24 24"><path d="M12 20l-6-10h12z"/><path d="M12 4v5"/></svg></button>
+        <label class="opt idmode" data-i18n-title="id.tip"><input type="checkbox" id="idMode"><span data-i18n="id.mode"></span></label>
         <span class="sep"></span>
         <label class="opt" id="optShape" hidden><span data-i18n="tool.shape"></span><select id="exShape"><option value="brush" data-i18n="tool.shapeBrush"></option><option value="rect" data-i18n="tool.shapeRect"></option></select></label>
         <label class="opt" id="optSize"><span data-i18n="tool.size"></span><input type="range" id="brushSize" min="1" max="120"><output id="brushOut"></output></label>
@@ -777,7 +783,7 @@ details.mini[open] { display: grid; gap: 6px; }
       <div class="body" style="padding:14px;display:grid;gap:10px">
         <label class="f"><span data-i18n="fig.type"></span><select id="figType">
           <option value="traces" data-i18n="fig.t.traces"></option><option value="core" data-i18n="fig.t.core"></option><option value="log" data-i18n="fig.t.log"></option>
-          <option value="geolog" data-i18n="fig.t.geolog"></option><option value="map" data-i18n="fig.t.map"></option></select></label>
+          <option value="sections" data-i18n="fig.t.sections"></option><option value="range" data-i18n="fig.t.range"></option><option value="geolog" data-i18n="fig.t.geolog"></option><option value="map" data-i18n="fig.t.map"></option></select></label>
         <label class="f"><span data-i18n="fig.title"></span><input type="text" id="figTitle"></label>
         <label class="f"><span data-i18n="fig.caption"></span><textarea id="figCaption" rows="3"></textarea></label>
         <div id="figOpts" style="display:grid;gap:8px"></div>

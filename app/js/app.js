@@ -1,7 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { BI, II, UNIT_TO_CM, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV } from './log.js';
+import { parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -15,7 +15,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V31';
+const DELIVERY = 'V32';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -81,7 +81,7 @@ function newSection({ name, file, w, h, orig, ds = 1 }) {
   const s = {
     id: uid(), name, file, rot: 0, ds, logVer: 0, w, h, orig, enh: null,
     labels: new Int32Array(w * h), exclude: new Uint8Array(w * h), objects: new Map(), nextId: 1,
-    top: 0, bottom: 100, units: 'cm', roi: { x0: 0, y0: 0, x1: w, y1: h },
+    top: 0, bottom: 100, units: 'cm', roi: { x0: 0, y0: 0, x1: w, y1: h }, marks: [],
     filters: { ...DEFAULT_FILTERS }, preset: 'none', detect: { ...DEFAULT_DETECT }, manual: [], bins: [], view: null,
   };
   enhance(s);
@@ -526,10 +526,68 @@ function render() {
     vctx.strokeStyle = S.tool === 'brush' ? clsById(S.active)?.color || '#fff' : '#fff'; vctx.lineWidth = 1.5;
     vctx.beginPath(); vctx.arc(a, b2, Math.max(2, S.brushSize * z), 0, Math.PI * 2); vctx.stroke();
   }
+  drawMarks(s, toS);
   drawRuler(s, ch);
   drawEdges(s, ch, cw, toS);
   vctx.restore();
   $('zoomLbl').textContent = Math.round(z * 100) + '%';
+}
+
+/* ── V32: identification mode — marks of identified traces (point + ichnotaxon), no quantification ── */
+const idMode = () => !!S.settings.idMode;
+function clsAbbr() { return abbrevs(S.classes.map((c) => c.name)); }
+/** Click with the Mark tool: add a mark of the active ichnotaxon, or remove the mark under the pointer (also with Alt). */
+function toggleMark(s, p, remove) {
+  if (!inImg(s, p)) return;
+  s.marks ||= [];
+  const z = S.view.zoom, hit = s.marks.findIndex((m) => Math.hypot((m.x - p.x) * z, (m.y - p.y) * z) <= 9);
+  if (hit >= 0) s.marks.splice(hit, 1);
+  else if (!remove) { const c = clsById(S.active); if (!c || c.id === 'artifact') { toast(t('id.pickCls')); return; } s.marks.push({ id: uid(), x: Math.round(p.x), y: Math.round(p.y), cls: c.id }); }
+  s.logVer++; markDirty(); scheduleLog(); renderClasses(); requestRender();
+}
+function drawMarks(s, toS) {
+  if (!s.marks?.length) return;
+  const ab = clsAbbr();
+  vctx.font = '600 11px "IBM Plex Sans Condensed", sans-serif'; vctx.textBaseline = 'middle';
+  for (const m of s.marks) {
+    const c = clsById(m.cls); if (!c) continue;
+    const [x, y] = toS(m.x, m.y);
+    vctx.fillStyle = c.color; vctx.strokeStyle = '#fff'; vctx.lineWidth = 1.5;
+    vctx.beginPath(); vctx.moveTo(x, y); vctx.lineTo(x - 7, y - 13); vctx.lineTo(x + 7, y - 13); vctx.closePath(); vctx.fill(); vctx.stroke();
+    const lab = ab.get(c.name) || ''; vctx.lineWidth = 3; vctx.strokeStyle = 'rgba(0,0,0,.75)'; vctx.strokeText(lab, x + 9, y - 9); vctx.fillStyle = '#fff'; vctx.fillText(lab, x + 9, y - 9);
+  }
+}
+$('idMode').addEventListener('change', (e) => {
+  S.settings.idMode = e.target.checked; markDirty();
+  if (S.settings.idMode) { setTool('mark'); toast(t('id.on')); } else toast(t('id.off'));
+  scheduleLog(); renderClasses();
+});
+/** Identified traces of the composite on the log axis: marks of every section, plus traced objects if wanted. */
+function compositeMarks(D) {
+  const ab = clsAbbr(), out = [];
+  for (const s of D.secs) for (const m of s.marks || []) {
+    const c = clsById(m.cls); if (!c || m.y < s.roi.y0 || m.y >= s.roi.y1) continue;
+    const d = depthAtRow(s, m.y) * D.f(s), a = D.axis === 'age' ? interpAge(D.model, d) : d; if (a == null) continue;
+    out.push({ a, xf: (m.x - s.roi.x0) / Math.max(1, s.roi.x1 - s.roi.x0), color: c.color, abbr: ab.get(c.name), name: c.name, plain: !!c.plain, cls: c.id });
+  }
+  return out.sort((p, q) => p.a - q.a);
+}
+/** Ichnotaxa identified in each interval of the log (consecutive intervals with the same set are merged). */
+function idListOf(rows, marks) {
+  const groups = [];
+  for (const r of rows) {
+    const inR = marks.filter((m) => m.a >= r.a0 && m.a < r.a1), seen = new Map();
+    for (const m of inR) if (!seen.has(m.cls)) seen.set(m.cls, { name: m.name, abbr: m.abbr, color: m.color, plain: m.plain });
+    const items = [...seen.values()], key = items.map((k) => k.name).sort().join('|'), last = groups[groups.length - 1];
+    if (!items.length) continue;
+    if (last && last.key === key && Math.abs(last.a1 - r.a0) < 1e-9) last.a1 = r.a1; else groups.push({ a0: r.a0, a1: r.a1, items, key });
+  }
+  return groups;
+}
+/** Colour legend of the ichnotaxa shown (traced, predicted or marked). */
+function legendOf(classes, marks) {
+  const names = new Set(marks.map((m) => m.name));
+  return S.classes.filter((c) => c.id !== 'artifact' && (names.has(c.name) || classes.some((k) => k.name === c.name))).map((c) => ({ name: c.name, color: c.color }));
 }
 
 /* ── V31: Start/End markers of the analysed interval and the crop lines ── */
@@ -585,6 +643,7 @@ async function applyCrop() {
   await busy(async () => {
     const cut = (arr, ch) => arr.slice(y0 * W * ch, y1 * W * ch);
     s.orig = cut(s.orig, 4); s.labels = cut(s.labels, 1); s.exclude = cut(s.exclude, 1); s.h = H;
+    s.marks = (s.marks || []).filter((m) => m.y >= y0 && m.y < y1).map((m) => ({ ...m, y: m.y - y0 }));
     s.top = r.top; s.bottom = r.bottom; s.roi = r.roi;
     // keep the stored picture identical to what is analysed (re-encoded once; rotation and downsampling are now built in)
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -718,6 +777,7 @@ view.addEventListener('pointerdown', (e) => {
   if (tool === 'select') drag = { type: 'select', sx: e.clientX, sy: e.clientY, moved: false, p, add: e.shiftKey || e.ctrlKey || e.metaKey };
   else if ((tool === 'exclude' || tool === 'include') && (e.shiftKey || S.exShape === 'rect')) { boxDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drag = { type: 'exrect', mode: tool }; }
   else if (tool === 'roi') { roiDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drag = { type: 'roi' }; }
+  else if (tool === 'mark') { toggleMark(s, p, e.altKey); return; }
   else if (tool === 'lasso') { lassoPts = [[p.x, p.y]]; drag = { type: 'lasso', mode: e.altKey ? 'sub' : e.shiftKey ? 'add' : 'new' }; }
   else if (tool === 'wand') {
     if (!inImg(s, p)) return;
@@ -824,7 +884,7 @@ document.addEventListener('keydown', (e) => {
   const k = e.key, s = sec();
   if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
   if (k === ' ') { spaceDown = true; view.classList.add('pan'); e.preventDefault(); return; }
-  const tools = { v: 'select', w: 'wand', b: 'brush', l: 'lasso', e: 'erase', x: 'exclude', h: 'pan' };
+  const tools = { v: 'select', w: 'wand', b: 'brush', l: 'lasso', e: 'erase', x: 'exclude', h: 'pan', m: 'mark' };
   if (tools[k.toLowerCase()] && !e.ctrlKey && !e.metaKey) { setTool(tools[k.toLowerCase()]); return; }
   if (!s) return;
   if (/^[0-9]$/.test(k)) {
@@ -911,7 +971,7 @@ function renderClasses() {
       <kbd>${keyOf(c)}</kbd>
       <input type="color" value="${c.color}" aria-label="color">
       <input class="name" type="text" value="${esc(c.name)}" aria-label="name">
-      <span class="cnt">${t('cls.counts', { n: nObj[c.id] || 0, e: nEx[c.id] || 0 })}</span>
+      <span class="cnt">${idMode() ? t('id.count', { n: S.sections.reduce((a, x) => a + (x.marks || []).filter((m) => m.cls === c.id).length, 0) }) : t('cls.counts', { n: nObj[c.id] || 0, e: nEx[c.id] || 0 })}</span>
       ${c.fixed ? `<span title="${esc(t('gx.fixedCls'))}"></span>` : `<button class="del" title="${esc(t('gx.delCls'))}" aria-label="${esc(t('gx.delCls'))}">✕</button>`}
     </li>`).join('');
 }
@@ -1264,6 +1324,7 @@ for (const [id, dir] of [['rotL', -1], ['rotR', 1]]) $(id).addEventListener('cli
   const s = sec(); if (!s) return;
   busy(() => {
     s.orig = rotate90(s.orig, s.w, s.h, 4, dir); s.labels = rotate90(s.labels, s.w, s.h, 1, dir); s.exclude = rotate90(s.exclude, s.w, s.h, 1, dir);
+    s.marks = (s.marks || []).map((m) => (dir > 0 ? { ...m, x: s.h - 1 - m.y, y: m.x } : { ...m, x: m.y, y: s.w - 1 - m.x }));
     [s.w, s.h] = [s.h, s.w]; s.rot += dir; s.roi = { x0: 0, y0: 0, x1: s.w, y1: s.h };
     enhance(s);
     refreshObjects(s, new Set(s.objects.keys()), null);
@@ -1545,7 +1606,7 @@ function serSection(s, binary) {
     file: { name: s.file.name, type: s.file.type, ...(binary ? { bytes: s.file.bytes } : { b64: b64encode(s.file.bytes) }) },
     top: s.top, bottom: s.bottom, units: s.units, roi: s.roi, filters: s.filters, preset: s.preset, detect: s.detect, manual: s.manual,
     nextId: s.nextId, objects: [...s.objects.values()].map((o) => ({ id: o.id, cls: o.cls, src: o.src, ...(o.nt ? { nt: 1 } : {}) })),
-    labels: rleEncode(s.labels), exclude: rleEncode(s.exclude),
+    labels: rleEncode(s.labels), exclude: rleEncode(s.exclude), marks: s.marks || [],
   };
 }
 
@@ -1572,7 +1633,7 @@ async function loadSection(q) {
   const s = newSection({ name: q.name, file: { name: q.file.name, type: q.file.type, bytes }, w, h, orig: rgba, ds: q.ds || 1 });
   Object.assign(s, { id: q.id, rot: q.rot, top: q.top, bottom: q.bottom, units: q.units, roi: q.roi, filters: q.filters, preset: q.preset, detect: q.detect, manual: q.manual || [], nextId: q.nextId });
   enhance(s);
-  s.labels = rleDecode(q.labels, w * h, Int32Array); s.exclude = rleDecode(q.exclude, w * h, Uint8Array);
+  s.labels = rleDecode(q.labels, w * h, Int32Array); s.exclude = rleDecode(q.exclude, w * h, Uint8Array); s.marks = q.marks || [];
   for (const o of q.objects) s.objects.set(o.id, { id: o.id, cls: o.cls, src: o.src, nt: !!o.nt, pred: null, conf: 0, area: 0, bbox: null, stats: null, feat: null });
   refreshObjects(s, new Set(s.objects.keys()), null);
   return s;
@@ -2075,11 +2136,13 @@ function renderLog() {
   const image = lv.tracks.image ? { href: stripDataURL(D, from, to, lv.height, imgW * 2) } : null;
   const boundaries = D.secs.map((s) => ({ a: D.axis === 'age' ? interpAge(D.model, s.top * D.f(s)) : s.top * D.f(s), label: s.name })).filter((b) => b.a != null);
   const axisLabel = D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`;
+  const marks = compositeMarks(D), idm = idMode();
   const res = buildLogSVG({
-    title: S.name, subtitle: t('log.subtitle', { n: D.secs.length, b: S.settings.binPx, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
-    axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, imageWidth: imgW, records, boundaries,
+    title: S.name, subtitle: idm ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: S.settings.binPx, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
+    axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: idm ? { ...lv.tracks, total: false, species: false, BI: false, ii: false, manual: false } : lv.tracks, image, imageWidth: imgW, records, boundaries,
+    marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes : [], marks),
     ...geoOverlay(D.axis),
-    labels: { total: t('log.total'), species: t('log.species'), image: t('log.image') },
+    labels: { total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
     colWidths: (lv.colW ||= {}),
   });
   box.innerHTML = res.svg;
@@ -4529,7 +4592,9 @@ async function startWindow() {
 
 /* ───────────── figures: representative traces, interpreted core, logs and maps ───────────── */
 
-const defaultFig = () => ({ type: 'traces', title: '', caption: '', n: 4, pick: 'largest', tile: 150, img: 'enh', outline: true, picks: {}, coreH: 1400 });
+const defaultFig = () => ({ type: 'traces', title: '', caption: '', n: 4, pick: 'largest', tile: 150, img: 'enh', outline: true, picks: {}, coreH: 1400,
+  secFrom: null, secTo: null, panels: ['orig', 'enh', 'alpha', 'mask', 'arrows'], panelW: 150, panelH: 700, alpha: 0.5, minArea: 0, hideExcl: false, rangeH: 900, rangeTotal: true });
+const FIG_PANELS = ['orig', 'enh', 'fill', 'alpha', 'outline', 'mask', 'bw', 'arrows'];
 S.fig = defaultFig();
 let figSvgCache = '';
 
@@ -4614,9 +4679,103 @@ function coreSVG() {
   const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
   return buildLogSVG({
     title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`,
-    from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, imageWidth: 70, records: logRecords(D), boundaries, ...geoOverlay(D.axis),
-    labels: { total: t('log.total'), species: t('log.species'), image: t('log.image') },
+    from, to, height: H, rows: D.rows, classes, tracks: idMode() ? { ...lv.tracks, image: !!image, total: false, species: false, BI: false, ii: false, manual: false } : { ...lv.tracks, image: !!image }, image, imageWidth: 70, records: logRecords(D), boundaries, ...geoOverlay(D.axis),
+    marks: compositeMarks(D), idList: idMode() || compositeMarks(D).length ? idListOf(D.rows, compositeMarks(D)) : null, legendClasses: legendOf(classes, compositeMarks(D)),
+    labels: { total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
   }).svg;
+}
+
+/* ── V32: core-section figure (versions of the same interval side by side) and ichnotaxa range chart ── */
+/** Section picture in one of the figure styles, reduced to ≤ 900 px wide and cached per section. */
+function sectionModeCanvas(s, mode) {
+  const F = S.fig, key = `${s.logVer}|${mode}|${F.alpha}|${F.hideExcl}|${S.settings.predThr}|${S.settings.includePred}`;
+  s._fc ||= new Map(); if (s._fc.get(mode)?.key === key) return s._fc.get(mode);
+  const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
+  const ctx = c.getContext('2d'), im = ctx.createImageData(s.w, s.h), d = im.data, lab = s.labels, ex = s.exclude, W = s.w;
+  const eff = effClassArray(s), cols = S.classes.map((k) => hex(k.color)), photo = !['mask', 'bw'].includes(mode);
+  if (photo) d.set(mode === 'orig' ? s.orig : s.enh); else d.fill(255);
+  for (let i = 0; i < lab.length; i++) {
+    const j = i * 4;
+    if (ex[i] && (F.hideExcl || !photo)) { const v = photo ? 255 : 236; d[j] = d[j + 1] = d[j + 2] = v; continue; }
+    const id = lab[i]; if (!id) continue; const k = eff[id]; if (k < 0) continue; const col = cols[k];
+    if (mode === 'fill' || mode === 'mask') { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; }
+    else if (mode === 'bw') { d[j] = d[j + 1] = d[j + 2] = 20; }
+    else if (mode === 'alpha') { const a = F.alpha; d[j] += (col[0] - d[j]) * a; d[j + 1] += (col[1] - d[j + 1]) * a; d[j + 2] += (col[2] - d[j + 2]) * a; }
+    else if (mode === 'outline') { const x = i % W; if (x === 0 || x === W - 1 || lab[i - 1] !== id || lab[i + 1] !== id || lab[i - W] !== id || lab[i + W] !== id) { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; } }
+  }
+  ctx.putImageData(im, 0, 0);
+  const k = Math.min(1, 900 / s.w), out = document.createElement('canvas'); out.width = Math.max(1, Math.round(s.w * k)); out.height = Math.max(1, Math.round(s.h * k));
+  const o2 = out.getContext('2d'); o2.imageSmoothingQuality = 'high'; o2.drawImage(c, 0, 0, out.width, out.height); c.width = c.height = 0;
+  const r = { key, canvas: out, k: out.width / s.w }; s._fc.set(mode, r); return r;
+}
+/** One panel image for depths [from, to) (base units), H × W px. */
+function panelDataURL(D, from, to, H, W, mode) {
+  const Hc = Math.min(6000, Math.round(H * 2)), Wc = W * 2, c = document.createElement('canvas'); c.width = Wc; c.height = Hc;
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, Wc, Hc);
+  for (let r = 0; r < Hc; r++) {
+    const dd = from + ((r + 0.5) / Hc) * (to - from), s = D.secs.find((q) => dd >= q.top * D.f(q) && dd < q.bottom * D.f(q)); if (!s) continue;
+    const row = Math.floor(rowAtDepth(s, dd / D.f(s))); if (row < s.roi.y0 || row >= s.roi.y1) continue;
+    const pc = sectionModeCanvas(s, mode), k = pc.k;
+    ctx.drawImage(pc.canvas, s.roi.x0 * k, Math.min(pc.canvas.height - 1, Math.floor(row * k)), Math.max(1, (s.roi.x1 - s.roi.x0) * k), 1, 0, r, Wc, 1);
+  }
+  return ['mask', 'bw'].includes(mode) ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.92);
+}
+/** Identified traces in [from, to): classified objects (centroid) of at least minArea px and the marks. */
+function figTraces(D, from, to) {
+  const out = [], ab = clsAbbr(), F = S.fig;
+  for (const s of D.secs) {
+    const add = (x, y, cid) => {
+      const c = clsById(cid); if (!c || c.id === 'artifact' || y < s.roi.y0 || y >= s.roi.y1) return;
+      const dd = depthAtRow(s, y) * D.f(s); if (dd < from || dd >= to) return;
+      out.push({ d: dd, xf: (x - s.roi.x0) / Math.max(1, s.roi.x1 - s.roi.x0), color: c.color, abbr: ab.get(c.name), name: c.name, plain: !!c.plain });
+    };
+    for (const o of s.objects.values()) { const cid = effClassId(o); if (!cid || !o.stats || o.area < F.minArea) continue; add(o.stats.sx / o.stats.n, o.stats.sy / o.stats.n, cid); }
+    for (const m of s.marks || []) add(m.x, m.y, m.cls);
+  }
+  return out;
+}
+function sectionsSVG() {
+  if (!S.sections.length) return null;
+  const F = S.fig, D0 = compositeData(), D = { ...D0, axis: 'depth' };
+  const dMin = Math.min(...D.secs.map((s) => s.top * D.f(s))), dMax = Math.max(...D.secs.map((s) => s.bottom * D.f(s)));
+  let from = F.secFrom ?? dMin, to = F.secTo ?? Math.min(dMax, dMin + (dMax - dMin));
+  if (!(to > from)) { from = dMin; to = dMax; }
+  const panels = FIG_PANELS.filter((p) => F.panels.includes(p)); if (!panels.length) return null;
+  const W = F.panelW, H = F.panelH, gap = 16, x0 = 62, top = 44, tr = figTraces(D, from, to);
+  const legend = S.classes.filter((c) => c.id !== 'artifact' && (tr.some((q) => q.name === c.name) || S.sections.some((s) => [...s.objects.values()].some((o) => effClassId(o) === c.id))));
+  const ab = clsAbbr(), perRow = Math.max(1, Math.floor((x0 + panels.length * (W + gap)) / 190)), legH = legend.length ? Math.ceil(legend.length / perRow) * 16 + 18 : 0;
+  const Wt = Math.max(x0 + panels.length * (W + gap) + 8, 360), Ht = top + H + 30 + legH, y = (v) => +(top + ((v - from) / (to - from)) * H).toFixed(2);
+  const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${Wt}" height="${Ht}" viewBox="0 0 ${Wt} ${Ht}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10"><rect width="${Wt}" height="${Ht}" fill="#fff"/>`];
+  out.push(`<text transform="translate(14,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${esc(t('r.depth'))} (${esc(D.base)})</text>`);
+  out.push(`<line x1="${x0 - 8}" y1="${top}" x2="${x0 - 8}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
+  const span = to - from, raw = span / Math.max(3, Math.round(H / 80)), mag = 10 ** Math.floor(Math.log10(raw)), st = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw);
+  for (let v = Math.ceil(from / st) * st; v <= to + 1e-9; v += st) out.push(`<line x1="${x0 - 13}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 15}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${+v.toPrecision(6)}</text>`);
+  panels.forEach((p, i) => {
+    const X = x0 + i * (W + gap), href = panelDataURL(D, from, to, H, W, p);
+    out.push(`<text x="${X}" y="${top - 10}" font-weight="700" fill="#1c2422">${String.fromCharCode(97 + i)}</text><text x="${X + 12}" y="${top - 10}" fill="#1c2422">${esc(t('fig.p.' + p))}</text>`);
+    out.push(`<image x="${X}" y="${top}" width="${W}" height="${H}" preserveAspectRatio="none" href="${href}" xlink:href="${href}"/><rect x="${X}" y="${top}" width="${W}" height="${H}" fill="none" stroke="#5b6763" stroke-width="0.6"/>`);
+    if (p === 'arrows') for (const q of tr) {
+      const px = X + Math.min(1, Math.max(0, q.xf)) * W, py = y(q.d), lx = Math.min(X + W - 4, px + 20);
+      out.push(`<path d="M${(lx - 2).toFixed(1)} ${(py - 9).toFixed(1)}L${(px + 3).toFixed(1)} ${(py - 1.5).toFixed(1)}" stroke="#fff" stroke-width="3"/><path d="M${(lx - 2).toFixed(1)} ${(py - 9).toFixed(1)}L${(px + 3).toFixed(1)} ${(py - 1.5).toFixed(1)}" stroke="${q.color}" stroke-width="1.4"/><path d="M${px.toFixed(1)} ${py.toFixed(1)}l6.5 -1.2l-3.4 -4z" fill="${q.color}" stroke="#fff" stroke-width="0.5"/>`);
+      out.push(`<text x="${lx}" y="${(py - 10).toFixed(1)}" font-weight="700" font-size="10" fill="#1c2422" stroke="#fff" stroke-width="2.6" paint-order="stroke">${esc(q.abbr)}</text>`);
+    }
+  });
+  out.push(`<text x="${x0}" y="${top + H + 18}" fill="#5b6763">${esc(curCore()?.name || S.name)} · ${+from.toPrecision(6)}–${+to.toPrecision(6)} ${esc(D.base)}</text>`);
+  legend.forEach((c, i) => {
+    const lx = 8 + (i % perRow) * 190, ly = top + H + 30 + Math.floor(i / perRow) * 16;
+    out.push(`<rect x="${lx}" y="${ly}" width="10" height="10" fill="${c.color}"/><text x="${lx + 14}" y="${ly + 9}" fill="#1c2422"><tspan font-weight="700">${esc(ab.get(c.name))}</tspan> <tspan font-style="${c.plain ? 'normal' : 'italic'}">${esc(c.name)}</tspan></text>`);
+  });
+  out.push('</svg>');
+  return out.join('');
+}
+function rangeSVG() {
+  if (!S.sections.length) return null;
+  const F = S.fig, D = compositeData(), [from, to] = rowsRange(D.rows), marks = compositeMarks(D);
+  const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, index: i, plain: !!c.plain })).filter((c) => S.classes[c.index].id !== 'artifact');
+  const presence = [];
+  for (const r of D.rows) for (const m of marks) if (m.a >= r.a0 && m.a < r.a1) { const index = S.classes.findIndex((c) => c.id === m.cls); if (!presence.some((p) => p.index === index && p.a0 === r.a0)) presence.push({ a0: r.a0, a1: r.a1, index }); }
+  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(idMode() ? 'fig.rangeSubId' : 'fig.rangeSub'), axisLabel: D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`,
+    from, to, height: F.rangeH, rows: idMode() ? [] : D.rows, classes, presence, total: F.rangeTotal && !idMode(), totalLabel: t('log.total') }).svg;
 }
 
 /** Adds title and caption around any figure SVG. */
@@ -4647,6 +4806,20 @@ function renderFigPanel() {
       const [sid, oid] = cv.dataset.thumb.split(':'), s = S.sections.find((q) => q.id === sid), o = s?.objects.get(+oid); if (!o) continue;
       const tc = traceCanvas(s, o, 56, F.img, false); const ctx = cv.getContext('2d'); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 56, 56); ctx.drawImage(tc.canvas, (56 - tc.canvas.width) / 2, (56 - tc.canvas.height) / 2);
     }
+  } else if (F.type === 'sections') {
+    const D = compositeData(), base = D.base;
+    box.innerHTML = `<div class="grid2"><label class="f"><span>${t('fig.from')} (${esc(base)})</span><input type="number" id="figSecFrom" step="any" value="${F.secFrom ?? ''}" placeholder="${t('fig.auto2')}"></label>
+      <label class="f"><span>${t('fig.to')} (${esc(base)})</span><input type="number" id="figSecTo" step="any" value="${F.secTo ?? ''}" placeholder="${t('fig.auto2')}"></label>
+      <label class="f"><span>${t('fig.panelW')}</span><input type="number" id="figPanelW" min="60" max="600" step="10" value="${F.panelW}"></label>
+      <label class="f"><span>${t('fig.panelH')}</span><input type="number" id="figPanelH" min="200" max="4000" step="50" value="${F.panelH}"></label></div>
+      <div class="f"><span>${t('fig.panels')}</span><div class="chk2">${FIG_PANELS.map((p) => `<label class="chk"><input type="checkbox" data-panel="${p}" ${F.panels.includes(p) ? 'checked' : ''}><span>${t('fig.p.' + p)}</span></label>`).join('')}</div></div>
+      <label class="f"><span>${t('fig.alpha')}</span><input type="range" id="figAlpha" min="0.1" max="0.9" step="0.05" value="${F.alpha}"></label>
+      <label class="f" title="${esc(t('fig.minAreaTip'))}"><span>${t('fig.minArea')}</span><input type="number" id="figMinArea" min="0" step="10" value="${F.minArea}"></label>
+      <label class="chk"><input type="checkbox" id="figHideExcl" ${F.hideExcl ? 'checked' : ''}><span>${t('log.hideExcl')}</span></label>
+      <p class="note">${t('fig.secNote')}</p>`;
+  } else if (F.type === 'range') {
+    box.innerHTML = `<label class="f"><span>${t('log.height')}</span><input type="number" id="figRangeH" min="300" max="6000" step="50" value="${F.rangeH}"></label>
+      <label class="chk"><input type="checkbox" id="figRangeTotal" ${F.rangeTotal ? 'checked' : ''}><span>${t('log.total')}</span></label><p class="note">${t('fig.rangeNote')}</p>`;
   } else if (F.type === 'core') {
     box.innerHTML = `<label class="f"><span>${t('log.height')}</span><input type="number" id="figCoreH" min="400" max="6000" step="100" value="${F.coreH}"></label><p class="note">${t('fig.coreNote')}</p>`;
   } else if (F.type === 'geolog') {
@@ -4660,6 +4833,8 @@ function renderFigure() {
   try {
     if (F.type === 'traces') svg = tracesSVG();
     else if (F.type === 'core') svg = coreSVG();
+    else if (F.type === 'sections') svg = sectionsSVG();
+    else if (F.type === 'range') svg = rangeSVG();
     else if (F.type === 'log') { renderLog(); svg = lastLog?.svg || null; }
     else if (F.type === 'geolog') { if (geoRT.dirty) geoComputeSamples(); renderGeoLogs(); svg = $('geoLogSvg').querySelector('svg')?.outerHTML || null; }
     else { if (geoRT.dirty) geoComputeSamples(); svg = renderGeoMap() || null; }
@@ -4677,6 +4852,11 @@ $('figPanel').addEventListener('change', (e) => {
   else if (el.id === 'figTile') F.tile = Math.max(60, +el.value || 150); else if (el.id === 'figImg') { F.img = el.value; renderFigPanel(); }
   else if (el.id === 'figOutline') F.outline = el.checked; else if (el.id === 'figCoreH') F.coreH = Math.max(400, +el.value || 1400);
   else if (el.id === 'figGeoCore') S.geo.view.core = el.value;
+  else if (el.id === 'figSecFrom') F.secFrom = el.value === '' ? null : +el.value; else if (el.id === 'figSecTo') F.secTo = el.value === '' ? null : +el.value;
+  else if (el.id === 'figPanelW') F.panelW = Math.max(60, +el.value || 150); else if (el.id === 'figPanelH') F.panelH = Math.max(200, +el.value || 700);
+  else if (el.dataset.panel) { const set = new Set(F.panels); if (el.checked) set.add(el.dataset.panel); else set.delete(el.dataset.panel); F.panels = FIG_PANELS.filter((p) => set.has(p)); }
+  else if (el.id === 'figAlpha') F.alpha = +el.value; else if (el.id === 'figMinArea') F.minArea = Math.max(0, +el.value || 0); else if (el.id === 'figHideExcl') F.hideExcl = el.checked;
+  else if (el.id === 'figRangeH') F.rangeH = Math.max(300, +el.value || 900); else if (el.id === 'figRangeTotal') F.rangeTotal = el.checked;
   else if (el.dataset.key) {
     const cls = el.closest('.thumbs').dataset.cls, set = new Set(F.picks[cls] || []);
     if (el.checked) set.add(el.dataset.key); else set.delete(el.dataset.key);
@@ -4721,7 +4901,7 @@ async function busy(fn) {
 
 function syncSettingsForm() {
   const st = S.settings;
-  $('inclPred').checked = st.includePred; $('countCand').checked = st.countCandidates;
+  $('inclPred').checked = st.includePred; $('countCand').checked = st.countCandidates; $('idMode').checked = !!st.idMode;
   $('predThr').value = st.predThr; $('thrOut').textContent = Math.round(st.predThr * 100) + '%';
   $('novelty').value = st.novelty; $('novOut').textContent = '×' + st.novelty;
   $('maxMP').value = st.maxMP;

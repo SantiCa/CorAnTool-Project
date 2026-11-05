@@ -7,7 +7,7 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
 (reglas) y `docs/HISTORIAL_VERSIONES.md` (qué se hizo en cada entrega).
 
 ## Estado
-- Última entrega: **V31** (`DELIVERY` en `app/js/app.js`; aplicación 2.1 y programa de escritorio).
+- Última entrega: **V32** (`DELIVERY` en `app/js/app.js`; aplicación 2.2 y programa de escritorio).
 - Pruebas: `npm test` (44, Node) y `pytest` (9, Python). Deben pasar antes de cada commit.
 - Rama de trabajo: `master`. Remoto: `https://github.com/SantiCa/IchAnTool-Project.git` (público).
 

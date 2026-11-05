@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTable, guessAxisColumn, niceTicks, invertModel, toAxis, compositeRows, buildLogSVG, windowCSV, wrapTitle } from '../../app/js/log.js';
+import { parseTable, guessAxisColumn, niceTicks, invertModel, toAxis, compositeRows, buildLogSVG, windowCSV, wrapTitle, abbrevs, buildRangeSVG } from '../../app/js/log.js';
 import { downsampleRGBA } from '../../app/js/imageproc.js';
 
 test('parseTable: comma, semicolon with decimal comma, whitespace, comments', () => {
@@ -52,4 +52,18 @@ test('track names wrap to two lines and column widths can be set per track (V25)
   assert.equal(r2.layout.find((c) => c.id === 'rec:A').w, 200);
   assert.equal(r2.layout.find((c) => c.id === 'rec:B b b').w, 90);
   assert.ok(r2.width > r1.width);
+});
+
+test('identification mode: marks, identified-ichnotaxa column, legend; unique abbreviations; range chart (V32)', () => {
+  const ab = abbrevs(['Chondrites', 'Planolites', 'Phycosiphon', 'Palaeophycus', 'Chondrites b']);
+  assert.equal(ab.get('Chondrites'), 'Ch'); assert.equal(ab.get('Planolites'), 'Pl'); assert.equal(new Set(ab.values()).size, 5);
+  const base = { from: 0, to: 10, height: 200, rows: [], classes: [], tracks: {}, records: [] };
+  const r = buildLogSVG({ ...base, marks: [{ a: 2, xf: 0.5, color: '#ff0000', abbr: 'Ch' }], idList: [{ a0: 0, a1: 5, items: [{ name: 'Chondrites', abbr: 'Ch', color: '#ff0000' }] }],
+    legendClasses: [{ name: 'Chondrites', color: '#ff0000' }], labels: { idList: 'Identified' } });
+  assert.ok(r.layout.some((c) => c.key === 'marks') && r.layout.some((c) => c.key === 'idlist'));
+  assert.match(r.svg, /fill="#ff0000" stroke="#ffffff"/);   // triangle
+  assert.match(r.svg, /Chondrites<\/text>/);                // legend entry
+  const g = buildRangeSVG({ from: 0, to: 10, height: 100, rows: [{ a0: 0, a1: 5, classPct: [10, 0] }, { a0: 5, a1: 10, classPct: [20, 5] }],
+    classes: [{ name: 'A', color: '#111111', index: 0 }, { name: 'B', color: '#222222', index: 1 }, { name: 'C', color: '#333333', index: 2 }], presence: [] });
+  assert.match(g.svg, />A<\/text>/); assert.match(g.svg, />B<\/text>/); assert.doesNotMatch(g.svg, />C<\/text>/);   // absent taxa have no column
 });

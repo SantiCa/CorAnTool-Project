@@ -49,6 +49,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V32 | 05-11-2026 | Aplicación 2.2 | Modo identificación (marcas de trazas sin cuantificar, triángulos y lista de icnotaxones por tramo en la columna), leyenda de icnotaxones en columna y figuras, figura de secciones lado a lado (original, tratada, trazas, flechas…) y gráfico de distribución de icnotaxones |
 
 ---
 
@@ -620,6 +621,34 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V32 — Modo identificación, leyendas y figuras de secciones (05-11-2026)
+
+**Qué se hizo.** Petición de Santiago: un modo para sondeos donde no se puede cuantificar la bioturbación (solo identificar
+trazas), la leyenda de icnotaxones con colores en todas las figuras y la exportación de secciones del sondeo con varias
+versiones lado a lado, como en las publicaciones; se revisaron figuras de artículos de icnología de sondeos (tratamiento de
+imagen de Dorador y Rodríguez-Tovar; IODP U1385) para elegir los tipos.
+
+**Cambios.**
+- Sección: casilla **Modo identificación** y herramienta **Marcar** (M). En la lista de icnotaxones se cuentan las marcas.
+- Columna en modo identificación: sin porcentajes ni índices; triángulos de color sobre la imagen en la posición de cada
+  traza y columna «Icnotaxones identificados» por tramo; leyenda de icnotaxones al pie (también en modo normal).
+- Figuras nuevas: **Secciones del sondeo** (original, tratada, trazas coloreadas, con transparencia, contornos, solo trazas,
+  en negro, flechas con abreviaturas; tramo, tamaño de panel, opacidad y tamaño mínimo para flechas elegibles; leyenda con
+  abreviaturas) y **Distribución de icnotaxones** (columnas por icnotaxón con barras de abundancia relativa o presencia).
+- Flujo de GitHub: también se compila al publicar una release desde la web.
+
+**Por qué.** Muchos tramos solo permiten reconocer trazas; las figuras de publicación necesitan comparar el mismo tramo en
+bruto, tratado e interpretado, con leyenda.
+
+**Comprobación.** `npm test` 45 (nueva: marcas, columna de identificados, leyenda, abreviaturas únicas y gráfico de
+distribución). Navegador (proyecto de entrenamiento): figura de secciones 20–60 cm con cinco paneles, flechas y leyenda;
+distribución de icnotaxones; cuatro marcas en modo identificación y columna con triángulos y lista; sin errores de la app.
+
+**Pendiente o problemas conocidos.** Flechas apiñadas cuando hay muchas trazas pequeñas (usar el tamaño mínimo). La figura de
+secciones trabaja en profundidad aunque la columna esté en edad.
 
 ---
 
