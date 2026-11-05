@@ -4,7 +4,7 @@ Owner: Santiago Casanova-Arenillas. Communicate in Spanish.
 
 ## Documentation is part of every change
 Every delivery that changes code, algorithms, defaults or files must, in the same commit:
-1. Get the next delivery number **V0.<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V0.4) and mention it in the reply. Since 05-11-2026 the numbering is V0.<n> (V33 = V0.1); V1 is reserved for when Santiago declares the program fully functional. Below, `V0.<n>` means this number.
+1. Get the next delivery number **V0.<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V0.5) and mention it in the reply. Since 05-11-2026 the numbering is V0.<n> (V33 = V0.1); V1 is reserved for when Santiago declares the program fully functional. Below, `V0.<n>` means this number.
 2. Add a `V0.<n>` section to `docs/HISTORIAL_VERSIONES.md` (Qué se hizo / Cambios / Por qué / Comprobación / Pendiente) and a row in its summary table.
 3. Update `docs/DOCUMENTACION_TECNICA.md` if any algorithm, formula, default value, file format or validation result changes. Formulas there must match the code exactly.
 4. Update `publications/METODOS_Y_DEFENSA.md` if the change affects what a paper can claim.

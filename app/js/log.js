@@ -116,8 +116,19 @@ export function wrapTitle(text, w) {
  *       idList:[{a0, a1, items:[{name, abbr, color, plain}]}] (identified ichnotaxa per interval, column at the right),
  *       legendClasses:[{name, color}] (ichnotaxa legend, always drawn when given), bandLegend, shade:[{a0,a1,color}] (class colours behind the record curves) }
  */
+/**
+ * V0.5: style of the column and its figure. yFactor converts axis values to the displayed unit (e.g. m → cm: 100);
+ * yStep (displayed units) or yDiv (approximate number of divisions) set the vertical ticks; pctDiv the divisions of
+ * the 0–100 % axes; totalStyle: 'barsline' | 'bars' | 'line' | 'points'; frame/grid/boundaries on or off; custom
+ * titles for the bioturbation and ichnotaxa columns; fontSize and whether title/subtitle are drawn.
+ */
+export const LOG_STYLE = { yFactor: 1, yStep: null, yDiv: null, pctDiv: 4, totalStyle: 'barsline', barColor: '#e7c9a5', lineColor: '#a85f1c',
+  frame: true, grid: true, boundaries: true, totalTitle: '', speciesTitle: '', fontSize: 10, showTitle: true };
 export function buildLogSVG(o) {
+  const st = { ...LOG_STYLE, ...(o.style || {}) };
   const L = { total: 'Bioturbation (%)', species: 'Ichnotaxa (%)', image: 'Core', ...(o.labels || {}) };
+  if (st.totalTitle) L.total = st.totalTitle;
+  if (st.speciesTitle) L.species = st.speciesTitle;
   const H = o.height, top = 84, from = o.from, to = o.to;
   const span = to - from || 1;
   const y = (v) => f2(top + ((v - from) / span) * H);
@@ -143,7 +154,7 @@ export function buildLogSVG(o) {
   const legendH = legendItems.length ? Math.ceil(legendItems.length / perRow) * 16 + 14 : 0;
   const Htot = top + H + 22 + legendH;
   const out = [];
-  out.push(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`);
+  out.push(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="${st.fontSize}">`);
   out.push(`<rect x="0" y="0" width="${W}" height="${Htot}" fill="#ffffff"/>`);
   out.push(`<defs><clipPath id="plot"><rect x="0" y="${top}" width="${W}" height="${H}"/></clipPath><pattern id="nodata" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f2f2f0"/><line x1="0" y1="0" x2="0" y2="6" stroke="#b9bdbb" stroke-width="1.6"/></pattern></defs>`);
   // V0.3: intervals without data (excluded or too few valid pixels) are drawn as NO DATA, never as 0
@@ -153,11 +164,15 @@ export function buildLogSVG(o) {
     const g = gaps[gaps.length - 1];
     if (g && Math.abs(r.a0 - g.a1) < 1e-9) g.a1 = r.a1; else gaps.push({ a0: r.a0, a1: r.a1 });
   }
-  out.push(`<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`);
-  if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
+  if (st.showTitle) {
+    out.push(`<text x="8" y="16" font-size="${st.fontSize + 3}" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`);
+    if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
+  }
 
-  const yTicks = niceTicks(from, to, Math.max(3, Math.round(H / 70)));
-  const frame = (c) => out.push(`<rect x="${c.x}" y="${top}" width="${c.w}" height="${H}" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`);
+  const fy = +st.yFactor || 1, yTicks = st.yStep > 0
+    ? (() => { const a = Math.ceil((from * fy) / st.yStep - 1e-9), b = Math.floor((to * fy) / st.yStep + 1e-9), out2 = []; for (let k = a; k <= b && out2.length < 400; k++) out2.push((k * st.yStep) / fy); return out2; })()
+    : niceTicks(from * fy, to * fy, st.yDiv > 0 ? st.yDiv : Math.max(3, Math.round(H / 70))).map((v) => v / fy);
+  const frame = (c) => { if (st.frame) out.push(`<rect x="${c.x}" y="${top}" width="${c.w}" height="${H}" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`); };
   // track names: up to two lines that fit the column width (V25); the full name is in the returned layout
   const title = (c) => {
     const ls = wrapTitle(c.title, c.w);
@@ -167,7 +182,7 @@ export function buildLogSVG(o) {
     const sx = (v) => f2(c.x + ((reverse ? hi - v : v - lo) / (hi - lo || 1)) * c.w);
     for (const tv of ticks || niceTicks(lo, hi, 3)) {
       const xx = sx(tv);
-      out.push(`<line x1="${xx}" y1="${top}" x2="${xx}" y2="${top + H}" stroke="#e3e8e6" stroke-width="0.6"/>`);
+      if (st.grid) out.push(`<line x1="${xx}" y1="${top}" x2="${xx}" y2="${top + H}" stroke="#e3e8e6" stroke-width="0.6"/>`);
       out.push(`<line x1="${xx}" y1="${top - 4}" x2="${xx}" y2="${top}" stroke="#5b6763" stroke-width="0.6"/>`);
       out.push(`<text x="${xx}" y="${top - 7}" text-anchor="middle" fill="#5b6763" font-size="9">${lbl(tv)}</text>`);
     }
@@ -180,7 +195,7 @@ export function buildLogSVG(o) {
       for (const v of yTicks) {
         const yy = y(v);
         out.push(`<line x1="${c.x + c.w - 6}" y1="${yy}" x2="${c.x + c.w}" y2="${yy}" stroke="#1c2422" stroke-width="0.8"/>`);
-        out.push(`<text x="${c.x + c.w - 9}" y="${yy + 3}" text-anchor="end" fill="#1c2422">${lbl(v)}</text>`);
+        out.push(`<text x="${c.x + c.w - 9}" y="${yy + 3}" text-anchor="end" fill="#1c2422">${lbl(v * fy)}</text>`);
       }
       out.push(`<line x1="${c.x + c.w}" y1="${top}" x2="${c.x + c.w}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
       continue;
@@ -196,16 +211,18 @@ export function buildLogSVG(o) {
       out.push(`<image x="${c.x}" y="${top}" width="${c.w}" height="${H}" preserveAspectRatio="none" href="${o.image.href}" xlink:href="${o.image.href}"/>`);
       for (const m of o.marks || []) if (m.a >= from && m.a <= to) out.push(markTri(c.x + Math.min(1, Math.max(0, m.xf)) * c.w, y(m.a), m.color));
     } else if (c.key === 'total') {
-      const sx = xScale(c, 0, 100, false, [0, 25, 50, 75, 100]);
+      const nd = Math.max(1, Math.min(20, Math.round(st.pctDiv) || 4)), sx = xScale(c, 0, 100, false, Array.from({ length: nd + 1 }, (_, k) => +((100 * k) / nd).toFixed(4)));
+      const bars = st.totalStyle === 'barsline' || st.totalStyle === 'bars', line = st.totalStyle === 'barsline' || st.totalStyle === 'line';
       let d = '', prev = null;
       for (const r of rows) {
         if (r.pct == null) { prev = null; continue; }
-        out.push(`<rect x="${c.x}" y="${y(r.a0)}" width="${f2(sx(r.pct) - c.x)}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="#e7c9a5"/>`);
+        if (bars) out.push(`<rect x="${c.x}" y="${y(r.a0)}" width="${f2(sx(r.pct) - c.x)}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${st.barColor}"/>`);
+        if (st.totalStyle === 'points') out.push(`<circle cx="${sx(r.pct)}" cy="${f2((y(r.a0) + y(r.a1)) / 2)}" r="2.2" fill="${st.lineColor}"/>`);
         d += prev && Math.abs(r.a0 - prev.a1) < 1e-9 ? `L${sx(r.pct)} ${y(r.a0)}` : `M${sx(r.pct)} ${y(r.a0)}`;
         d += `L${sx(r.pct)} ${y(r.a1)}`;
         prev = r;
       }
-      if (d) out.push(`<path d="${d}" fill="none" stroke="#a85f1c" stroke-width="1.2"/>`);
+      if (d && line) out.push(`<path d="${d}" fill="none" stroke="${st.lineColor}" stroke-width="1.2"/>`);
     } else if (c.key === 'species') {
       const max = Math.max(1, ...rows.map((r) => presentClasses.reduce((s, k) => s + (r.classPct[k.index] || 0), 0)));
       const [, hi] = niceRange(0, max);
@@ -262,7 +279,7 @@ export function buildLogSVG(o) {
     out.push('</g>');
     frame(c);
   }
-  for (const b of o.boundaries || []) {
+  for (const b of st.boundaries ? o.boundaries || [] : []) {
     if (b.a <= from || b.a >= to) continue;
     out.push(`<line x1="${cols[0].x + cols[0].w}" y1="${y(b.a)}" x2="${W - 14}" y2="${y(b.a)}" stroke="#5b6763" stroke-width="0.6" stroke-dasharray="3 3"/>`);
     if (b.label) out.push(`<text x="${W - 16}" y="${y(b.a) - 2}" text-anchor="end" fill="#5b6763" font-size="8">${escXml(b.label)}</text>`);

@@ -1,7 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { BI, II, UNIT_TO_CM, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG } from './log.js';
+import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -15,7 +15,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.4';
+const DELIVERY = 'V0.5';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2447,10 +2447,10 @@ function renderLog() {
   const records = logRecords(D), imgW = 64;
   const image = lv.tracks.image ? { href: stripDataURL(D, from, to, lv.height, imgW * 2) } : null;
   const boundaries = D.secs.map((s) => ({ a: D.axis === 'age' ? interpAge(D.model, s.top * D.f(s)) : s.top * D.f(s), label: s.name })).filter((b) => b.a != null);
-  const axisLabel = D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`;
+  const { style, label: axisLabel } = logStyleOf(D);
   const marks = compositeMarks(D), idm = idMode();
   const res = buildLogSVG({
-    title: S.name, subtitle: idm && !['total', 'species', 'BI', 'ii'].some((k) => lv.tracks[k]) ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
+    style, title: S.name, subtitle: idm && !['total', 'species', 'BI', 'ii'].some((k) => lv.tracks[k]) ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
     axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, imageWidth: imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
     marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes : [], marks),
     ...geoOverlay(D.axis),
@@ -2470,7 +2470,40 @@ function renderLog() {
     } });
 }
 
+/* ── V0.5: style of the column and its figure (per core, shared by the column view and the column figure) ── */
+const AGE_TO_KA = { a: 0.001, ka: 1, Ma: 1000 };
+function logStyleOf(D) {
+  const st = { ...LOG_STYLE, ...(S.logView.style || {}) };
+  let unit, f = 1;
+  if (D.axis === 'age') { unit = st.yUnitAge && AGE_TO_KA[st.yUnitAge] && AGE_TO_KA[S.age.units] ? st.yUnitAge : S.age.units; f = AGE_TO_KA[S.age.units] / (AGE_TO_KA[unit] || AGE_TO_KA[S.age.units] || 1) || 1; }
+  else { unit = st.yUnit && UNIT_TO_CM[st.yUnit] ? st.yUnit : D.base; f = UNIT_TO_CM[D.base] / UNIT_TO_CM[unit]; }
+  return { style: { ...st, yFactor: f }, label: `${t(D.axis === 'age' ? 'r.age' : 'r.depth')} (${unit})` };
+}
+function styleFormHTML() {
+  const st = { ...LOG_STYLE, ...(S.logView.style || {}) }, num = (k, lab, step = 'any', min = 0) => `<label class="f"><span>${t(lab)}</span><input type="number" data-st="${k}" step="${step}" min="${min}" value="${st[k] ?? ''}" placeholder="${t('fig.auto2')}"></label>`;
+  const chk = (k, lab) => `<label class="chk"><input type="checkbox" data-st="${k}" ${st[k] ? 'checked' : ''}><span>${t(lab)}</span></label>`;
+  const sel = (k, lab, opts) => `<label class="f"><span>${t(lab)}</span><select data-st="${k}">${opts.map(([v, l]) => `<option value="${v}" ${String(st[k] ?? '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  return `<div class="grid2">
+    ${sel('yUnit', 'st.yUnit', [['', t('st.native')], ['m', 'm'], ['cm', 'cm'], ['mm', 'mm']])}
+    ${sel('yUnitAge', 'st.yUnitAge', [['', t('st.native')], ['a', 'a'], ['ka', 'ka'], ['Ma', 'Ma']])}
+    ${num('yStep', 'st.yStep')}${num('yDiv', 'st.yDiv', 1, 1)}
+    ${num('pctDiv', 'st.pctDiv', 1, 1)}${num('fontSize', 'st.fontSize', 1, 6)}
+    ${sel('totalStyle', 'st.totalStyle', ['barsline', 'bars', 'line', 'points'].map((v) => [v, t('st.ts.' + v)]))}
+    <label class="f"><span>${t('st.colors')}</span><span class="row"><input type="color" data-st="barColor" value="${st.barColor}"><input type="color" data-st="lineColor" value="${st.lineColor}"></span></label>
+    <label class="f"><span>${t('st.totalTitle')}</span><input type="text" data-st="totalTitle" value="${esc(st.totalTitle || '')}" placeholder="${esc(t('log.total'))}"></label>
+    <label class="f"><span>${t('st.speciesTitle')}</span><input type="text" data-st="speciesTitle" value="${esc(st.speciesTitle || '')}" placeholder="${esc(t('log.species'))}"></label></div>
+    <div class="chk2">${chk('frame', 'st.frame')}${chk('grid', 'st.grid')}${chk('boundaries', 'st.boundaries')}${chk('showTitle', 'st.showTitle')}</div>`;
+}
+function onStyleInput(e) {
+  const el = e.target, k = el.dataset.st; if (!k) return;
+  const lv = S.logView; lv.style ||= {};
+  if (el.type === 'checkbox') lv.style[k] = el.checked;
+  else if (el.type === 'number') lv.style[k] = el.value === '' ? null : Math.max(0, +el.value);
+  else lv.style[k] = el.value;
+  markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure();
+}
 function renderLogPanel() {
+  if ($('logStyle')) $('logStyle').innerHTML = styleFormHTML();
   const lv = S.logView;
   $('logAxis').value = lv.axis === 'age' && S.age.model ? 'age' : 'depth';
   $('logHeight').value = lv.height; $('logHeightOut').textContent = lv.height + ' px';
@@ -2478,7 +2511,9 @@ function renderLogPanel() {
   document.querySelectorAll('#logTracks [data-track]').forEach((el) => (el.checked = !!lv.tracks[el.dataset.track]));
 }
 
+$('logStyle').addEventListener('change', onStyleInput);   // V0.5
 $('logPanel').addEventListener('change', (e) => {
+  if (e.target.closest('#logStyle')) return;
   const el = e.target, lv = S.logView;
   if (el.dataset.track) lv.tracks[el.dataset.track] = el.checked;
   else if (el.id === 'logAxis') { lv.axis = el.value; lv.from = lv.to = null; }
@@ -4997,8 +5032,9 @@ function coreSVG() {
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, index: i, counts: c.counts })).filter((c) => c.counts);
   const image = S.sections.length && lv.tracks.image ? { href: stripDataURL(D, from, to, H, Math.max(64, imgW * 2)) } : null;
   const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
+  const LS = logStyleOf(D);
   return buildLogSVG({
-    title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`,
+    style: LS.style, title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: LS.label,
     from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
     marks: compositeMarks(D), idList: idMode() || compositeMarks(D).length ? idListOf(D.rows, compositeMarks(D)) : null, legendClasses: legendOf(classes, compositeMarks(D)),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
@@ -5123,6 +5159,25 @@ function coreFigSize(D) {
   }
   return { W, H, r };
 }
+/**
+ * V0.5: marker of an identified trace at (px, py) in the trace colour: 'arrow' (from the upper right), 'triDown'
+ * (inverted triangle above the trace), 'tri', 'circle', 'square', 'star', 'cross'. legend = small version centred at (px, py).
+ */
+function figSymbol(kind, px, py, color, xMax = 1e9, legend = false) {
+  const f = (v) => v.toFixed(1), c = color, halo = 'stroke="#fff" stroke-width="0.8"';
+  if (kind === 'arrow') {
+    if (legend) return `<path d="M${f(px + 5)} ${f(py - 6)}L${f(px - 3)} ${f(py + 1)}" stroke="${c}" stroke-width="1.6"/><path d="M${f(px - 4)} ${f(py + 2)}l5 -1l-2.6 -3z" fill="${c}"/>`;
+    const lx = Math.min(xMax, px + 20);
+    return `<path d="M${f(lx - 2)} ${f(py - 9)}L${f(px + 3)} ${f(py - 1.5)}" stroke="#fff" stroke-width="3"/><path d="M${f(lx - 2)} ${f(py - 9)}L${f(px + 3)} ${f(py - 1.5)}" stroke="${c}" stroke-width="1.4"/><path d="M${f(px)} ${f(py)}l6.5 -1.2l-3.4 -4z" fill="${c}" stroke="#fff" stroke-width="0.5"/>`;
+  }
+  const s = legend ? 4.5 : 5.5, cy = legend ? py - 4 : kind === 'triDown' ? py - s - 3 : py;
+  if (kind === 'triDown') return `<path d="M${f(px - s)} ${f(cy - s)}H${f(px + s)}L${f(px)} ${f(cy + s)}z" fill="${c}" ${halo}/>`;
+  if (kind === 'tri') return `<path d="M${f(px - s)} ${f(cy + s)}H${f(px + s)}L${f(px)} ${f(cy - s)}z" fill="${c}" ${halo}/>`;
+  if (kind === 'square') return `<rect x="${f(px - s * 0.8)}" y="${f(cy - s * 0.8)}" width="${f(s * 1.6)}" height="${f(s * 1.6)}" fill="${c}" ${halo}/>`;
+  if (kind === 'cross') return `<path d="M${f(px - s)} ${f(cy - s)}L${f(px + s)} ${f(cy + s)}M${f(px + s)} ${f(cy - s)}L${f(px - s)} ${f(cy + s)}" stroke="#fff" stroke-width="3.4"/><path d="M${f(px - s)} ${f(cy - s)}L${f(px + s)} ${f(cy + s)}M${f(px + s)} ${f(cy - s)}L${f(px - s)} ${f(cy + s)}" stroke="${c}" stroke-width="1.8"/>`;
+  if (kind === 'star') { const p = Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? s * 0.45 : s * 1.1, a = (Math.PI / 5) * i - Math.PI / 2; return `${f(px + r * Math.cos(a))} ${f(cy + r * Math.sin(a))}`; }); return `<path d="M${p.join('L')}z" fill="${c}" ${halo}/>`; }
+  return `<circle cx="${f(px)}" cy="${f(cy)}" r="${f(s * 0.8)}" fill="${c}" ${halo}/>`;
+}
 function sectionsSVG() {
   if (!S.sections.length) return null;
   const F = S.fig, D0 = compositeData(), D = { ...D0, axis: 'depth' };
@@ -5141,16 +5196,29 @@ function sectionsSVG() {
     const X = x0 + i * (W + gap), href = panelDataURL(D, from, to, H, W, p);
     out.push(`<text x="${X}" y="${top - 10}" font-weight="700" fill="#1c2422">${String.fromCharCode(97 + i)}</text><text x="${X + 12}" y="${top - 10}" fill="#1c2422">${esc(t('fig.p.' + p))}</text>`);
     out.push(`<image x="${X}" y="${top}" width="${W}" height="${H}" preserveAspectRatio="none" href="${href}" xlink:href="${href}"/><rect x="${X}" y="${top}" width="${W}" height="${H}" fill="none" stroke="#5b6763" stroke-width="0.6"/>`);
-    if (p === 'arrows') for (const q of tr) {
-      const px = X + Math.min(1, Math.max(0, q.xf)) * W, py = y(q.d), lx = Math.min(X + W - 4, px + 20);
-      out.push(`<path d="M${(lx - 2).toFixed(1)} ${(py - 9).toFixed(1)}L${(px + 3).toFixed(1)} ${(py - 1.5).toFixed(1)}" stroke="#fff" stroke-width="3"/><path d="M${(lx - 2).toFixed(1)} ${(py - 9).toFixed(1)}L${(px + 3).toFixed(1)} ${(py - 1.5).toFixed(1)}" stroke="${q.color}" stroke-width="1.4"/><path d="M${px.toFixed(1)} ${py.toFixed(1)}l6.5 -1.2l-3.4 -4z" fill="${q.color}" stroke="#fff" stroke-width="0.5"/>`);
-      out.push(`<text x="${lx}" y="${(py - 10).toFixed(1)}" font-weight="700" font-size="10" fill="#1c2422" stroke="#fff" stroke-width="2.6" paint-order="stroke">${esc(q.abbr)}</text>`);
+    if (p === 'arrows') {   // V0.5: marker style and what to do with labels that touch
+      const ms = F.markStyle || 'arrowLabel', ov = F.overlap || 'keep', labels = ms === 'arrowLabel';
+      const pts = tr.map((q) => ({ q, px: X + Math.min(1, Math.max(0, q.xf)) * W, py: y(q.d) })).sort((a, b) => a.py - b.py);
+      for (const t0 of pts) out.push(figSymbol(ms === 'arrowLabel' ? 'arrow' : ms, t0.px, t0.py, t0.q.color, X + W - 4));
+      if (labels) {
+        const lab = pts.map((t0) => ({ ...t0, lx: Math.min(X + W - 4, t0.px + 20), ly: t0.py - 10, txt: t0.q.abbr }));
+        const out2 = [];
+        for (const l of lab) {
+          const prev = out2[out2.length - 1], near = prev && l.ly - prev.ly < 11;
+          if (!near || ov === 'keep') out2.push(l);
+          else if (ov === 'shift') { l.ly = prev.ly + 11; out2.push(l); }
+          else if (ov === 'merge') { if (!prev.txt.split(', ').includes(l.txt)) prev.txt += ', ' + l.txt; }
+          /* 'hide': the arrow stays, its label is left out */
+        }
+        for (const l of out2) out.push(`<text x="${l.lx}" y="${l.ly.toFixed(1)}" font-weight="700" font-size="10" fill="#1c2422" stroke="#fff" stroke-width="2.6" paint-order="stroke">${esc(l.txt)}</text>`);
+      }
     }
   });
   out.push(`<text x="${x0}" y="${top + H + 18}" fill="#5b6763">${esc(curCore()?.name || S.name)} · ${+from.toPrecision(6)}–${+to.toPrecision(6)} ${esc(D.base)}</text>`);
   legend.forEach((c, i) => {
     const lx = 8 + (i % perRow) * 190, ly = top + H + 30 + Math.floor(i / perRow) * 16;
-    out.push(`<rect x="${lx}" y="${ly}" width="10" height="10" fill="${c.color}"/><text x="${lx + 14}" y="${ly + 9}" fill="#1c2422"><tspan font-weight="700">${esc(ab.get(c.name))}</tspan> <tspan font-style="${c.plain ? 'normal' : 'italic'}">${esc(c.name)}</tspan></text>`);
+    const symOnly = F.panels.includes('arrows') && (F.markStyle || 'arrowLabel') !== 'arrowLabel';
+    out.push(`${symOnly ? figSymbol(F.markStyle, lx + 5, ly + 9, c.color, 1e9, true) : `<rect x="${lx}" y="${ly}" width="10" height="10" fill="${c.color}"/>`}<text x="${lx + 14}" y="${ly + 9}" fill="#1c2422">${symOnly ? '' : `<tspan font-weight="700">${esc(ab.get(c.name))}</tspan> `}<tspan font-style="${c.plain ? 'normal' : 'italic'}">${esc(c.name)}</tspan></text>`);
   });
   out.push('</svg>');
   return out.join('');
@@ -5213,6 +5281,8 @@ function renderFigPanel() {
       <label class="f"><span>${t('fig.panelH')}</span><input type="number" id="figPanelH" min="50" max="4000" step="50" value="${F.panelH}"></label></div>
       <label class="chk"><input type="checkbox" id="figKeepRatio" ${F.keepRatio ? 'checked' : ''}><span>${t('fig.keepRatio')}</span></label><p class="note" id="figRatioNote"></p>
       <div class="f"><span>${t('fig.panels')}</span><div class="chk2">${FIG_PANELS.map((p) => `<label class="chk"><input type="checkbox" data-panel="${p}" ${F.panels.includes(p) ? 'checked' : ''}><span>${t('fig.p.' + p)}</span></label>`).join('')}</div></div>
+      <div class="grid2"><label class="f"><span>${t('fig.markStyle')}</span><select id="figMarkStyle">${['arrowLabel', 'arrow', 'triDown', 'tri', 'circle', 'square', 'star', 'cross'].map((v) => `<option value="${v}" ${(F.markStyle || 'arrowLabel') === v ? 'selected' : ''}>${t('fig.ms.' + v)}</option>`).join('')}</select></label>
+      <label class="f"><span>${t('fig.overlap')}</span><select id="figOverlap" ${(F.markStyle || 'arrowLabel') !== 'arrowLabel' ? 'disabled' : ''}>${['keep', 'shift', 'merge', 'hide'].map((v) => `<option value="${v}" ${(F.overlap || 'keep') === v ? 'selected' : ''}>${t('fig.ov.' + v)}</option>`).join('')}</select></label></div>
       <label class="f"><span>${t('fig.alpha')}</span><input type="range" id="figAlpha" min="0.1" max="0.9" step="0.05" value="${F.alpha}"></label>
       <label class="f" title="${esc(t('fig.minAreaTip'))}"><span>${t('fig.minArea')}</span><input type="number" id="figMinArea" min="0" step="10" value="${F.minArea}"></label>
       <label class="chk"><input type="checkbox" id="figHideExcl" ${F.hideExcl ? 'checked' : ''}><span>${t('log.hideExcl')}</span></label>
@@ -5230,6 +5300,7 @@ function renderFigPanel() {
       <div class="grid2"><label class="f"><span>${t('fig.coreImgW')}</span><input type="number" id="figCoreImgW" min="10" max="600" step="10" value="${F.coreImgW || 70}"></label>
       <label class="f"><span>${t('log.height')}</span><input type="number" id="figCoreH" min="200" max="6000" step="100" value="${F.coreH}"></label></div>
       <label class="chk"><input type="checkbox" id="figKeepRatio" ${F.keepRatio ? 'checked' : ''}><span>${t('fig.keepRatio')}</span></label><p class="note" id="figRatioNote"></p>
+      <details class="mini"><summary>${t('st.title')}</summary><div id="figStyle">${styleFormHTML()}</div></details>
       <p class="note">${t('fig.coreNote')}</p>`;
     syncCoreFigSize();
   } else if (F.type === 'geolog') {
@@ -5255,6 +5326,7 @@ function renderFigure() {
 let figTimer = 0;
 const scheduleFigure = () => { clearTimeout(figTimer); figTimer = setTimeout(renderFigure, 150); };
 $('figPanel').addEventListener('change', (e) => {
+  if (e.target.dataset.st) { onStyleInput(e); return; }   // V0.5: column style
   const F = S.fig, el = e.target;
   if (el.id === 'figType') { F.type = el.value; renderFigPanel(); }
   else if (el.id === 'figTitle') F.title = el.value; else if (el.id === 'figCaption') F.caption = el.value;
@@ -5269,6 +5341,7 @@ $('figPanel').addEventListener('change', (e) => {
   else if (el.id === 'figPanelW') F.panelW = Math.max(10, +el.value || 150);
   else if (el.id === 'figPanelH') { F.panelH = Math.max(50, +el.value || 700); const z = secFigSize(figLightD()); if (z.r) F.panelW = Math.max(10, Math.min(600, Math.round(F.panelH / z.r))); }
   else if (el.id === 'figKeepRatio') F.keepRatio = el.checked;
+  else if (el.id === 'figMarkStyle') { F.markStyle = el.value; renderFigPanel(); } else if (el.id === 'figOverlap') F.overlap = el.value;
   else if (el.dataset.panel) { const set = new Set(F.panels); if (el.checked) set.add(el.dataset.panel); else set.delete(el.dataset.panel); F.panels = FIG_PANELS.filter((p) => set.has(p)); }
   else if (el.id === 'figAlpha') F.alpha = +el.value; else if (el.id === 'figMinArea') F.minArea = Math.max(0, +el.value || 0); else if (el.id === 'figHideExcl') F.hideExcl = el.checked;
   else if (el.id === 'figRangeH') F.rangeH = Math.max(300, +el.value || 900); else if (el.id === 'figRangeTotal') F.rangeTotal = el.checked;

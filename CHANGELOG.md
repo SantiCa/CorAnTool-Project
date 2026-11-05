@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.5 — 2026-11-05
+- Column and column-figure style: axis units, ticks/divisions, % divisions, font size, bioturbation shape and colours, column titles, frames, grid, section boundaries, title.
+- Section figure markers: arrow+label, arrow, triangles, circle, square, star, cross; symbol legend; handling of touching labels (keep, shift, merge, hide).
+
 ## V0.4 — 2026-11-05
 - Intervals with too few valid pixels (default < 20 %, adjustable) have no data instead of 0; shown as NO DATA in the column; option to widen no-data zones.
 

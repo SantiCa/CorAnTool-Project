@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.5 | 05-11-2026 | Aplicación 2.6 | Estilo configurable de la columna y su figura; indicadores de trazas (flecha, triángulo…) con leyenda y manejo de etiquetas que se tocan |
 | V0.4 | 05-11-2026 | Aplicación 2.5 | Intervalos sin datos (excluidos o con pocos píxeles válidos) como SIN DATOS en vez de 0; opción para ampliar esas zonas |
 | V0.3 | 05-11-2026 | Aplicación 2.4.1 | Columna y figuras combinan marcas de identificación con bioturbación, icnotaxones, BI e ii |
 | V0.2 | 05-11-2026 | Aplicación 2.4 | Importación arreglada en el programa de escritorio; imágenes siempre en un proyecto y un sondeo elegido; ocultar icnotaxones al interpretar; figuras con ventana de profundidad, columnas, registros y anchura con o sin proporción; más fluidez |
@@ -627,6 +628,31 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.5 — Estilo de la columna y de las figuras (05-11-2026)
+
+**Qué se hizo.**
+- **Estilo de la columna y su figura** (panel «Estilo…» en la columna y en la figura de columna; se guarda por
+  sondeo): unidades del eje (profundidad m/cm/mm; edad a/ka/Ma), intervalo de marcas o número de divisiones del eje,
+  divisiones de los ejes de %, tamaño de letra, forma de la bioturbación (barras y línea, barras, línea, puntos) y sus
+  colores, títulos de las columnas de bioturbación e icnotaxones, marco de las columnas, rejilla, límites de sección,
+  título y subtítulo.
+- **Figura de secciones, panel de flechas:** indicador de las trazas (flecha y abreviatura, solo flecha, triángulo
+  invertido, triángulo, círculo, cuadrado, estrella, aspa). Con un símbolo solo, la leyenda de abajo muestra el símbolo
+  con su color y el nombre. Etiquetas que se tocan: dejarlas, desplazarlas hacia abajo, unirlas («Ch, Pl») u ocultar la
+  de abajo.
+
+**Cambios.** `log.js`: `LOG_STYLE` y opción `style` de `buildLogSVG`. `app.js`: `logStyleOf`, `styleFormHTML`,
+`onStyleInput`, `figSymbol`, opciones `markStyle` y `overlap` de `S.fig`. `index.html` e `i18n.js`.
+
+**Por qué.** Petición de Santiago: más configuración en figuras y columna.
+
+**Comprobación.** `npm test` (47); prueba sin pantalla en Chromium de la columna, la figura de columna y la de
+secciones con los nuevos ajustes, sin errores.
+
+**Pendiente.** Las figuras de distribución y de trazas no usan aún el estilo de la columna.
 
 ---
 
