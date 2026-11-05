@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.29';
+const DELIVERY = 'V0.30';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -400,7 +400,30 @@ function setLabel(op, i, v) { const L = op.s.labels, o = L[i]; if (o !== v) { fo
 /* V0.20: overlapping traces. With «Superponer» a new trace keeps what is underneath; without it, it replaces it (as before). */
 const six = (s) => s._six || (s._six = stackIndex(s.stacks));
 const topLab = (s, i) => topAt(s.labels[i], s.stacks);
-const addPx = (op, i, id) => { const o = op.s.labels[i]; if (!S.overlap && o && o !== id) op.replaced = true; setLabel(op, i, S.overlap ? withId(o, id, op.s.stacks, six(op.s)) : id); };
+/** V0.30: traces only overlap when their ichnotaxa differ; a trace of the same ichnotaxon underneath gives way to the new one. */
+const clsKey = (s, id) => s.objects.get(id)?.cls ?? null;
+const addPx = (op, i, id) => {
+  const s = op.s, o = s.labels[i];
+  if (!S.overlap) { if (o && o !== id) op.replaced = true; setLabel(op, i, id); return; }
+  if (!o || o === id) { setLabel(op, i, id); return; }
+  const c = clsKey(s, id), keep = idsAt(o, s.stacks).filter((x) => x !== id && clsKey(s, x) !== c);
+  setLabel(op, i, codeFor([...keep, id], s.stacks, six(s)));
+};
+/** V0.30: after a class change, traces of the same ichnotaxon that overlap are merged into one. */
+function mergeSameTaxon(s, ids) {
+  const groups = [];
+  for (const id of ids) {
+    const o = s.objects.get(id); if (!o?.bbox) continue;
+    const c = o.cls ?? null, partners = new Set(), [x0, y0, x1, y1] = o.bbox;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const v = s.labels[y * s.w + x]; if (v >= 0) continue;
+      const st = s.stacks[-v]; if (!st.includes(id)) continue;
+      for (const q of st) if (q !== id && clsKey(s, q) === c) partners.add(q);
+    }
+    if (partners.size) groups.push([id, ...partners]);
+  }
+  for (const g of groups) if (g.every((id) => s.objects.has(id))) mergeObjects(g);
+}
 const subPx = (op, i, id) => setLabel(op, i, withoutId(op.s.labels[i], id, op.s.stacks, six(op.s)));
 /** Remove a set of ids from every pixel. */
 function dropIds(op, set) {
@@ -488,6 +511,7 @@ function assignClassMany(ids, clsId) {
   const op = beginOp(s);
   for (const o of objs) { o.cls = clsId; o.pred = null; o.conf = 0; }
   commitOp(op, true); afterChange(s);
+  mergeSameTaxon(s, objs.map((o) => o.id));   // V0.30
   if (objs.length === 1 && $('autoNext').checked) nextReview();
 }
 /** Objects selected now: the multi-selection if any, else the single selected object. */
@@ -1479,7 +1503,7 @@ view.addEventListener('pointerdown', (e) => {
     const op = beginOp(s); op.mode = tool;
     if (tool === 'brush') {
       const under = inImg(s, p) ? topLab(s, Math.floor(p.y) * s.w + Math.floor(p.x)) : 0;
-      op.target = e.shiftKey && S.selected ? S.selected : (!S.overlap && under) || newObject(s, S.active, 'brush').id;   // V0.20: with «Superponer», a new trace
+      op.target = e.shiftKey && S.selected ? S.selected : ((!S.overlap || s.objects.get(under)?.cls === S.active) && under) || newObject(s, S.active, 'brush').id;   // V0.30: over a trace of the active ichnotaxon the brush extends it   // V0.20: with «Superponer», a new trace
       rebuildLUT(s);
     }
     if (tool === 'erase' && e.shiftKey && S.selected) op.only = S.selected;

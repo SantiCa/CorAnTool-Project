@@ -156,7 +156,9 @@ intervalos.
     profundidad_j   = top + ((r0 + r1) / 2) · Δz       (centro del intervalo)
 
 **Trazas solapadas (desde V0.20).** Un píxel puede pertenecer a varias trazas (p. ej. *Chondrites* dentro de
-*Thalassinoides*). Entonces `B_r` lo cuenta **una vez** (si al menos una de sus trazas cuenta) y `C_r,k` lo cuenta una
+*Thalassinoides*). Desde V0.30 solo se solapan trazas de icnotaxones distintos: al dibujar, una traza del mismo
+icnotaxón que hay debajo cede esos píxeles a la nueva, y si al asignar una clase dos trazas solapadas quedan con el
+mismo icnotaxón se unen en una. Entonces `B_r` lo cuenta **una vez** (si al menos una de sus trazas cuenta) y `C_r,k` lo cuenta una
 vez **por cada clase distinta** presente en él (dos trazas de la misma clase en el mismo píxel cuentan una vez). Por
 tanto `%bioturbación_j ≤ 100`, pero `Σ_k %clase_k,j` puede ser mayor que `%bioturbación_j` (y que 100): cada
 icnotaxón conserva su superficie completa. Sin solapes, ambas definiciones coinciden con las anteriores.
@@ -555,7 +557,8 @@ traza seleccionada (V0.20).
 **Superponer** (desde V0.20, pincel, varita y lazo; activado por defecto desde V0.29, se recuerda en el navegador, tecla S). Activado, la traza nueva se añade encima
 de las que ya hay en esos píxeles y todas cuentan (§3, trazas solapadas); con el pincel, empezar sobre una traza crea
 una nueva en vez de ampliarla (Mayús amplía la seleccionada). Desactivado, la traza nueva sustituye a las de debajo, como
-antes. Restar (Alt) quita solo la traza seleccionada. Hacer clic de nuevo sobre un solape selecciona la traza de debajo.
+antes. Desde V0.30 el solape solo ocurre entre icnotaxones distintos, y el pincel que empieza sobre una traza del
+icnotaxón activo la amplía. Restar (Alt) quita solo la traza seleccionada. Hacer clic de nuevo sobre un solape selecciona la traza de debajo.
 
 **Selección de varias trazas** (desde V12; arrastre desde V13). Con la herramienta de selección,
 arrastrar dibuja un recuadro y selecciona las trazas cuyo centro del rectángulo envolvente cae dentro

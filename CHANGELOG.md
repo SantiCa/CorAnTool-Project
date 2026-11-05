@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.30 — 2026-11-05
+- Traces overlap only when their ichnotaxa differ; same-ichnotaxon overlaps give way to the new trace or are merged when a class change creates them; the brush extends a trace of the active ichnotaxon.
+
 ## V0.29 — 2026-11-05
 - «Overlap traces» is on by default (remembered, key S), shown as a highlighted toggle, with a hint when a new trace replaces part of another.
 

@@ -63,6 +63,7 @@ La descripción detallada de los algoritmos está en
 | V0.27 | 05-11-2026 | Diseño | Cabecera en una fila, fuentes incluidas, paneles por secciones y opciones en botones, figura vacía como hoja, títulos de columna partidos, paleta de registros; franja de navegación a la izquierda con su regla |
 | V0.28 | 05-11-2026 | Edad y realce | Modelo de edad con intervalo (Bacon *_ages.txt), columna de incertidumbre y age_min/age_max; nuevo criterio para «Elegir el ajuste…» con las trazas identificadas |
 | V0.29 | 05-11-2026 | Edición de trazas | «Superponer trazas» activado por defecto, más visible, tecla S y aviso cuando una traza sustituye a otra |
+| V0.30 | 05-11-2026 | Edición de trazas | Solape solo entre icnotaxones distintos; trazas del mismo icnotaxón que se solapan se unen al reasignar |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -653,6 +654,20 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.30 — Solape solo entre icnotaxones distintos (05-11-2026)
+
+- **Qué se hizo:** dos trazas del mismo icnotaxón ya no pueden solaparse (petición de Santiago):
+  - Al dibujar con «Superponer», la traza nueva solo se superpone a trazas de otros icnotaxones; las del mismo
+    icnotaxón ceden los píxeles comunes.
+  - El pincel que empieza sobre una traza del icnotaxón activo la amplía en vez de crear otra.
+  - Si al asignar una clase dos trazas solapadas quedan con el mismo icnotaxón, se unen en una.
+- **Cambios:** `app.js` (`addPx`, `clsKey`, `mergeSameTaxon`, objetivo del pincel, `assignClassMany`).
+  `DELIVERY` = V0.30.
+- **Comprobación:** 70 pruebas JS; en Chrome con el ejemplo idealizado: Chondrites sobre Chondrites no se apila
+  (el clic repetido no cambia de traza), Planolites sobre Chondrites sí; al pasar la Planolites a Chondrites se une
+  con la de debajo; sin errores.
+- **Pendiente / no probado:** trazas sin clase (candidatos) cuentan como un mismo grupo.
 
 ## V0.29 — Superponer trazas por defecto (05-11-2026)
 
