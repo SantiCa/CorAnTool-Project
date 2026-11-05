@@ -1,7 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
+import { LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.22';
+const DELIVERY = 'V0.23';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2980,6 +2980,29 @@ function sectionCanvas(s) {
 }
 
 /** Core image strip for the window, resampled row by row onto the depth or age axis. */
+/**
+ * V0.23: image panels of the core column (like the section figure): original, enhanced, traces painted, outlined, traces
+ * only, black and white, arrows. Width keeps the photo proportions by default (style.imgAspect = 'keep'), times
+ * style.imgStretch; 'fixed' uses style.imgW px. Panels other than the plain image need the depth axis.
+ */
+function columnImages(D, from, to, H) {
+  const lv = S.logView, st = lv.style || {}, panels = (lv.imgPanels?.length ? lv.imgPanels : [lv.imgMode === 'orig' ? 'orig' : 'enh']).filter((p) => FIG_PANELS.includes(p));
+  let w = +st.imgW > 0 ? +st.imgW : 64;
+  if ((st.imgAspect || 'keep') === 'keep') {
+    if (D.axis === 'depth') { const r = coreRatio(D, from, to); if (r) w = H / r; }
+    w *= +st.imgStretch > 0 ? +st.imgStretch : 1;
+  }
+  w = Math.round(Math.max(8, Math.min(600, w)));
+  if (D.axis !== 'depth') return [{ href: stripDataURL(D, from, to, H, w * 2), w }];
+  const tr = panels.includes('arrows') ? figTraces(D, from, to) : null, multi = panels.length > 1;
+  return panels.map((p) => {
+    if ((p === 'enh' || p === 'orig') && !multi && p === lv.imgMode) return { href: stripDataURL(D, from, to, H, w * 2), w };
+    const im = { href: panelDataURL(D, from, to, H, w, p === 'arrows' ? 'enh' : p), w, title: multi ? t('fig.p.' + p) : null };
+    if (p === 'arrows') { im.draw = (x, cw, y) => arrowMarksSVG(tr, x, cw, y); im.marks = false; }
+    return im;
+  });
+}
+
 function stripDataURL(D, from, to, H, W) {
   const Hc = Math.min(4000, Math.round(H * 2)), c = document.createElement('canvas'); c.width = W; c.height = Hc;
   const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, Hc);
@@ -3001,6 +3024,37 @@ function logRecords(D) {
   return out;
 }
 
+/** V0.23: which image panels the core column shows and how wide the image is. */
+function renderImgPanelsForm() {
+  const lv = S.logView, st = lv.style || {}, on = new Set(lv.imgPanels || []), asp = st.imgAspect || 'keep';
+  $('logImgPanels').innerHTML = `<div class="f"><span>${t('log.panels')}</span><div class="chk2">${FIG_PANELS.map((p) => `<label class="chk"><input type="checkbox" data-imgp="${p}" ${on.has(p) ? 'checked' : ''}><span>${t('fig.p.' + p)}</span></label>`).join('')}</div><p class="note">${t('log.panelsNote')}</p></div>
+    <div class="grid2"><label class="f"><span>${t('log.imgAspect')}</span><select data-st="imgAspect"><option value="keep" ${asp === 'keep' ? 'selected' : ''}>${t('log.asp.keep')}</option><option value="fixed" ${asp === 'fixed' ? 'selected' : ''}>${t('log.asp.fixed')}</option></select></label>
+    ${asp === 'keep' ? `<label class="f"><span>${t('log.imgStretch')}</span><input type="number" data-st="imgStretch" min="0.05" step="0.1" value="${st.imgStretch ?? ''}" placeholder="1"></label>` : `<label class="f"><span>${t('log.imgW')}</span><input type="number" data-st="imgW" min="8" max="600" step="2" value="${st.imgW ?? ''}" placeholder="64"></label>`}</div>`;
+}
+/** V0.23: NO DATA and marker fields of the column style (shared by the core column and the figures). */
+function ndFormHTML(st) {
+  const q = { ...ND_STYLE, ...st };
+  return `<div class="f"><span>${t('nd.title')}</span><div class="grid2">
+    <label class="f"><span>${t('nd.fill')}</span><select data-st="ndFill">${['hatch', 'solid', 'none'].map((v) => `<option value="${v}" ${q.ndFill === v ? 'selected' : ''}>${t('nd.f.' + v)}</option>`).join('')}</select></label>
+    <label class="f"><span>${t('nd.colors')}</span><span class="row"><input type="color" data-st="ndColor" value="${q.ndColor}"><input type="color" data-st="ndLine" value="${q.ndLine}"></span></label>
+    <label class="f"><span>${t('nd.text')}</span><input type="text" data-st="ndText" value="${esc(q.ndText || '')}" placeholder="${esc(t('log.noData'))}"></label>
+    <span></span></div><div class="chk2"><label class="chk"><input type="checkbox" data-st="ndShow" ${q.ndShow ? 'checked' : ''}><span>${t('nd.show')}</span></label><label class="chk"><input type="checkbox" data-st="ndLabel" ${q.ndLabel ? 'checked' : ''}><span>${t('nd.label')}</span></label><label class="chk"><input type="checkbox" data-st="ndImage" ${q.ndImage ? 'checked' : ''}><span>${t('nd.image')}</span></label></div></div>
+    <div class="f"><span>${t('mk.title')}</span><div class="grid2">
+    <label class="f"><span>${t('mk.size')}</span><input type="number" data-st="markSize" min="0.2" max="5" step="0.1" value="${st.markSize ?? ''}" placeholder="1"></label>
+    <label class="f"><span>${t('mk.stroke')}</span><span class="row"><input type="color" data-st="markStroke" value="${st.markStroke && st.markStroke !== 'none' ? st.markStroke : '#ffffff'}"><input type="number" data-st="markStrokeW" min="0" max="4" step="0.2" value="${st.markStrokeW ?? ''}" placeholder="0.8" style="width:60px" title="${esc(t('mk.strokeW'))}"></span></label></div></div>`;
+}
+/** V0.23: markers and labels of the arrows panel (section figure and core column). */
+function arrowFormHTML() {
+  const F = S.fig, ex = new Set(F.arrowExcl || []);
+  return `<div class="grid2"><label class="f"><span>${t('ar.src')}</span><select id="figArrowSrc">${['all', 'marks', 'objects'].map((v) => `<option value="${v}" ${(F.arrowSrc || 'all') === v ? 'selected' : ''}>${t('ar.src.' + v)}</option>`).join('')}</select></label>
+    <label class="f"><span>${t('ar.objScale')}</span><input type="number" id="figObjScale" min="0.2" max="3" step="0.1" value="${F.objScale ?? 1}"></label>
+    <label class="f"><span>${t('mk.size')}</span><input type="number" id="figMarkScale" min="0.2" max="5" step="0.1" value="${F.markScale ?? 1}"></label>
+    <label class="f"><span>${t('mk.stroke')}</span><span class="row"><input type="color" id="figMarkStroke" value="${F.markStroke && F.markStroke !== 'none' ? F.markStroke : '#ffffff'}"><input type="number" id="figMarkStrokeW" min="0" max="4" step="0.2" value="${F.markStrokeW ?? 0.8}" style="width:60px" title="${esc(t('mk.strokeW'))}"></span></label>
+    <label class="f"><span>${t('ar.labelSize')}</span><input type="number" id="figLabelSize" min="5" max="30" step="1" value="${F.labelSize ?? 10}"></label>
+    <label class="f"><span>${t('ar.labelColor')}</span><span class="row"><input type="color" id="figLabelColor" value="${F.labelColor || '#1c2422'}"><label class="chk"><input type="checkbox" id="figLabelHalo" ${F.labelHalo !== false ? 'checked' : ''}><span>${t('ar.halo')}</span></label></span></label></div>
+    <div class="f"><span>${t('ar.excl')}</span><div class="chk2">${S.classes.filter((c) => c.id !== 'artifact').map((c) => `<label class="chk"><input type="checkbox" data-arex="${esc(c.id)}" ${ex.has(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div></div>`;
+}
+
 function renderLog() {
   $('logStage').querySelector('[data-label-editor]')?.remove();
   const box = $('logSvg');
@@ -3012,14 +3066,14 @@ function renderLog() {
   $('logFrom').value = +from.toPrecision(6); $('logTo').value = +to.toPrecision(6);
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, counts: c.counts })).filter((c) => c.counts);
   const records = logRecords(D), imgW = 64;
-  const image = lv.tracks.image ? { href: stripDataURL(D, from, to, lv.height, imgW * 2) } : null;
+  const images = lv.tracks.image ? columnImages(D, from, to, lv.height) : null, image = images?.[0] || null;
   const boundaries = D.secs.map((s) => ({ a: D.axis === 'age' ? interpAge(D.model, s.top * D.f(s)) : s.top * D.f(s), label: s.name })).filter((b) => b.a != null);
   const { style, label: axisLabel } = logStyleOf(D);
   const marks = compositeMarks(D), idm = idMode();
   let res;
   try { res = buildLogSVG({
     style, title: S.name, subtitle: idm && !['total', 'species', 'BI', 'ii'].some((k) => lv.tracks[k]) ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
-    axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, imageWidth: imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
+    axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, images, imageWidth: image?.w || imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
     marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes : [], marks),
     ...geoOverlay(D.axis),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
@@ -3064,6 +3118,7 @@ function styleFormHTML() {
     <label class="f"><span>${t('st.totalTitle')}</span><input type="text" data-st="totalTitle" value="${esc(st.totalTitle || '')}" placeholder="${esc(t('log.total'))}"></label>
     <label class="f"><span>${t('st.speciesTitle')}</span><input type="text" data-st="speciesTitle" value="${esc(st.speciesTitle || '')}" placeholder="${esc(t('log.species'))}"></label></div>
     <div class="chk2">${chk('frame', 'st.frame')}${chk('grid', 'st.grid')}${chk('boundaries', 'st.boundaries')}${chk('showTitle', 'st.showTitle')}</div>
+    ${ndFormHTML(st)}
     ${axesFormHTML()}`;
 }
 /** V0.6: width and axis format of each column at the right of the core (total, ichnotaxa, BI, ii and records). */
@@ -3106,6 +3161,7 @@ function renderLogPanel() {
   const lv = S.logView;
   $('logAxis').value = lv.axis === 'age' && S.age.model ? 'age' : 'depth';
   $('logHeight').value = lv.height; $('logHeightOut').textContent = lv.height + ' px';
+  renderImgPanelsForm();
   $('logImgMode').value = lv.imgMode; $('logOverlay').checked = lv.overlay; $('logHideExcl').checked = !!lv.hideExcl;
   document.querySelectorAll('#logTracks [data-track]').forEach((el) => (el.checked = !!lv.tracks[el.dataset.track]));
 }
@@ -3115,7 +3171,9 @@ $('geoStyleForm').addEventListener('change', onStyleInput);   // V0.22
 $('logPanel').addEventListener('change', (e) => {
   if (e.target.closest('#logStyle')) return;
   const el = e.target, lv = S.logView;
-  if (el.dataset.track) lv.tracks[el.dataset.track] = el.checked;
+  if (el.closest('#logImgPanels') && el.dataset.st) { onStyleInput(e); renderImgPanelsForm(); return; }   // V0.23
+  if (el.dataset.imgp) { lv.imgPanels = [...$('logImgPanels').querySelectorAll('[data-imgp]:checked')].map((i) => i.dataset.imgp); }
+  else if (el.dataset.track) lv.tracks[el.dataset.track] = el.checked;
   else if (el.id === 'logAxis') { lv.axis = el.value; lv.from = lv.to = null; }
   else if (el.id === 'logFrom' || el.id === 'logTo') { const a = parseFloat($('logFrom').value), b = parseFloat($('logTo').value); if (b > a) { lv.from = a; lv.to = b; } }
   else if (el.id === 'logImgMode') lv.imgMode = el.value;
@@ -5457,7 +5515,8 @@ async function startWindow() {
 /* ───────────── figures: representative traces, interpreted core, logs and maps ───────────── */
 
 const defaultFig = () => ({ type: 'traces', title: '', caption: '', n: 4, pick: 'largest', tile: 150, img: 'enh', outline: true, picks: {}, coreH: 1400,
-  secFrom: null, secTo: null, panels: ['orig', 'enh', 'alpha', 'mask', 'arrows'], panelW: 150, panelH: 700, keepRatio: false, tracks: null, recs: null, coreImgW: 70, alpha: 0.5, minArea: 0, hideExcl: false, rangeH: 900, rangeTotal: true });
+  secFrom: null, secTo: null, panels: ['orig', 'enh', 'alpha', 'mask', 'arrows'], panelW: 150, panelH: 700, keepRatio: false, tracks: null, recs: null, coreImgW: 70, alpha: 0.5, minArea: 0, hideExcl: false, rangeH: 900, rangeTotal: true,
+  arrowSrc: 'all', arrowExcl: [], objScale: 1, markScale: 1, markStroke: '#ffffff', markStrokeW: 0.8, labelSize: 10, labelColor: '#1c2422', labelHalo: true });   // V0.23
 const FIG_PANELS = ['orig', 'enh', 'fill', 'alpha', 'outline', 'mask', 'bw', 'arrows'];
 S.fig = defaultFig();
 let figSvgCache = '';
@@ -5630,10 +5689,14 @@ function figTraces(D, from, to) {
     const add = (x, y, cid) => {
       const c = clsById(cid); if (!c || c.id === 'artifact' || y < s.roi.y0 || y >= s.roi.y1) return;
       const dd = depthAtRow(s, y) * D.f(s); if (dd < from || dd >= to) return;
-      out.push({ d: dd, xf: (x - s.roi.x0) / Math.max(1, s.roi.x1 - s.roi.x0), color: c.color, abbr: ab.get(c.name), name: c.name, plain: !!c.plain });
+      if ((F.arrowExcl || []).includes(c.id)) return;   // V0.23: excluded groups (e.g. undetermined)
+      out.push({ d: dd, xf: (x - s.roi.x0) / Math.max(1, s.roi.x1 - s.roi.x0), color: c.color, abbr: ab.get(c.name), name: c.name, plain: !!c.plain, k: src === 'obj' ? +F.objScale || 1 : 1 });
     };
-    for (const o of s.objects.values()) { const cid = effClassId(o); if (!cid || !o.stats || o.area < F.minArea) continue; add(o.stats.sx / o.stats.n, o.stats.sy / o.stats.n, cid); }
-    for (const m of s.marks || []) add(m.x, m.y, m.cls);
+    let src = 'obj';
+    // V0.23: 'all' = every trace and every mark, 'marks' = only the marks placed by hand, 'objects' = only traces
+    if ((F.arrowSrc || 'all') !== 'marks') for (const o of s.objects.values()) { const cid = effClassId(o); if (!cid || !o.stats || o.area < F.minArea) continue; add(o.stats.sx / o.stats.n, o.stats.sy / o.stats.n, cid); }
+    src = 'mark';
+    if ((F.arrowSrc || 'all') !== 'objects') for (const m of s.marks || []) add(m.x, m.y, m.cls);
   }
   return out;
 }
@@ -5709,8 +5772,10 @@ function coreFigSize(D) {
  * V0.5: marker of an identified trace at (px, py) in the trace colour: 'arrow' (from the upper right), 'triDown'
  * (inverted triangle above the trace), 'tri', 'circle', 'square', 'star', 'cross'. legend = small version centred at (px, py).
  */
-function figSymbol(kind, px, py, color, xMax = 1e9, legend = false) {
-  const f = (v) => v.toFixed(1), c = color, halo = 'stroke="#fff" stroke-width="0.8"';
+function figSymbol(kind, px, py, color, xMax = 1e9, legend = false, k = 1) {
+  const F = S.fig, kk = legend ? 1 : k * (+F.markScale || 1);
+  if (kk !== 1) return `<g transform="translate(${px.toFixed(1)} ${py.toFixed(1)}) scale(${+kk.toFixed(3)}) translate(${(-px).toFixed(1)} ${(-py).toFixed(1)})">${figSymbol(kind, px, py, color, px + (xMax - px) / kk, legend, 1 / (+F.markScale || 1))}</g>`;
+  const f = (v) => v.toFixed(1), c = color, halo = F.markStroke === 'none' ? 'stroke="none"' : `stroke="${F.markStroke || '#fff'}" stroke-width="${F.markStrokeW ?? 0.8}"`;   // V0.23: border of the marker
   if (kind === 'arrow') {
     if (legend) return `<path d="M${f(px + 5)} ${f(py - 6)}L${f(px - 3)} ${f(py + 1)}" stroke="${c}" stroke-width="1.6"/><path d="M${f(px - 4)} ${f(py + 2)}l5 -1l-2.6 -3z" fill="${c}"/>`;
     const lx = Math.min(xMax, px + 20);
@@ -5723,6 +5788,27 @@ function figSymbol(kind, px, py, color, xMax = 1e9, legend = false) {
   if (kind === 'cross') return `<path d="M${f(px - s)} ${f(cy - s)}L${f(px + s)} ${f(cy + s)}M${f(px + s)} ${f(cy - s)}L${f(px - s)} ${f(cy + s)}" stroke="#fff" stroke-width="3.4"/><path d="M${f(px - s)} ${f(cy - s)}L${f(px + s)} ${f(cy + s)}M${f(px + s)} ${f(cy - s)}L${f(px - s)} ${f(cy + s)}" stroke="${c}" stroke-width="1.8"/>`;
   if (kind === 'star') { const p = Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? s * 0.45 : s * 1.1, a = (Math.PI / 5) * i - Math.PI / 2; return `${f(px + r * Math.cos(a))} ${f(cy + r * Math.sin(a))}`; }); return `<path d="M${p.join('L')}z" fill="${c}" ${halo}/>`; }
   return `<circle cx="${f(px)}" cy="${f(cy)}" r="${f(s * 0.8)}" fill="${c}" ${halo}/>`;
+}
+/** V0.5–V0.23: markers (and abbreviations) of identified traces over an image panel at x X, width W; y(depth) → px. */
+function arrowMarksSVG(tr, X, W, y) {
+  const F = S.fig, out = [], ms = F.markStyle || 'arrowLabel', ov = F.overlap || 'keep', labels = ms === 'arrowLabel';
+  const pts = tr.map((q) => ({ q, px: X + Math.min(1, Math.max(0, q.xf)) * W, py: y(q.d) })).sort((a, b) => a.py - b.py);
+  for (const t0 of pts) out.push(figSymbol(ms === 'arrowLabel' ? 'arrow' : ms, t0.px, t0.py, t0.q.color, X + W - 4, false, t0.q.k || 1));
+  if (labels) {
+    const fs = +F.labelSize || 10, kk = +F.markScale || 1;
+    const lab = pts.map((t0) => ({ ...t0, lx: Math.min(X + W - 4, t0.px + 20 * kk * (t0.q.k || 1)), ly: t0.py - 10 * kk * (t0.q.k || 1), txt: t0.q.abbr }));
+    const out2 = [];
+    for (const l of lab) {
+      const prev = out2[out2.length - 1], near = prev && l.ly - prev.ly < fs + 1;
+      if (!near || ov === 'keep') out2.push(l);
+      else if (ov === 'shift') { l.ly = prev.ly + fs + 1; out2.push(l); }
+      else if (ov === 'merge') { if (!prev.txt.split(', ').includes(l.txt)) prev.txt += ', ' + l.txt; }
+      /* 'hide': the arrow stays, its label is left out */
+    }
+    const halo = F.labelHalo === false ? '' : ' stroke="#fff" stroke-width="2.6" paint-order="stroke"';
+    for (const l of out2) out.push(`<text x="${l.lx}" y="${l.ly.toFixed(1)}" font-weight="700" font-size="${fs}" fill="${F.labelColor || '#1c2422'}"${halo}>${esc(l.txt)}</text>`);
+  }
+  return out.join('');
 }
 function sectionsSVG() {
   if (!S.sections.length) return null;
@@ -5743,23 +5829,8 @@ function sectionsSVG() {
     const X = x0 + i * (W + gap), href = panelDataURL(D, from, to, H, W, p);
     out.push(`<text x="${X}" y="${top - 10}" font-weight="700" fill="#1c2422">${String.fromCharCode(97 + i)}</text><text x="${X + 12}" y="${top - 10}" fill="#1c2422">${esc(t('fig.p.' + p))}</text>`);
     out.push(`<image x="${X}" y="${top}" width="${W}" height="${H}" preserveAspectRatio="none" href="${href}" xlink:href="${href}"/><rect x="${X}" y="${top}" width="${W}" height="${H}" fill="none" stroke="#5b6763" stroke-width="0.6"/>`);
-    if (p === 'arrows') {   // V0.5: marker style and what to do with labels that touch
-      const ms = F.markStyle || 'arrowLabel', ov = F.overlap || 'keep', labels = ms === 'arrowLabel';
-      const pts = tr.map((q) => ({ q, px: X + Math.min(1, Math.max(0, q.xf)) * W, py: y(q.d) })).sort((a, b) => a.py - b.py);
-      for (const t0 of pts) out.push(figSymbol(ms === 'arrowLabel' ? 'arrow' : ms, t0.px, t0.py, t0.q.color, X + W - 4));
-      if (labels) {
-        const lab = pts.map((t0) => ({ ...t0, lx: Math.min(X + W - 4, t0.px + 20), ly: t0.py - 10, txt: t0.q.abbr }));
-        const out2 = [];
-        for (const l of lab) {
-          const prev = out2[out2.length - 1], near = prev && l.ly - prev.ly < 11;
-          if (!near || ov === 'keep') out2.push(l);
-          else if (ov === 'shift') { l.ly = prev.ly + 11; out2.push(l); }
-          else if (ov === 'merge') { if (!prev.txt.split(', ').includes(l.txt)) prev.txt += ', ' + l.txt; }
-          /* 'hide': the arrow stays, its label is left out */
-        }
-        for (const l of out2) out.push(`<text x="${l.lx}" y="${l.ly.toFixed(1)}" font-weight="700" font-size="10" fill="#1c2422" stroke="#fff" stroke-width="2.6" paint-order="stroke">${esc(l.txt)}</text>`);
-      }
-    }
+    if (p === 'arrows') out.push(arrowMarksSVG(tr, X, W, y));
+    if (LS.style.ndImage) for (const g of noDataGaps(D.rows.filter((r) => r.a1 > from && r.a0 < to))) out.push(noDataRect(LS.style, X, W, y(Math.max(g.a0, from)), y(Math.min(g.a1, to)) - y(Math.max(g.a0, from)), t('log.noData')));   // V0.23
   });
   out.push(`<text x="${x0}" y="${top + H + 18}" fill="#5b6763">${esc(curCore()?.name || S.name)} · ${+from.toPrecision(6)}–${+to.toPrecision(6)} ${esc(D.base)}</text>`);
   legend.forEach((c, i) => {
@@ -5804,8 +5875,8 @@ function syncCoreFigSize() {
   else $('figRatioNote').textContent = '';
   $('figCoreH').disabled = !!(F.keepRatio && z.r);
 }
-function verticalStyleHTML(st = S.logView.style || {}) {
-  return `<div class="grid2"><label class="f"><span>${t('st.yUnit')}</span><select data-st="yUnit">${['', 'mm', 'cm', 'm'].map((u) => `<option value="${u}" ${(st.yUnit || '') === u ? 'selected' : ''}>${u || t('st.native')}</option>`).join('')}</select></label><label class="f"><span>${t('st.yStep')}</span><input type="number" data-st="yStep" step="any" min="0" value="${st.yStep ?? ''}" placeholder="${t('fig.auto2')}"></label><label class="f"><span>${t('st.yDiv')}</span><input type="number" data-st="yDiv" min="1" step="1" value="${st.yDiv ?? ''}" placeholder="${t('fig.auto2')}"></label>${['yMajor', 'yMinor'].map((k) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="any" min="0" value="${st[k] ?? ''}" placeholder="${t('st.none')}"></label>`).join('')}${['yLabelLen', 'yMinorLen'].map((k) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="1" min="1" value="${st[k] ?? ''}" placeholder="${k === 'yLabelLen' ? 6 : 3}"></label>`).join('')}</div>`;
+function verticalStyleHTML(st = S.logView.style || {}, nd = true) {
+  return `${nd ? ndFormHTML(st) : ''}<div class="grid2"><label class="f"><span>${t('st.yUnit')}</span><select data-st="yUnit">${['', 'mm', 'cm', 'm'].map((u) => `<option value="${u}" ${(st.yUnit || '') === u ? 'selected' : ''}>${u || t('st.native')}</option>`).join('')}</select></label><label class="f"><span>${t('st.yStep')}</span><input type="number" data-st="yStep" step="any" min="0" value="${st.yStep ?? ''}" placeholder="${t('fig.auto2')}"></label><label class="f"><span>${t('st.yDiv')}</span><input type="number" data-st="yDiv" min="1" step="1" value="${st.yDiv ?? ''}" placeholder="${t('fig.auto2')}"></label>${['yMajor', 'yMinor'].map((k) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="any" min="0" value="${st[k] ?? ''}" placeholder="${t('st.none')}"></label>`).join('')}${['yLabelLen', 'yMinorLen'].map((k) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="1" min="1" value="${st[k] ?? ''}" placeholder="${k === 'yLabelLen' ? 6 : 3}"></label>`).join('')}</div>`;
 }
 function renderFigPanel() {
   const F = S.fig, box = $('figOpts');
@@ -5843,6 +5914,7 @@ function renderFigPanel() {
       <label class="f"><span>${t('fig.alpha')}</span><input type="range" id="figAlpha" min="0.1" max="0.9" step="0.05" value="${F.alpha}"></label>
       <label class="f" title="${esc(t('fig.minAreaTip'))}"><span>${t('fig.minArea')}</span><input type="number" id="figMinArea" min="0" step="10" value="${F.minArea}"></label>
       <label class="chk"><input type="checkbox" id="figHideExcl" ${F.hideExcl ? 'checked' : ''}><span>${t('log.hideExcl')}</span></label>
+      <details class="mini"><summary>${t('ar.title')}</summary>${arrowFormHTML()}</details>
       <p class="note">${t('fig.secNote')}</p>`;
     syncSecFigSize();
   } else if (F.type === 'range') {
@@ -5950,6 +6022,10 @@ $('figPanel').addEventListener('change', (e) => {
   else if (el.id === 'figKeepRatio') F.keepRatio = el.checked;
   else if (el.dataset.tview) { const set = new Set(traceViews(F)); if (el.checked) set.add(el.dataset.tview); else set.delete(el.dataset.tview); F.tviews = Object.keys(TRACE_VIEWS).filter((v) => set.has(v)); if (!F.tviews.length) F.tviews = ['enh']; }
   else if (/^figSc/.test(el.id)) { F.scale ||= {}; const k = { figScStyle: 'style', figScPos: 'pos', figScLen: 'len', figScDiv: 'div', figScColor: 'color', figScInk: 'ink', figScAll: 'all' }[el.id]; F.scale[k] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (el.value === '' ? null : +el.value) : el.value; }
+  else if (el.dataset.arex != null) { const ex = new Set(F.arrowExcl || []); if (el.checked) ex.add(el.dataset.arex); else ex.delete(el.dataset.arex); F.arrowExcl = [...ex]; }   // V0.23
+  else if (el.id === 'figArrowSrc') F.arrowSrc = el.value; else if (el.id === 'figObjScale') F.objScale = Math.max(0.2, +el.value || 1); else if (el.id === 'figMarkScale') F.markScale = Math.max(0.2, +el.value || 1);
+  else if (el.id === 'figMarkStroke') F.markStroke = el.value; else if (el.id === 'figMarkStrokeW') F.markStrokeW = Math.max(0, +el.value || 0); else if (el.id === 'figLabelSize') F.labelSize = Math.max(5, +el.value || 10);
+  else if (el.id === 'figLabelColor') F.labelColor = el.value; else if (el.id === 'figLabelHalo') F.labelHalo = el.checked;
   else if (el.id === 'figMarkStyle') { F.markStyle = el.value; renderFigPanel(); } else if (el.id === 'figOverlap') F.overlap = el.value;
   else if (el.dataset.panel) { const set = new Set(F.panels); if (el.checked) set.add(el.dataset.panel); else set.delete(el.dataset.panel); F.panels = FIG_PANELS.filter((p) => set.has(p)); }
   else if (el.id === 'figAlpha') F.alpha = +el.value; else if (el.id === 'figMinArea') F.minArea = Math.max(0, +el.value || 0); else if (el.id === 'figHideExcl') F.hideExcl = el.checked;

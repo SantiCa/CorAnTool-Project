@@ -1751,6 +1751,14 @@ cambia lo que se ve en la imagen de trabajo.
 Las coordenadas de datos permanecen en la unidad original: la etiqueta muestra `v · yFactor`,
 con `yFactor = UNIT_TO_CM[unidad original] / UNIT_TO_CM[unidad mostrada]` para profundidad.
 `yStep` expresa la distancia entre marcas en la unidad mostrada y tiene prioridad sobre `yDiv`.
+Desde V0.23: estilo de los intervalos SIN DATOS (`ndShow`, `ndFill` = rayado/liso/ninguno, `ndColor`, `ndLine`,
+`ndLabel`, `ndText`, `ndImage` = también sobre las imágenes; `log.js::ND_STYLE, noDataGaps, noDataRect`), aplicado en
+Columna, Rango y paneles de Secciones; tamaño y borde de los símbolos de trazas (`markSize`, `markStroke`,
+`markStrokeW`). Columna: paneles de imagen como en Secciones (`logView.imgPanels`), con ancho en proporción real de la
+foto por defecto (`style.imgAspect = 'keep'`: ancho = alto del gráfico / (alto/ancho del testigo), mediana de las
+secciones; × `imgStretch`) o fijo (`imgW`). Flechas (`fig.arrowSrc` = todas / solo marcas a mano / solo trazas,
+`arrowExcl` grupos excluidos, `objScale` tamaño de las de cada traza, `markScale`, `markStroke(W)`, `labelSize`,
+`labelColor`, `labelHalo`), compartidas por Secciones y la Columna.
 Desde V0.22, `yStep` son las marcas con número; `yMajor` añade marcas largas sin número y `yMinor` marcas cortas, en
 la unidad mostrada (`log.js::extraTicks`; no se repiten donde ya hay una marca con número o larga). `yLabelLen` y
 `yMinorLen` fijan la longitud en px (6 y 3 por defecto; las largas usan `yMajorLen`, 6). Multiproxy › Registros tiene

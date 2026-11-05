@@ -1702,3 +1702,27 @@ Object.assign(D.en, {
   'st.yLabelLen': 'Length of numbered ticks (px)', 'st.yMinorLen': 'Length of short ticks (px)', 'st.none': 'none',
   'st.scales': 'Scales',
 });
+
+// V0.23: core column image panels, NO DATA, markers and arrows
+Object.assign(D.es, {
+  'log.panels': 'Paneles de imagen', 'log.panelsNote': 'Como en la figura de secciones: varios a la vez se ponen uno al lado del otro. Sin marcar, se usa la imagen elegida abajo. El estilo de las flechas se ajusta en Figuras › Secciones › Flechas y etiquetas. Con el eje en edad solo se muestra la imagen.',
+  'log.imgAspect': 'Ancho de la imagen', 'log.asp.keep': 'Proporciones de la foto', 'log.asp.fixed': 'Ancho fijo',
+  'log.imgStretch': 'Factor horizontal (1 = real)', 'log.imgW': 'Ancho (px)',
+  'nd.title': 'Intervalos SIN DATOS', 'nd.fill': 'Relleno', 'nd.f.hatch': 'Rayado', 'nd.f.solid': 'Color liso', 'nd.f.none': 'Sin relleno',
+  'nd.colors': 'Fondo y rayas', 'nd.text': 'Texto', 'nd.show': 'Mostrarlos', 'nd.label': 'Con texto', 'nd.image': 'También sobre las imágenes',
+  'mk.title': 'Símbolos de las trazas', 'mk.size': 'Tamaño de los símbolos (× 1)', 'mk.stroke': 'Borde (color y grosor)', 'mk.strokeW': 'Grosor del borde (0 = sin borde)',
+  'ar.title': 'Flechas y etiquetas', 'ar.src': 'Qué se señala', 'ar.src.all': 'Trazas y marcas', 'ar.src.marks': 'Solo las marcas puestas a mano', 'ar.src.objects': 'Solo las trazas (cada objeto)',
+  'ar.objScale': 'Tamaño de las de cada traza (× 1)', 'ar.labelSize': 'Tamaño de las etiquetas', 'ar.labelColor': 'Color de las etiquetas', 'ar.halo': 'Halo blanco',
+  'ar.excl': 'No señalar estos grupos',
+});
+Object.assign(D.en, {
+  'log.panels': 'Image panels', 'log.panelsNote': 'As in the sections figure: several are placed side by side. With none ticked, the image chosen below is used. Arrow style is set in Figures › Sections › Arrows and labels. On the age axis only the image is shown.',
+  'log.imgAspect': 'Image width', 'log.asp.keep': 'Photo proportions', 'log.asp.fixed': 'Fixed width',
+  'log.imgStretch': 'Horizontal factor (1 = true)', 'log.imgW': 'Width (px)',
+  'nd.title': 'NO DATA intervals', 'nd.fill': 'Fill', 'nd.f.hatch': 'Hatched', 'nd.f.solid': 'Plain colour', 'nd.f.none': 'No fill',
+  'nd.colors': 'Background and hatch', 'nd.text': 'Text', 'nd.show': 'Show them', 'nd.label': 'With text', 'nd.image': 'Also over the images',
+  'mk.title': 'Trace symbols', 'mk.size': 'Symbol size (× 1)', 'mk.stroke': 'Border (colour and width)', 'mk.strokeW': 'Border width (0 = no border)',
+  'ar.title': 'Arrows and labels', 'ar.src': 'What is pointed at', 'ar.src.all': 'Traces and marks', 'ar.src.marks': 'Only marks placed by hand', 'ar.src.objects': 'Only traces (each object)',
+  'ar.objScale': 'Size of those of each trace (× 1)', 'ar.labelSize': 'Label size', 'ar.labelColor': 'Label colour', 'ar.halo': 'White halo',
+  'ar.excl': 'Do not point at these groups',
+});

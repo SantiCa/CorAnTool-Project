@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.23 — 2026-11-05
+- Core column: image panels side by side (original, enhanced, traces, traces only, arrows…), true photo proportions by default with a horizontal factor.
+- NO DATA style (show, fill, colours, text, over images); trace symbol size and border; arrows from hand-placed marks only, excluded groups, label style.
+
 ## V0.22 — 2026-11-05
 - Vertical axes: numbered ticks, long ticks and short ticks with their own interval and length (Core column, Figures, Multiproxy). Multiproxy logs get their own editable scales.
 

@@ -56,6 +56,7 @@ La descripción detallada de los algoritmos está en
 | V0.20 | 05-11-2026 | Edición de trazas | Trazas solapadas sin límite (total sin doble conteo; cada icnotaxón con su superficie completa), opción «Superponer», tijeras para dividir y «Unir» trazas |
 | V0.21 | 05-11-2026 | Columna lateral | Ancho ajustable, escalas horizontales fijas arriba y registros de Datos como columnas adicionales |
 | V0.22 | 05-11-2026 | Escalas de figuras | Marcas largas y cortas del eje vertical con intervalo y longitud propios; escalas editables también en Multiproxy |
+| V0.23 | 05-11-2026 | Figuras | Paneles de imagen en Columna con proporción real, estilo de SIN DATOS, tamaño y borde de símbolos, flechas solo de marcas a mano, grupos excluidos y etiquetas |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -646,6 +647,26 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.23 — Imagen del sondeo, SIN DATOS, símbolos y flechas en figuras (05-11-2026)
+
+- **Qué se hizo:**
+  - Columna: paneles de imagen como en Secciones (original, tratada, trazas coloreadas, con transparencia,
+    contornos, solo trazas, blanco y negro, flechas), uno junto a otro. El ancho mantiene por defecto las
+    proporciones de la foto y se puede deformar con un factor horizontal o fijar en px.
+  - SIN DATOS: mostrar u ocultar, relleno rayado, liso o ninguno, colores, texto y si cubren también las imágenes;
+    en Columna, Rango y Secciones.
+  - Símbolos de las trazas: tamaño y borde (color y grosor).
+  - Flechas: señalar todo, solo las marcas puestas a mano o solo las trazas; tamaño propio de las de cada traza;
+    excluir grupos (p. ej. indeterminadas); tamaño, color y halo de las etiquetas.
+- **Cambios:** `log.js` (`ND_STYLE`, `noDataGaps`, `noDataRect`, varios paneles `images` con dibujo superpuesto,
+  estilo de símbolos), `app.js` (`columnImages`, `arrowMarksSVG`, `renderImgPanelsForm`, `ndFormHTML`,
+  `arrowFormHTML`, `figTraces` y `figSymbol`), `index.html`, `i18n.js`. `DELIVERY` = V0.23.
+- **Por qué:** petición de Santiago de controlar la apariencia del sondeo y de las figuras.
+- **Comprobación:** 68 pruebas JS; en Chrome con U1385I: 3 paneles en Columna, ancho ×3 con el factor, flechas
+  dibujadas, «solo marcas a mano» reduce los símbolos de la figura de secciones (13 031 → 6 527 trazos), sin errores.
+- **Pendiente / no probado:** en Columna con eje de edad solo se muestra una imagen; con proporción real un sondeo
+  largo queda muy estrecho (usar el factor horizontal).
 
 ## V0.22 — Escalas: marcas del eje vertical y escalas en Multiproxy (05-11-2026)
 

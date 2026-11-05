@@ -126,7 +126,32 @@ export function traceSymbolPath(kind = 'triDown') {
   if (kind === 'star') return Array.from({length:10}, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 2.2 : 5.5; return `${i ? 'L' : 'M'}${f2(r * Math.cos(a))} ${f2(-4 + r * Math.sin(a))}`; }).join('') + 'z';
   return 'M0 0l-4.5 -8h9z';
 }
-const traceSymbol = (x, y, color, kind) => `<path transform="translate(${f2(x)} ${f2(y)})" d="${traceSymbolPath(kind)}" fill="${color}" stroke="#ffffff" stroke-width="0.8"/>`;
+let SYM = { k: 1, stroke: '#ffffff', sw: 0.8 };   // V0.23: marker size and border of the current figure
+const traceSymbol = (x, y, color, kind) => `<path transform="translate(${f2(x)} ${f2(y)})${SYM.k !== 1 ? ` scale(${f2(SYM.k)})` : ''}" d="${traceSymbolPath(kind)}" fill="${color}" stroke="${SYM.stroke}" stroke-width="${SYM.sw}"/>`;
+/** V0.23: style of NO DATA intervals: show, fill (hatch / solid / none), colours and label. */
+export const ND_STYLE = { ndShow: true, ndFill: 'hatch', ndColor: '#f2f2f0', ndLine: '#b9bdbb', ndLabel: true, ndText: '', ndImage: false };
+export function noDataDefs(st) {
+  const q = { ...ND_STYLE, ...(st || {}) };
+  return `<pattern id="nodata" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${q.ndColor}"/>${q.ndFill === 'hatch' ? `<line x1="0" y1="0" x2="0" y2="6" stroke="${q.ndLine}" stroke-width="1.6"/>` : ''}</pattern>`;
+}
+/** NO DATA rectangle (and label) for one column; '' when hidden. */
+export function noDataRect(st, x, w, ya, h, text) {
+  const q = { ...ND_STYLE, ...(st || {}) };
+  if (!q.ndShow || q.ndFill === 'none' || h <= 0) return '';
+  let r = `<rect x="${f2(x)}" y="${f2(ya)}" width="${f2(w)}" height="${f2(Math.max(0.4, h))}" fill="url(#nodata)"/>`;
+  if (q.ndLabel && h >= 12 && w >= 44) r += `<text x="${f2(x + w / 2)}" y="${f2(ya + h / 2 + 3)}" text-anchor="middle" font-size="8.5" font-weight="600" fill="#6b7471">${escXml(q.ndText || text || 'NO DATA')}</text>`;
+  return r;
+}
+/** Intervals without data among rows (merged when contiguous). */
+export function noDataGaps(rows) {
+  const gaps = [];
+  for (const r of rows) {
+    if (r.pct != null) continue;
+    const g = gaps[gaps.length - 1];
+    if (g && Math.abs(r.a0 - g.a1) < 1e-9) g.a1 = r.a1; else gaps.push({ a0: r.a0, a1: r.a1 });
+  }
+  return gaps;
+}
 const escXml = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[m]);
 const f2 = (v) => +(+v).toFixed(2);
 const lbl = (v) => String(+(+v).toPrecision(6));
@@ -164,6 +189,7 @@ export const LOG_STYLE = { yFactor: 1, yStep: null, yDiv: null, pctDiv: 4, total
   axes: {} };   // V0.6: per column {min, max, div, dec, rev, log} keyed by column id (total, species, BI, ii, rec:<name>)
 export function buildLogSVG(o) {
   const st = { ...LOG_STYLE, ...(o.style || {}) };
+  SYM = { k: +st.markSize > 0 ? +st.markSize : 1, stroke: st.markStroke === 'none' ? 'none' : st.markStroke || '#ffffff', sw: +st.markStrokeW >= 0 && st.markStrokeW != null ? +st.markStrokeW : 0.8 };
   const L = { total: 'Bioturbation (%)', species: 'Ichnotaxa (%)', image: 'Core', ...(o.labels || {}) };
   if (st.totalTitle) L.total = st.totalTitle;
   if (st.speciesTitle) L.species = st.speciesTitle;
@@ -174,7 +200,8 @@ export function buildLogSVG(o) {
   const cols = [];
   const t = o.tracks, cw = o.colWidths || {}, wOf = (id, d) => Math.max(30, Math.min(600, +cw[id] || d));
   cols.push({ key: 'axis', w: 64 });
-  if (t.image && o.image) cols.push({ key: 'image', w: o.imageWidth || 60, title: L.image });
+  if (t.image && o.images?.length) for (const im of o.images) cols.push({ key: 'image', w: im.w || o.imageWidth || 60, title: im.title || L.image, img: im });   // V0.23: several panels
+  else if (t.image && o.image) cols.push({ key: 'image', w: o.imageWidth || 60, title: L.image, img: o.image });
   if (t.total) cols.push({ key: 'total', id: 'total', w: wOf('total', 150), title: L.total });
   const presentClasses = o.classes.filter((c) => rows.some((r) => (r.classPct[c.index] || 0) > 0));
   if (t.species) cols.push({ key: 'species', id: 'species', w: wOf('species', 150), title: L.species });
@@ -194,14 +221,9 @@ export function buildLogSVG(o) {
   const out = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="${st.fontSize}">`);
   out.push(`<rect x="0" y="0" width="${W}" height="${Htot}" fill="#ffffff"/>`);
-  out.push(`<defs><clipPath id="plot"><rect x="0" y="${top}" width="${W}" height="${H}"/></clipPath><pattern id="nodata" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f2f2f0"/><line x1="0" y1="0" x2="0" y2="6" stroke="#b9bdbb" stroke-width="1.6"/></pattern></defs>`);
+  out.push(`<defs><clipPath id="plot"><rect x="0" y="${top}" width="${W}" height="${H}"/></clipPath>${noDataDefs(st)}</defs>`);
   // V0.3: intervals without data (excluded or too few valid pixels) are drawn as NO DATA, never as 0
-  const gaps = [];
-  for (const r of rows) {
-    if (r.pct != null) continue;
-    const g = gaps[gaps.length - 1];
-    if (g && Math.abs(r.a0 - g.a1) < 1e-9) g.a1 = r.a1; else gaps.push({ a0: r.a0, a1: r.a1 });
-  }
+  const gaps = noDataGaps(rows);
   if (st.showTitle) {
     out.push(`<text x="8" y="16" font-size="${st.fontSize + 3}" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`);
     if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
@@ -257,13 +279,14 @@ export function buildLogSVG(o) {
     title(c);
     out.push(`<defs><clipPath id="track-${c.x}"><rect x="${c.x}" y="${top}" width="${c.w}" height="${H}"/></clipPath></defs><g clip-path="url(#track-${c.x})">`);
     if (['total', 'species', 'BI', 'ii'].includes(c.key)) for (const g of gaps) {
-      const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to)), h = yb - ya; if (h <= 0) continue;
-      out.push(`<rect x="${c.x}" y="${ya}" width="${c.w}" height="${f2(Math.max(0.4, h))}" fill="url(#nodata)"/>`);
-      if (h >= 12 && c.w >= 44) out.push(`<text x="${f2(c.x + c.w / 2)}" y="${f2(ya + h / 2 + 3)}" text-anchor="middle" font-size="8.5" font-weight="600" fill="#6b7471">${escXml(L.noData || 'NO DATA')}</text>`);
+      const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to));
+      out.push(noDataRect(st, c.x, c.w, ya, yb - ya, L.noData));
     }
     if (c.key === 'image') {
-      out.push(`<image x="${c.x}" y="${top}" width="${c.w}" height="${H}" preserveAspectRatio="none" href="${o.image.href}" xlink:href="${o.image.href}"/>`);
-      for (const m of o.marks || []) if (m.a >= from && m.a <= to) out.push(traceSymbol(c.x + Math.min(1, Math.max(0, m.xf)) * c.w, y(m.a), m.color, m.symbol));
+      out.push(`<image x="${c.x}" y="${top}" width="${c.w}" height="${H}" preserveAspectRatio="none" href="${c.img.href}" xlink:href="${c.img.href}"/>`);
+      if (st.ndImage) for (const g of gaps) { const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to)); out.push(noDataRect(st, c.x, c.w, ya, yb - ya, L.noData)); }
+      if (typeof c.img.draw === 'function') out.push(c.img.draw(c.x, c.w, y));   // V0.23: overlay (e.g. arrows) drawn by the caller
+      if (c.img.marks !== false) for (const m of o.marks || []) if (m.a >= from && m.a <= to) out.push(traceSymbol(c.x + Math.min(1, Math.max(0, m.xf)) * c.w, y(m.a), m.color, m.symbol));
     } else if (c.key === 'total') {
       const nd = Math.max(1, Math.min(20, Math.round(st.pctDiv) || 4)), sx = xScale(c, 0, 100, false, Array.from({ length: nd + 1 }, (_, k) => +((100 * k) / nd).toFixed(4)));
       const bars = st.totalStyle === 'barsline' || st.totalStyle === 'bars', line = st.totalStyle === 'barsline' || st.totalStyle === 'line';
@@ -385,6 +408,11 @@ export function buildRangeSVG(o) {
   for (const e of extraTicks(from, to, H, o.style)) out.push(`<line x1="${x0 - e.len}" y1="${y(e.v)}" x2="${x0}" y2="${y(e.v)}" stroke="#1c2422" stroke-width="0.6"/>`);
   out.push(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
   out.push(`<text transform="translate(16,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.axisLabel || '')}</text>`);
+  {   // V0.23: NO DATA intervals across the plot (style: show, fill, colours, label)
+    const st = o.style || {}; SYM = { k: +st.markSize > 0 ? +st.markSize : 1, stroke: st.markStroke === 'none' ? 'none' : st.markStroke || '#ffffff', sw: st.markStrokeW != null && +st.markStrokeW >= 0 ? +st.markStrokeW : 0.8 };
+    out.push(`<defs>${noDataDefs(st)}</defs>`);
+    for (const g of noDataGaps(rows)) { const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to)); out.push(noDataRect(st, x0, W - 14 - x0, ya, yb - ya, o.labels?.noData)); }
+  }
   const rangeScale = (id, x, w, defaultMax) => {
     const ax = id === 'species' && display === 'symbols' ? {} : o.style?.axes?.[id] || {}, hi = ax.max ?? defaultMax, lo = ax.min ?? (ax.log ? hi / 1000 : 0);
     if (!(hi > lo) || (ax.log && !(lo > 0))) throw new Error('Invalid horizontal axis: max > min; logarithmic limits must be positive.');
