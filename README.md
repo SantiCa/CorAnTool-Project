@@ -92,6 +92,7 @@ legacy/             original v2.1 code (2019), unchanged
 
 ## Documentation
 
+- [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) — agent instructions; [docs/COORDINACION_IA.md](docs/COORDINACION_IA.md) — shared Claude/Codex workflow and handoff.
 - [docs/DOCUMENTACION_TECNICA.md](docs/DOCUMENTACION_TECNICA.md) — every algorithm, formula, default value and validation result (Spanish).
 - [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md) — what changed in each version and why (Spanish).
 - [publications/METODOS_Y_DEFENSA.md](publications/METODOS_Y_DEFENSA.md) — methods per planned paper and answers to likely reviewer questions (Spanish).

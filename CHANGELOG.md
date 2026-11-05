@@ -1,6 +1,9 @@
 # Changelog
 
-Delivery numbers (V1–V5) and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
+Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
+
+## V30 — 2026-11-05
+- Added Codex instructions, shared Claude/Codex editing and handoff rules, and four focused chat roles. Updated the visible delivery tag; analysis behavior is unchanged.
 
 ## V29 — 2026-11-01
 - Publications: updated portfolio (5 papers), methods and defence reorganised, drafts 4 and 5, Word/LaTeX export (`tools/export_publications.py`).

@@ -4,7 +4,7 @@ Owner: Santiago Casanova-Arenillas. Communicate in Spanish.
 
 ## Documentation is part of every change
 Every delivery that changes code, algorithms, defaults or files must, in the same commit:
-1. Get the next delivery number **V<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V29) and mention it in the reply.
+1. Get the next delivery number **V<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V30) and mention it in the reply.
 2. Add a `V<n>` section to `docs/HISTORIAL_VERSIONES.md` (Qué se hizo / Cambios / Por qué / Comprobación / Pendiente) and a row in its summary table.
 3. Update `docs/DOCUMENTACION_TECNICA.md` if any algorithm, formula, default value, file format or validation result changes. Formulas there must match the code exactly.
 4. Update `publications/METODOS_Y_DEFENSA.md` if the change affects what a paper can claim.
@@ -12,6 +12,7 @@ Every delivery that changes code, algorithms, defaults or files must, in the sam
 6. Set `DELIVERY` in `app/js/app.js` to the new V<n> (shown in the app and used for the offline file name `dist/CorAnTool_V<n>.html`).
 
 ## Handoff
+- Shared Claude/Codex workflow and current editing turn: read `docs/COORDINACION_IA.md` before editing. Only one editor at a time in the shared checkout; other chats review read-only. Do not start old pending tasks without a concrete request.
 - Current state, how to run and pending work: `docs/TRASPASO_CLAUDE_CODE.md`.
 
 ## Git

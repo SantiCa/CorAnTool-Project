@@ -47,6 +47,7 @@ La descripción detallada de los algoritmos está en
 | V27 | 01-11-2026 | Aplicación web 2.0.1 | Barra de progreso del entrenamiento (con tiempo restante y Cancelar) y número de versión visible en el programa y en el nombre del archivo descargable |
 | V28 | 01-11-2026 | Documentación | Nota de traspaso a Claude Code (estado, cómo ejecutar, datos privados, pendientes) |
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
+| V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 
 ---
 
@@ -1200,6 +1201,32 @@ navegar por todos los proyectos con mapas multiproyecto y sacar figuras.
 - Los proyectos restaurados desde archivo aparecen en «Todos los proyectos» cuando se abren una vez.
 - El registro del sondeo necesita imágenes; los sondeos solo con datos se ven en Multiproxy.
 - La bioturbación de GP03 y LC10 de la tesis sigue sin cargar.
+
+---
+
+## V30 — Coordinación entre Claude y Codex (05-11-2026)
+
+**Qué se hizo.** Preparar el repositorio para colaborar desde Claude Code y chats
+especializados de Codex con contexto acotado.
+
+**Cambios.** `AGENTS.md` remite a las reglas comunes de `CLAUDE.md`;
+`docs/COORDINACION_IA.md` define ámbitos de chat, turno de un solo editor en `master`,
+sincronización y traspaso. Se enlazan desde las instrucciones y el README. El traspaso
+de noviembre de V28/V29 queda señalado como histórico. `DELIVERY` pasa a V30.
+
+**Por qué.** Evitar cambios simultáneos sobre la misma copia y lecturas o auditorías
+repetidas al distribuir el trabajo entre herramientas y modelos.
+
+**Comprobación.** 44 pruebas JavaScript correctas con `node --test tests/app/*.test.mjs`
+(mismo comando de `npm test`, sin npm en PATH), 9 pruebas Python correctas con
+`.\.venv\Scripts\python.exe -m pytest -q` y generación correcta de
+`dist/CorAnTool_V30.html` con `tools/build_standalone.py`. `git diff --check` sin errores.
+Se creó un entorno Python local ignorado por Git. No se realizó una revisión visual
+de la interfaz; el cambio en la app se limita a la etiqueta de entrega.
+
+**Pendiente.** Los pendientes funcionales de V29 continúan sin cambios. Los chats no
+inician trabajo de producto al crearse. La reserva de edición es una convención compartida,
+no un bloqueo automático del sistema de archivos.
 
 ---
 

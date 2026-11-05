@@ -1,5 +1,8 @@
 # Traspaso a Claude Code (01-11-2026)
 
+> Nota histórica de V28/V29. Desde V30 (05-11-2026), leer primero `CLAUDE.md` y
+> `docs/COORDINACION_IA.md` para el turno de edición y el traspaso vigente.
+
 Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Léelo junto con `CLAUDE.md`
 (reglas) y `docs/HISTORIAL_VERSIONES.md` (qué se hizo en cada entrega).
 
