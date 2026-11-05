@@ -95,6 +95,8 @@ textarea { font: 12px/1.4 var(--font-data); resize: vertical; min-height: 64px; 
 input[type=number] { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 .note { color: var(--muted); font-size: 11.5px; margin: 0; }
 .chk { display: flex; gap: 7px; align-items: flex-start; cursor: pointer; }
+.opt.toggle { padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: var(--r); }
+.opt.toggle:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
 /* V0.27: groups of options as toggle chips (two or more per row) */
 .side .chk2, #figPanel .chk2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px; margin-top: 4px; }
 .side .chk2 > .chk, #figPanel .chk2 > .chk { align-items: center; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--field); font-size: 12px; line-height: 1.25; min-width: 0; }
@@ -724,7 +726,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <button class="tool" data-tool="mark" data-i18n-title="tool.mark"><svg viewBox="0 0 24 24"><path d="M12 20l-6-10h12z"/><path d="M12 4v5"/></svg></button>
         <label class="opt idmode" data-i18n-title="id.tip"><input type="checkbox" id="idMode"><span data-i18n="id.mode"></span></label>
         <span class="sep"></span>
-        <label class="opt" id="optOverlap" hidden><input type="checkbox" id="overlapMode"><span data-i18n="tool.overlap"></span></label>
+        <label class="opt toggle" id="optOverlap" hidden data-i18n-title="h.tool.overlap"><input type="checkbox" id="overlapMode" checked><span data-i18n="tool.overlap"></span></label>
         <label class="opt" id="optShape" hidden><span data-i18n="tool.shape"></span><select id="exShape"><option value="brush" data-i18n="tool.shapeBrush"></option><option value="rect" data-i18n="tool.shapeRect"></option></select></label>
         <label class="opt" id="optSize"><span data-i18n="tool.size"></span><input type="range" id="brushSize" min="1" max="120"><output id="brushOut"></output></label>
         <label class="opt" id="optTol"><span data-i18n="tool.tol"></span><input type="range" id="wandTol" min="2" max="120"><output id="tolOut"></output></label>

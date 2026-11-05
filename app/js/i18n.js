@@ -1770,3 +1770,9 @@ Object.assign(D.en, {
   'age.errTrack': 'Age interval ({u})', 'age.errChip': 'Age uncertainty', 'age.errTip': 'Width of the age interval (e.g. Bacon 95 %) at each depth. Shown only when the age model has it.',
   'age.ph': 'depth, age[, min, max]\n0, 0\n150, 12.5',
 });
+
+// V0.29: overlap on by default
+Object.assign(D.es, { 'tool.overlap': 'Superponer trazas (S)', 'ov.on': 'Superponer activado: las trazas nuevas se solapan con las de debajo.', 'ov.off': 'Superponer desactivado: las trazas nuevas sustituyen a las de debajo.',
+  'ov.hint': 'La traza nueva ha sustituido parte de otra. Para que se solapen, activa «Superponer trazas» (tecla S).' });
+Object.assign(D.en, { 'tool.overlap': 'Overlap traces (S)', 'ov.on': 'Overlap on: new traces overlap those underneath.', 'ov.off': 'Overlap off: new traces replace those underneath.',
+  'ov.hint': 'The new trace replaced part of another. To make them overlap, turn on «Overlap traces» (key S).' });

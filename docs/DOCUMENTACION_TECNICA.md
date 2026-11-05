@@ -552,7 +552,7 @@ Implementación: `imageproc.js::regionGrow, polygonPixels` y `app.js` (herramien
 Modificadores: Mayús añade al objeto seleccionado y Alt resta (varita y lazo). Con el borrador, Mayús borra solo la
 traza seleccionada (V0.20).
 
-**Superponer** (desde V0.20, pincel, varita y lazo; desactivado por defecto). Activado, la traza nueva se añade encima
+**Superponer** (desde V0.20, pincel, varita y lazo; activado por defecto desde V0.29, se recuerda en el navegador, tecla S). Activado, la traza nueva se añade encima
 de las que ya hay en esos píxeles y todas cuentan (§3, trazas solapadas); con el pincel, empezar sobre una traza crea
 una nueva en vez de ampliarla (Mayús amplía la seleccionada). Desactivado, la traza nueva sustituye a las de debajo, como
 antes. Restar (Alt) quita solo la traza seleccionada. Hacer clic de nuevo sobre un solape selecciona la traza de debajo.

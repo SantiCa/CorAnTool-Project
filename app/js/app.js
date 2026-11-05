@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.28';
+const DELIVERY = 'V0.29';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -400,7 +400,7 @@ function setLabel(op, i, v) { const L = op.s.labels, o = L[i]; if (o !== v) { fo
 /* V0.20: overlapping traces. With «Superponer» a new trace keeps what is underneath; without it, it replaces it (as before). */
 const six = (s) => s._six || (s._six = stackIndex(s.stacks));
 const topLab = (s, i) => topAt(s.labels[i], s.stacks);
-const addPx = (op, i, id) => setLabel(op, i, S.overlap ? withId(op.s.labels[i], id, op.s.stacks, six(op.s)) : id);
+const addPx = (op, i, id) => { const o = op.s.labels[i]; if (!S.overlap && o && o !== id) op.replaced = true; setLabel(op, i, S.overlap ? withId(o, id, op.s.stacks, six(op.s)) : id); };
 const subPx = (op, i, id) => setLabel(op, i, withoutId(op.s.labels[i], id, op.s.stacks, six(op.s)));
 /** Remove a set of ids from every pixel. */
 function dropIds(op, set) {
@@ -414,8 +414,10 @@ function dropIds(op, set) {
 function setEx(op, i, v) { const E = op.s.exclude; if (E[i] !== v) { op.ex.push(i, E[i]); E[i] = v; } }
 function grow(op, x, y) { const e = op.ext; if (x < e.x0) e.x0 = x; if (y < e.y0) e.y0 = y; if (x > e.x1) e.x1 = x; if (y > e.y1) e.y1 = y; }
 
+let ovHint = false;
 function finishPixelOp(op, target = 0) {
   const s = op.s;
+  if (op.replaced && !ovHint) { ovHint = true; toast(t('ov.hint')); }   // V0.29: the user may have wanted the traces to overlap
   if (target) op.touched.add(target);
   if (op.touched.size) {
     const R = { ...op.ext };
@@ -1580,6 +1582,7 @@ document.addEventListener('keydown', (e) => {
   if (k === ' ') { spaceDown = true; view.classList.add('pan'); e.preventDefault(); return; }
   const tools = { v: 'select', w: 'wand', b: 'brush', l: 'lasso', c: 'cut', e: 'erase', x: 'exclude', h: 'pan', m: 'mark' };
   if (tools[k.toLowerCase()] && !e.ctrlKey && !e.metaKey) { setTool(tools[k.toLowerCase()]); return; }
+  if (k.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey) { setOverlap(!S.overlap); toast(t(S.overlap ? 'ov.on' : 'ov.off')); return; }   // V0.29
   if (!s) return;
   if (/^[0-9]$/.test(k)) {
     const c = k === '0' ? clsById('artifact') : S.classes[+k - 1];
@@ -1631,7 +1634,11 @@ function setTool(tool) {
   requestRender();
 }
 $('exShape').addEventListener('change', (e) => { S.exShape = e.target.value; });
-$('overlapMode').addEventListener('change', (e) => { S.overlap = e.target.checked; });
+/* V0.29: «Superponer» is on by default and remembered in the browser; key S toggles it */
+try { S.overlap = localStorage.getItem('ichantool.overlap') !== '0'; } catch { S.overlap = true; }
+$('overlapMode').checked = S.overlap;
+function setOverlap(on) { S.overlap = !!on; $('overlapMode').checked = S.overlap; try { localStorage.setItem('ichantool.overlap', S.overlap ? '1' : '0'); } catch { /* storage blocked */ } }
+$('overlapMode').addEventListener('change', (e) => setOverlap(e.target.checked));
 function setBrush(v) { S.brushSize = Math.max(1, Math.min(120, v)); $('brushSize').value = S.brushSize; $('brushOut').textContent = S.brushSize; requestRender(); }
 function setActive(id) { S.active = id; if (S.settings.solo) { setHidden(S.classes.filter((c) => c.id !== id).map((c) => c.id)); } renderClasses(); renderSelTools(sec()); }
 function select(id) { S.selected = id || 0; S.multi.clear(); renderObject(); requestRender(); if (id) showTab('object', true); }

@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.29 — 2026-11-05
+- «Overlap traces» is on by default (remembered, key S), shown as a highlighted toggle, with a hint when a new trace replaces part of another.
+
 ## V0.28 — 2026-11-05
 - Age model with an age range; imports the Bacon (rbacon) *_ages.txt table with median or mean; age_min/age_max in the CSV and an age-uncertainty track.
 - «Pick the setting that best separates traces and matrix» now measures the separation of your identified traces from the matrix (or a contrast-invariant local criterion without them) and also tries each colour channel.

@@ -62,6 +62,7 @@ La descripción detallada de los algoritmos está en
 | V0.26 | 05-11-2026 | Interfaz | La página ya no se desplaza (solo los paneles), paneles que se adaptan al ancho de pantalla, barra de estado visible, franja de navegación, «Ver todo» y Re Pág/Av Pág/Inicio/Fin |
 | V0.27 | 05-11-2026 | Diseño | Cabecera en una fila, fuentes incluidas, paneles por secciones y opciones en botones, figura vacía como hoja, títulos de columna partidos, paleta de registros; franja de navegación a la izquierda con su regla |
 | V0.28 | 05-11-2026 | Edad y realce | Modelo de edad con intervalo (Bacon *_ages.txt), columna de incertidumbre y age_min/age_max; nuevo criterio para «Elegir el ajuste…» con las trazas identificadas |
+| V0.29 | 05-11-2026 | Edición de trazas | «Superponer trazas» activado por defecto, más visible, tecla S y aviso cuando una traza sustituye a otra |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -652,6 +653,18 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.29 — Superponer trazas por defecto (05-11-2026)
+
+- **Qué se hizo:** Santiago no conseguía poner una traza sobre otra: la opción «Superponer» (V0.20) venía
+  desactivada y apenas se veía en la barra. Ahora está activada por defecto, se recuerda en el navegador, se muestra
+  como botón resaltado «Superponer trazas (S)», la tecla S la alterna y, si está desactivada y una traza nueva
+  sustituye a parte de otra, un aviso (una vez por sesión) explica cómo hacer que se solapen.
+- **Cambios:** `app.js` (`setOverlap`, `addPx`, aviso en `finishPixelOp`, tecla S), `index.html`, `i18n.js`.
+  `DELIVERY` = V0.29.
+- **Comprobación:** 70 pruebas JS; en Chrome sin tocar nada: pincel sobre una traza crea otra solapada, tijeras y
+  unir siguen funcionando; sin errores.
+- **Pendiente / no probado:** —
 
 ## V0.28 — Modelos de edad de Bacon con incertidumbre y mejor elección del realce (05-11-2026)
 
