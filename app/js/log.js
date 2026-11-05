@@ -145,7 +145,14 @@ export function buildLogSVG(o) {
   const out = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`);
   out.push(`<rect x="0" y="0" width="${W}" height="${Htot}" fill="#ffffff"/>`);
-  out.push(`<defs><clipPath id="plot"><rect x="0" y="${top}" width="${W}" height="${H}"/></clipPath></defs>`);
+  out.push(`<defs><clipPath id="plot"><rect x="0" y="${top}" width="${W}" height="${H}"/></clipPath><pattern id="nodata" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f2f2f0"/><line x1="0" y1="0" x2="0" y2="6" stroke="#b9bdbb" stroke-width="1.6"/></pattern></defs>`);
+  // V0.3: intervals without data (excluded or too few valid pixels) are drawn as NO DATA, never as 0
+  const gaps = [];
+  for (const r of rows) {
+    if (r.pct != null) continue;
+    const g = gaps[gaps.length - 1];
+    if (g && Math.abs(r.a0 - g.a1) < 1e-9) g.a1 = r.a1; else gaps.push({ a0: r.a0, a1: r.a1 });
+  }
   out.push(`<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`);
   if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
 
@@ -180,6 +187,11 @@ export function buildLogSVG(o) {
     }
     title(c);
     out.push('<g clip-path="url(#plot)">');
+    if (['total', 'species', 'BI', 'ii'].includes(c.key)) for (const g of gaps) {
+      const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to)), h = yb - ya; if (h <= 0) continue;
+      out.push(`<rect x="${c.x}" y="${ya}" width="${c.w}" height="${f2(Math.max(0.4, h))}" fill="url(#nodata)"/>`);
+      if (h >= 12 && c.w >= 44) out.push(`<text x="${f2(c.x + c.w / 2)}" y="${f2(ya + h / 2 + 3)}" text-anchor="middle" font-size="8.5" font-weight="600" fill="#6b7471">${escXml(L.noData || 'NO DATA')}</text>`);
+    }
     if (c.key === 'image') {
       out.push(`<image x="${c.x}" y="${top}" width="${c.w}" height="${H}" preserveAspectRatio="none" href="${o.image.href}" xlink:href="${o.image.href}"/>`);
       for (const m of o.marks || []) if (m.a >= from && m.a <= to) out.push(markTri(c.x + Math.min(1, Math.max(0, m.xf)) * c.w, y(m.a), m.color));

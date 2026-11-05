@@ -155,7 +155,7 @@ intervalos.
     %clase_k,j      = 100 · Σ C_r,k / Σ V_r
     profundidad_j   = top + ((r0 + r1) / 2) · Δz       (centro del intervalo)
 
-Si un intervalo no tiene píxeles válidos (todo excluido), su porcentaje queda vacío.
+Si un intervalo tiene menos de `minValid` (20 % por defecto) de sus píxeles válidos —es decir, `Σ V_r < minValid · N · anchura`— no tiene datos (V0.4): porcentajes, BI e ii quedan vacíos (nunca 0) y la columna lo dibuja como SIN DATOS. Opcionalmente (`noDataPad`, cm) se marcan también sin datos los intervalos de la misma sección que solapan con `[techo − pad, muro + pad]` de un intervalo sin datos. Solo en la aplicación web (el paquete Python no tiene capa de exclusión).
 
 ### 3.3 Equivalencia con la versión publicada (V2)
 La V2 calculaba el porcentaje de cada fila y después la **media** de las filas del intervalo.

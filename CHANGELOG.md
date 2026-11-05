@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.4 — 2026-11-05
+- Intervals with too few valid pixels (default < 20 %, adjustable) have no data instead of 0; shown as NO DATA in the column; option to widen no-data zones.
+
 ## V0.3 — 2026-11-05
 - Column and figures can show identification marks together with quantified tracks (bioturbation, ichnotaxa, BI, ii).
 

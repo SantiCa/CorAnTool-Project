@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.4 | 05-11-2026 | Aplicación 2.5 | Intervalos sin datos (excluidos o con pocos píxeles válidos) como SIN DATOS en vez de 0; opción para ampliar esas zonas |
 | V0.3 | 05-11-2026 | Aplicación 2.4.1 | Columna y figuras combinan marcas de identificación con bioturbación, icnotaxones, BI e ii |
 | V0.2 | 05-11-2026 | Aplicación 2.4 | Importación arreglada en el programa de escritorio; imágenes siempre en un proyecto y un sondeo elegido; ocultar icnotaxones al interpretar; figuras con ventana de profundidad, columnas, registros y anchura con o sin proporción; más fluidez |
 | V33 = V0.1 | 05-11-2026 | Aplicación 2.3 (release V0.1) | Imágenes en disco y en memoria solo al usarlas; resolución completa guardada y resolución de trabajo cambiable por sección; recorte sin perder resolución; intervalo de análisis en cm |
@@ -626,6 +627,26 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.4 — Intervalos sin datos (05-11-2026)
+
+**Qué se hizo.** Un intervalo cuyo porcentaje de píxeles válidos (no excluidos) es menor que un mínimo (20 % por
+defecto, ajustable en el paso 4) no tiene datos: su bioturbación, icnotaxones, BI e ii quedan vacíos (no 0), se dejan
+fuera de los CSV y en la columna (y su figura) se dibuja una banda rayada «SIN DATOS». En el panel de la columna,
+«Ampliar zonas sin datos (cm por lado)» marca también sin datos los intervalos cercanos a esas zonas.
+
+**Cambios.** `core.js`: `rowCounts` devuelve `nCols`; `binRows` acepta `minValid` y marca `noData`. `app.js`:
+ajustes `minValid` y `noDataPad`, ampliación en `analyze`, controles y etiquetas. `log.js::buildLogSVG`: patrón
+rayado y texto en las columnas de bioturbación, icnotaxones, BI e ii. Prueba nueva en `core.test.mjs`.
+
+**Por qué.** Petición de Santiago: que las secciones excluidas o con muy pocos datos no aparezcan como 0.
+
+**Comprobación.** `npm test` (47). Sin pruebas en navegador.
+
+**Pendiente.** El paquete Python no tiene capa de exclusión, así que no aplica el mínimo de píxeles válidos. Los
+proyectos existentes pueden cambiar en intervalos con menos del 20 % de píxeles válidos (antes daban un valor).
 
 ---
 

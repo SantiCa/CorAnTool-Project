@@ -45,6 +45,7 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.4, 05-11-2026 (Claude):** intervalos sin datos (mínimo de píxeles válidos, SIN DATOS en la columna, ampliar zonas).
 - **V0.3, 05-11-2026 (Claude):** identificación y cuantificación juntas en columna y figuras.
 - **V0.2, 05-11-2026 (Claude):** importación en escritorio (imágenes como bytes), sondeo obligatorio al añadir imágenes,
   ocultar icnotaxones, opciones de figuras (ventana, columnas, registros, proporción) y cachés de rendimiento.

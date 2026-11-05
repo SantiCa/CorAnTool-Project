@@ -661,6 +661,7 @@ details.mini[open] { display: grid; gap: 6px; }
           <label class="f"><span data-i18n="a.bin"></span><input type="number" id="binCm" min="0.001" step="0.1"></label>
           <p class="note" id="binNote"></p>
           <label class="chk"><input type="checkbox" id="inclPred"><span data-i18n="a.inclPred"></span></label>
+          <label class="f" data-i18n-title="a.minValidTip"><span data-i18n="a.minValid"></span><input type="number" id="minValid" min="0" max="100" step="5"></label>
           <label class="chk"><input type="checkbox" id="countCand"><span data-i18n="a.countCand"></span></label>
           <p class="note" data-i18n="a.note"></p>
         </div>
@@ -766,6 +767,7 @@ details.mini[open] { display: grid; gap: 6px; }
           <button class="btn small" id="logAll" data-i18n="log.all"></button>
         </div>
         <div class="slider"><span data-i18n="log.height"></span><output id="logHeightOut"></output><input type="range" id="logHeight" min="300" max="3000" step="50"></div>
+        <label class="f" data-i18n-title="log.noDataPadTip"><span data-i18n="log.noDataPad"></span><input type="number" id="noDataPad" min="0" step="0.5"></label>
         <div class="f" id="logTracks"><span data-i18n="log.tracks"></span>
           <label class="chk"><input type="checkbox" data-track="image"><span data-i18n="log.image"></span></label>
           <label class="chk"><input type="checkbox" data-track="total"><span data-i18n="log.total"></span></label>

@@ -15,7 +15,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.3';
+const DELIVERY = 'V0.4';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -50,7 +50,7 @@ const S = {
   classes: defaultClasses(), active: 'undet',
   sections: [], cur: -1, cores: [], curCore: null, sheet: { columns: [], cells: {} },
   id: '', notes: '', records: [], logView: null,
-  settings: { binCm: 1, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP: 8, clfScope: 'project', ml: { method: 'knn', k: 5, weights: 'distance', trees: 100, maxDepth: 12, minLeaf: 2, balanced: true, priors: 'uniform' } },
+  settings: { binCm: 1, minValid: 20, noDataPad: 0, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP: 8, clfScope: 'project', ml: { method: 'knn', k: 5, weights: 'distance', trees: 100, maxDepth: 12, minLeaf: 2, balanced: true, priors: 'uniform' } },
   age: { text: '', units: 'ka', model: null },
   library: [],
   tool: 'select', prevTool: 'select', brushSize: 10, wandTol: 30,
@@ -596,7 +596,13 @@ function analyze(s) {
   const key = `${s._mv || 0}|${s.w}x${s.h}|${s.roi.x0},${s.roi.y0},${s.roi.x1},${s.roi.y1}|${S.classes.length}|${eff.length}|${h}`;
   if (s._rc?.key !== key) s._rc = { key, counts: rowCounts({ labels: s.labels, width: s.w, roi: s.roi, exclude: s.exclude, effClass: eff, nClasses: S.classes.length }) };   // V0.2: cached
   const counts = s._rc.counts;
-  s.bins = binRows(counts, { top: s.top, bottom: s.bottom, binPx: binRowsOf(s) });
+  s.bins = binRows(counts, { top: s.top, bottom: s.bottom, binPx: binRowsOf(s), minValid: (S.settings.minValid ?? 20) / 100 });
+  const pad = (S.settings.noDataPad || 0) / UNIT_TO_CM[s.units];   // V0.3: widen the no-data zones by this length (cm) on each side
+  if (pad > 0) {
+    const gaps = s.bins.filter((b) => b.noData).map((b) => [b.dTop - pad, b.dBottom + pad]);
+    for (const b of s.bins) if (!b.noData && gaps.some(([a, z]) => b.dBottom > a + 1e-9 && b.dTop < z - 1e-9)) Object.assign(b, { noData: true, pct: null, classPct: b.classPct.map(() => null) });
+  }
+  for (const b of s.bins) if (b.noData) { b.BI = null; b.ii = null; }
   for (const b of s.bins) {
     b.age = interpAge(S.age.model, b.depth);
     const m = manualAt(s, b.depth); b.BIm = m?.BI ?? null; b.iim = m?.ii ?? null;
@@ -1546,6 +1552,10 @@ $('detectBtn').addEventListener('click', runDetection);
 $('clearCand').addEventListener('click', clearCandidates);
 
 $('maxMP').addEventListener('change', (e) => { S.settings.maxMP = +e.target.value; });
+for (const [id, key, max] of [['minValid', 'minValid', 100], ['noDataPad', 'noDataPad', 1e6]]) $(id).addEventListener('change', (e) => {   // V0.3
+  const v = Math.max(0, Math.min(max, +e.target.value || 0)); S.settings[key] = v; e.target.value = v;
+  for (const s of S.sections) s.logVer++; markDirty(); scheduleAnalysis(); scheduleLog(); if (mode === 'fig') scheduleFigure();
+});
 $('binCm').addEventListener('change', (e) => { const v = +e.target.value; if (!(v > 0)) { renderBinNote(); return; } S.settings.binCm = v; markDirty(); renderBinNote(); scheduleAnalysis(); scheduleLog(); });
 $('inclPred').addEventListener('change', (e) => { S.settings.includePred = e.target.checked; scheduleAnalysis(); renderClasses(); });
 $('countCand').addEventListener('change', (e) => { S.settings.countCandidates = e.target.checked; scheduleAnalysis(); renderClasses(); });
@@ -1969,7 +1979,7 @@ function resetState() {
   S.undo = []; S.selected = 0; S.multi.clear(); S.library = []; S.sheet = { columns: [], cells: {} }; S.fig = defaultFig(); S.kind = 'normal'; S.multiSource = null; S.plots = []; S.plotCur = 0; S.coreModels = {};
   S.geo = defaultGeo(); geoReset();
   S.classes = defaultClasses(); S.active = 'undet';
-  S.settings = { binCm: 1, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP, clfScope: 'project', ml: { ...ML_DEFAULT } };
+  S.settings = { binCm: 1, minValid: 20, noDataPad: 0, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP, clfScope: 'project', ml: { ...ML_DEFAULT } };
   $('undoBtn').disabled = true; $('detectStatus').textContent = '';
   S.cores = [makeCore({ name: t('core.first') })];
   activateCore(S.cores[0].id, true);
@@ -2444,7 +2454,7 @@ function renderLog() {
     axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, imageWidth: imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
     marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes : [], marks),
     ...geoOverlay(D.axis),
-    labels: { total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
+    labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
     colWidths: (lv.colW ||= {}),
   });
   box.innerHTML = res.svg;
@@ -3365,7 +3375,7 @@ function renderGeoLogs() {
     title: core.name, subtitle: t('geo.subtitleLogs', { n: geoRT.samples.filter((s) => s.core === core.id).length, step: st.step }),
     axisLabel: axis === 'age' ? `${t('r.age')} (${S.age.units || 'ka'})` : `${t('r.depth')} (${core.units || 'm'})`,
     from, to, height: 700, rows, classes: [], tracks, image, imageWidth: 64, records, boundaries: [], bands, bandLegend: bandLegendOf(bands), shade,
-    labels: { total: t('log.total'), species: t('log.species'), image: t('log.image') },
+    labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image') },
     colWidths: (g.view.colW ||= {}), recWidth: g.view.trackW || 120,
   });
   box.innerHTML = res.svg;
@@ -4991,7 +5001,7 @@ function coreSVG() {
     title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: D.axis === 'age' ? `${t('r.age')} (${S.age.units})` : `${t('r.depth')} (${D.base})`,
     from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
     marks: compositeMarks(D), idList: idMode() || compositeMarks(D).length ? idListOf(D.rows, compositeMarks(D)) : null, legendClasses: legendOf(classes, compositeMarks(D)),
-    labels: { total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
+    labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
   }).svg;
 }
 
@@ -5312,7 +5322,7 @@ function syncSettingsForm() {
   $('inclPred').checked = st.includePred; $('countCand').checked = st.countCandidates; $('idMode').checked = !!st.idMode;
   $('predThr').value = st.predThr; $('thrOut').textContent = Math.round(st.predThr * 100) + '%';
   $('novelty').value = st.novelty; $('novOut').textContent = '×' + st.novelty;
-  $('maxMP').value = st.maxMP;
+  $('maxMP').value = st.maxMP; $('minValid').value = st.minValid ?? 20; $('noDataPad').value = st.noDataPad || 0;
   renderBinNote();
 }
 

@@ -80,3 +80,11 @@ test('V33: fractional rows per bin (interval in cm) keep boundaries without drif
   const i = binRows(counts, { top: 0, bottom: 10, binPx: 30 });   // integer: classic bins, partial kept
   assert.deepEqual(i.map((x) => [x.r0, x.r1]), [[0, 30], [30, 60], [60, 90], [90, 100]]);
 });
+
+test('V0.3: intervals with too few valid pixels are no data (null), not 0', () => {
+  const n = 20, valid = new Uint32Array(n).fill(10); valid.fill(1, 10);   // second half: 1 valid pixel of 10 per row
+  const counts = { nRows: n, valid, bio: new Uint32Array(n), cls: new Uint32Array(0), nClasses: 0, nCols: 10 };
+  const b = binRows(counts, { top: 0, bottom: 2, binPx: 10, minValid: 0.2 });
+  assert.equal(b[0].pct, 0); assert.equal(b[1].pct, null); assert.equal(b[1].noData, true);
+  assert.equal(binRows(counts, { top: 0, bottom: 2, binPx: 10 })[1].pct, 0);   // without threshold: 0 %
+});

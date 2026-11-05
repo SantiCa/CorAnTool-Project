@@ -44,7 +44,7 @@ export function rowCounts({ labels, width, roi, exclude, effClass, nClasses }) {
     }
     valid[r] = v; bio[r] = b;
   }
-  return { nRows, valid, bio, cls, nClasses };
+  return { nRows, valid, bio, cls, nClasses, nCols: x1 - x0 };
 }
 
 /**
@@ -53,8 +53,8 @@ export function rowCounts({ labels, width, roi, exclude, effClass, nClasses }) {
  * [⌊j·binPx + ½⌋, ⌊(j+1)·binPx + ½⌋), so the boundaries never drift. Integer binPx gives the old bins.
  */
 export const binEdge = (j, binPx) => Math.floor(j * binPx + 0.5);
-export function binRows(counts, { top, bottom, binPx }) {
-  const { nRows, valid, bio, cls, nClasses } = counts;
+export function binRows(counts, { top, bottom, binPx, minValid = 0 }) {
+  const { nRows, valid, bio, cls, nClasses, nCols = 0 } = counts;
   const step = (bottom - top) / nRows;
   const out = [];
   binPx = Math.max(1, binPx);
@@ -66,13 +66,15 @@ export function binRows(counts, { top, bottom, binPx }) {
       v += valid[r]; b += bio[r];
       for (let k = 0; k < nClasses; k++) c[k] += cls[r * nClasses + k];
     }
-    const pct = v ? (b / v) * 100 : null;
+    // V0.3: an interval with less than minValid (fraction) of its pixels valid (not excluded) has no data (null, not 0)
+    const ok = v > 0 && !(minValid > 0 && nCols > 0 && v < minValid * (r1 - r0) * nCols);
+    const pct = ok ? (b / v) * 100 : null;
     out.push({
       index: out.length, r0, r1,
       depth: top + ((r0 + r1) / 2) * step,
       dTop: top + r0 * step, dBottom: top + r1 * step,
-      valid: v, pct,
-      classPct: c.map((x) => (v ? (x / v) * 100 : null)),
+      valid: v, pct, ...(ok ? {} : { noData: true }),
+      classPct: c.map((x) => (ok ? (x / v) * 100 : null)),
       BI: classify(BI, pct), ii: classify(II, pct),
     });
   }
