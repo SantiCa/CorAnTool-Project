@@ -1,8 +1,10 @@
 # Historial de versiones de CorAnTool (antes IchAnTool)
 
 Este documento recoge **qué se hizo, qué cambió y por qué** en cada versión del proyecto.
-Cada entrega lleva un número **V** (V1, V2, …). La tabla relaciona ese número con la versión
-interna de cada componente.
+Cada entrega lleva un número **V**. Hasta la V33 se numeraron V1, V2, … V33. **Desde el 05-11-2026 la
+numeración es V0.<n>**: la V33 pasa a ser la **V0.1** (primera release publicada) y las siguientes
+entregas son V0.2, V0.3… La V1 se reserva para cuando Santiago considere el programa completamente
+funcional. La tabla relaciona cada número con la versión interna de cada componente.
 
 Cómo se lee cada versión:
 - **Qué se hizo**: resumen en una frase.
@@ -49,7 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
-| V33 | 05-11-2026 | Aplicación 2.3 | Imágenes en disco y en memoria solo al usarlas; resolución completa guardada y resolución de trabajo cambiable por sección; recorte sin perder resolución; intervalo de análisis en cm |
+| V33 = V0.1 | 05-11-2026 | Aplicación 2.3 (release V0.1) | Imágenes en disco y en memoria solo al usarlas; resolución completa guardada y resolución de trabajo cambiable por sección; recorte sin perder resolución; intervalo de análisis en cm |
 | V32 | 05-11-2026 | Aplicación 2.2 | Modo identificación (marcas de trazas sin cuantificar, triángulos y lista de icnotaxones por tramo en la columna), leyenda de icnotaxones en columna y figuras, figura de secciones lado a lado (original, tratada, trazas, flechas…) y gráfico de distribución de icnotaxones |
 
 ---
@@ -625,7 +627,7 @@ la vez; se planifica aparte).
 
 ---
 
-## V33 — Imágenes en disco, resolución por sección e intervalos en cm (05-11-2026)
+## V33 (= V0.1) — Imágenes en disco, resolución por sección e intervalos en cm (05-11-2026)
 
 **Qué se hizo.**
 - Las imágenes originales se guardan **una vez** en un almacén aparte en disco (IndexedDB `images`) y

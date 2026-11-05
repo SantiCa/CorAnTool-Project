@@ -7,6 +7,6 @@ const EXAMPLES = ['data', 'tutorial', 'U1385I-1H', 'geochem_demo'];
 fs.rmSync(WEB, { recursive: true, force: true });
 fs.cpSync(path.join(ROOT, 'app'), path.join(WEB, 'app'), { recursive: true, filter: (p) => !/README\.md$/.test(p) });
 for (const d of EXAMPLES) if (fs.existsSync(path.join(ROOT, 'examples', d))) fs.cpSync(path.join(ROOT, 'examples', d), path.join(WEB, 'examples', d), { recursive: true });
-const m = fs.readFileSync(path.join(ROOT, 'app', 'js', 'app.js'), 'utf8').match(/const DELIVERY = '(V\d+)'/);
+const m = fs.readFileSync(path.join(ROOT, 'app', 'js', 'app.js'), 'utf8').match(/const DELIVERY = '(V\d+(?:\.\d+)*)'/);
 fs.writeFileSync(path.join(WEB, 'DELIVERY'), m ? m[1] : 'V0');
 console.log('web ready:', WEB, m && m[1]);

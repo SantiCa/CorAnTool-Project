@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **Numeración, 05-11-2026:** desde ahora las entregas son **V0.<n>**; la V33 es la **V0.1** (primera release). La
+  siguiente es V0.2. V1 cuando Santiago dé el programa por completo.
 - **V33, 05-11-2026 (Claude):** imágenes originales en un almacén aparte en disco y píxeles en memoria solo para las
   secciones en uso; resolución de trabajo cambiable por sección desde el original; recorte sin recodificar; intervalo de
   análisis en cm (`binCm`, Python `bin_cm`). Formato de proyecto v4. Sin pruebas en navegador (las hace Santiago).

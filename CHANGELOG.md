@@ -2,7 +2,7 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
-## V33 — App 2.3 — 2026-11-05
+## V0.1 (formerly V33) — App 2.3 — 2026-11-05
 - Original images stored once on disk (separate image store); pixels loaded only for the sections in use.
 - Full-resolution originals kept; per-section working resolution can be changed later (masks follow). Crop no longer re-encodes.
 - Analysis interval set in cm (fractional rows per interval, same rule in JS and Python `bin_cm`). Project format v4.

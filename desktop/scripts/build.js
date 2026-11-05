@@ -4,11 +4,11 @@ const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 execSync('node scripts/prepare.js', { stdio: 'inherit', cwd: path.resolve(__dirname, '..') });
-const V = fs.readFileSync(path.resolve(__dirname, '..', 'web', 'DELIVERY'), 'utf8').trim(), n = V.replace(/\D/g, '') || '0';
+const V = fs.readFileSync(path.resolve(__dirname, '..', 'web', 'DELIVERY'), 'utf8').trim(), n = ((V.match(/\d+/g) || ['0']).concat('0', '0')).slice(0, 3).map(Number).join('.');   // V0.2 → 0.2.0
 const builder = require('electron-builder');
 const config = {
   appId: 'org.corantool.app', productName: 'CorAnTool', copyright: 'Santiago Casanova-Arenillas',
-  extraMetadata: { version: `${n}.0.0` },
+  extraMetadata: { version: n },
   artifactName: `CorAnTool-${V}-\${os}-\${arch}.\${ext}`,
   files: ['main.js', 'web/**', 'build/icon.png', 'package.json'],
   directories: { output: 'dist', buildResources: 'build' },

@@ -35,7 +35,7 @@ def strip_module(src: str) -> str:
 
 
 def delivery() -> str:
-    m = re.search(r"const DELIVERY = '(V\d+)'", (APP / "js" / "app.js").read_text(encoding="utf-8"))
+    m = re.search(r"const DELIVERY = '(V\d+(?:\.\d+)*)'", (APP / "js" / "app.js").read_text(encoding="utf-8"))
     if not m:
         raise SystemExit("DELIVERY constant not found in app/js/app.js")
     return m.group(1)
