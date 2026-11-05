@@ -1,7 +1,7 @@
 # Builds the CorAnTool desktop program for Windows, macOS and Linux and publishes it as a GitHub Release.
 # Runs when a delivery tag (V0.1, V0.2…) is pushed or a release is published on GitHub, or by hand from the Actions tab
 # (then only as downloadable artifacts).
-# The owner's private thesis data is git-ignored, so it never reaches these builds.
+# The owner's private data is git-ignored, so it never reaches these builds.
 name: Desktop builds
 
 on:

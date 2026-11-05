@@ -13,16 +13,14 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
 
 ## Cómo ejecutar
 - App en local: desde la raíz, `python -m http.server 8765` y abrir `http://localhost:8765/app/`.
-- Archivo sin conexión: `python tools/build_standalone.py` → `dist/CorAnTool_V<n>.html` (incluye los datos privados
-  si existen en `examples/tesis_casanova/privado/`; `dist/` no se sube a git).
+- Archivo sin conexión: `python tools/build_standalone.py` → `dist/CorAnTool_V<n>.html` (`dist/` no se sube a git).
 - Programa de escritorio: `cd desktop && npm ci && npm start` (probar) o `npm run dist` (instaladores del sistema actual).
   Las descargas de GitHub se generan al subir la etiqueta `V0.<n>`.
 - Publicaciones en Word y LaTeX: `python tools/export_publications.py` (necesita pandoc).
 - Python: `pip install -e ".[dev]"` (incluye pytest, openpyxl y matplotlib) y `pytest`.
 
-## Datos privados de la tesis
-- Van en `examples/tesis_casanova/privado/` (ignorado por git; **nunca** subirlos). El dueño los tiene en un zip
-  aparte; también se regeneran con `tools/make_thesis_dataset.py` a partir de los datos originales.
+## Datos privados
+- El repositorio no contiene datos ni resultados inéditos del autor. No subir nunca datos privados.
 
 ## Estructura clave
 - `app/js/app.js` (~4 650 líneas, interfaz y lógica de la página). Módulos puros sin DOM: `core.js`, `imageproc.js`,

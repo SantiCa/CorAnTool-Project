@@ -30,19 +30,19 @@ La descripción detallada de los algoritmos está en
 | V7 | 31-10-2026 | Aplicación web 0.2 | Carpetas de proyecto, registro compuesto del sondeo (profundidad/edad), registros externos, sondeo de prueba IODP U1385I |
 | V9 | 31-10-2026 | Aplicación web 0.4 | Herramienta de geoquímica: muchos sondeos y proxies, etiquetas por intervalos y reglas, aprendizaje automático configurable, mapas por edad, superposición con el registro icnológico |
 | V10 | 31-10-2026 | Aplicación web 0.5 | «Geoquímica» pasa a «Multiproxy»: cualquier registro numérico, capas de intervalos descritos con subdivisiones (litología, turbiditas…), editables e importables, usadas por el clasificador automático de intervalos |
-| V11 | 31-10-2026 | Aplicación web 0.6 | Modo claro/oscuro, prueba de la autoclasificación con coloreado de registros, sondeos reales de la tesis (ODP 977A, ODP 976, GP03, LC10) precargados; la rama pasa a `master` |
-| V12 | 31-10-2026 | Aplicación web 0.7 | Selección de varias trazas y asignación conjunta; sin saltos ni zoom al asignar; elección automática del ajuste por separabilidad; datos propios de la tesis en Multiproxy (privados); valores que faltan; guía del modo |
+| V11 | 31-10-2026 | Aplicación web 0.6 | Modo claro/oscuro, prueba de la autoclasificación con coloreado de registros, sondeos reales privados (ODP 977A, ODP 976, GP03, LC10) precargados; la rama pasa a `master` |
+| V12 | 31-10-2026 | Aplicación web 0.7 | Selección de varias trazas y asignación conjunta; sin saltos ni zoom al asignar; elección automática del ajuste por separabilidad; datos privados del autor en Multiproxy (privados); valores que faltan; guía del modo |
 | V13 | 31-10-2026 | Aplicación web 0.7.1 | Selección por recuadro arrastrando y Mayús/Ctrl+clic; exclusión de zonas con rectángulo |
 | V14 | 31-10-2026 | Aplicación web 0.8 | Reestructuración: pantalla inicial con todos los proyectos y mapa multiproyecto; proyectos con varios sondeos; pestaña Datos (tabla, columnas calculadas y manuales, hoja libre); ventanas sincronizadas y panel flotante; Figuras |
 | V15 | 31-10-2026 | Aplicación web 0.9 | Mapas personalizables: fondo (simple, físico, relieve, topográfico, batimétrico, GEBCO, foto aérea, foto aérea + batimetría), símbolo, tamaño, etiquetas, colores, retícula, escala y norte; zoom con rueda, arrastre y extensión editable |
-| V16 | 31-10-2026 | Aplicación web 1.0 | Nombre CorAnTool (antes IchAnTool); todos los sondeos de la carpeta de la tesis (GP14, LC21, LC01, LC05, LC06, LC12, LC14, LC20) y más foraminíferos (GP03, LC21) |
+| V16 | 31-10-2026 | Aplicación web 1.0 | Nombre CorAnTool (antes IchAnTool); todos los sondeos de la carpeta de datos privados (GP14, LC21, LC01, LC05, LC06, LC12, LC14, LC20) y más foraminíferos (GP03, LC21) |
 | V17 | 31-10-2026 | Aplicación web 1.1 | Pestaña «Todos los proyectos» con análisis multiproyecto (Multiproxy, Datos y Figuras con sondeos de varios proyectos); tres modelos de icnotaxones (sondeo, proyecto, todos) guardados y probabilidad de cada icnotaxón por modelo |
 | V18 | 31-10-2026 | Aplicación web 1.2 | Diálogo «Modelos y entrenamiento»: guía para no especialistas, k-NN / Random Forest / Bayes con parámetros, evaluación de 3 métodos × 3 modelos con recomendación, galería de ejemplos (excluir, quitar) y ejemplos de otros proyectos |
 | V19 | 31-10-2026 | Aplicación web 1.3 | Proyecto de entrenamiento con 7 sondeos sintéticos del Mediterráneo e imagen con trazas, carteles de ayuda por pestaña y recorrido guiado de 25 pasos |
 | V20 | 31-10-2026 | Aplicación web 1.4 | Paneles laterales sin cortes; mapa con 7 métodos de interpolación (IDW, vecino, triangulación, curvatura mínima, RBF, kriging, media móvil), isolíneas, celdas ajustables, solo mar/tierra, escalas y barra de color, lista de sondeos, proyecciones, mapa ampliable y PNG a la resolución elegida |
 | V21 | 31-10-2026 | Aplicación web 1.6 | Gráficos tipo Grapher en Datos: registros estratigráficos multipanel y XY con eje Y2, ejes log/invertidos, 6 tipos de serie, ajustes de curva con ecuación y R², estadística y exportación |
 | V22 | 31-10-2026 | Aplicación web 1.7 | Revisión de un concilio de 3 agentes (métodos, usabilidad, interfaz y código): evaluación sin inflar, validación por sección e intervalos descritos, mapas solo con datos reales y distancias en km, nombres coherentes, confirmaciones, atajos seguros, pantalla inicial y contraste |
-| V23 | 31-10-2026 | Aplicación web 1.8 | Pantalla inicial genérica (todos los proyectos como tarjetas, sin acceso propio de la tesis), sondeos presentes en varios proyectos, paneles laterales redimensionables u ocultables y mapa redimensionable arrastrando sus bordes |
+| V23 | 31-10-2026 | Aplicación web 1.8 | Pantalla inicial genérica (todos los proyectos como tarjetas, sin acceso propio para ellos), sondeos presentes en varios proyectos, paneles laterales redimensionables u ocultables y mapa redimensionable arrastrando sus bordes |
 | V24 | 31-10-2026 | Aplicación web 1.8.1 | Los análisis entre proyectos dejan de aparecer como proyectos: se guardan y abren desde la pestaña «Entre proyectos» |
 | V25 | 31-10-2026 | Aplicación web 1.9 | Multiproxy más ordenado: panel compacto con resumen por paso, ayuda al pasar el ratón en todo el modo, cursor que lee todos los valores, columnas desplazables y redimensionables con nombres en dos líneas (también en Columna), clase elegida en la barra de curvas, clic para editar intervalos y borrado de clases con confirmación |
 | V26 | 01-11-2026 | Aplicación web 2.0 | Multiproxy rehecho en torno a familias de intervalos y clasificadores: clasificación manual arrastrando en la columna de cualquier familia y sondeo, varios clasificadores definidos por el usuario (qué clasifican, con qué datos, qué modelo), red neuronal (perceptrón multicapa) y comparación de modelos |
@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.14 | 05-11-2026 | Aplicación | Auditoría; sin referencias a datos privados del autor; librerías incluidas (TIFF y Excel sin internet); README de uso |
 | V0.13 | 05-11-2026 | Aplicación | Revisión de V0.9–V0.12; mensajes de error de dibujo |
 | V0.12 | 05-11-2026 | Aplicación web | Distribución por símbolos y símbolo editable de cada icnotaxón |
 | V0.11 | 05-11-2026 | Aplicación web | Escalas editables, recorte por columna y edición de textos y posiciones en figuras |
@@ -83,7 +84,7 @@ La descripción detallada de los algoritmos está en
 
 **Por qué.** Facilitar el uso a investigadores sin experiencia en programación.
 
-**Comprobación.** Uso propio durante la tesis.
+**Comprobación.** Uso propio del autor.
 
 **Problemas conocidos.** Variables globales, cálculos píxel a píxel (lentos), dependiente de
 Excel, sin pruebas automáticas.
@@ -522,12 +523,12 @@ separarlo claramente del sistema que sugiere la clasificación de la bioturbaci�
 
 ---
 
-## V11 — Modo oscuro, prueba de la autoclasificación y sondeos de la tesis (31-10-2026)
+## V11 — Modo oscuro, prueba de la autoclasificación y sondeos privados de prueba (31-10-2026)
 
 **Qué se hizo.** Botón para cambiar entre modo claro y oscuro. Botón para **probar la
 autoclasificación** en un sondeo sin usar sus propias etiquetas, con bandas de resultado y de
 acierto y la opción de **colorear los registros** por clase. Para esta primera versión, el modo
-Multiproxy carga solo los **sondeos de la tesis** (capítulos VI–IX) con datos reales. Desde esta
+Multiproxy carga solo los **sondeos privados de prueba** con datos reales. Desde esta
 entrega los cambios van a la rama principal (`master`).
 
 **Cambios.**
@@ -542,14 +543,13 @@ entrega los cambios van a la rama principal (`master`).
 - `geo.js`: al convertir intervalos entre profundidad y edad, los extremos fuera de los datos del
   sondeo se ajustan al primer/último valor (antes se perdía el intervalo entero; p. ej. la unidad
   superior de 977A, que empieza en 0 mbsf).
-- `examples/tesis_casanova/` (ver su README):
+- datos privados (retirados):
   - registros de PANGAEA: ODP 977A (SST de alquenonas y C37:4, CaCO3, TOC, color L\*a\*b\*,
     susceptibilidad magnética) y ODP 976 (SST, K37, tasa de sedimentación, δ18O, Mg/Ca);
-  - intervalos de la tesis: ORL L1–L8 de 977A con su tipo (Cap. VII), unidades icnológicas de 977A
-    (Cap. VI), ORL 1 de GP03 con sus fases euxínica y subóxica como subdivisión, HS1 (Cap. VIII),
-    sapropeles S2–S6 de LC10 con la interrupción de S4 como subdivisión (Cap. IX);
-  - posiciones (Tabla IV.1) y modelo de edad de LC10 (Tabla IX.1).
-- `PRELOAD_THESIS = true` en app.js: los carga al abrir Multiproxy en un proyecto sin sondeos, y
+  - intervalos privados: ORL L1–L8 de 977A con su tipo, unidades icnológicas de 977A, ORL 1 de GP03 con sus fases euxínica y subóxica como subdivisión, HS1,
+    sapropeles S2–S6 de LC10 con la interrupción de S4 como subdivisión;
+  - posiciones y modelo de edad de LC10.
+- precarga de datos privados (retirada) en app.js: los carga al abrir Multiproxy en un proyecto sin sondeos, y
   hay un botón para cargarlos cuando se quiera. En la versión final se pondrá en `false`.
 
 **Por qué.** Petición de Santiago: modo oscuro/claro, probar la autoclasificación con coloreado,
@@ -566,14 +566,14 @@ tener sus sondeos en esta primera versión y empezar a trabajar sobre la rama pr
 - Modo oscuro aplicado y guardado; ningún error de JavaScript.
 
 **Pendiente o problemas conocidos.**
-- Faltan los datos propios de la tesis (XRF/WDXRF de GP03 y LC10, bioturbación de 976/977): GP03
+- Faltan los datos privados del autor (XRF/WDXRF de GP03 y LC10, bioturbación de 976/977): GP03
   y LC10 solo tienen intervalos y no aportan muestras hasta importar sus registros.
 - ODP 976 solo tiene en común con 977A la SST de alquenonas.
-- Quitar la precarga (`PRELOAD_THESIS = false`) en la versión final.
+- Quitar la precarga (precarga de datos privados (retirada)) en la versión final.
 
 ---
 
-## V12 — Selección múltiple, elección del ajuste y datos propios de la tesis (31-10-2026)
+## V12 — Selección múltiple, elección del ajuste y datos privados del autor (31-10-2026)
 
 **Qué se hizo.**
 - **Selección de varias trazas** (automáticas o dibujadas) y asignación a un icnotaxón de una vez.
@@ -581,7 +581,7 @@ tener sus sondeos en esta primera versión y empezar a trabajar sobre la rama pr
   defecto, se recuerda y, si se activa, ya no cambia el zoom.
 - Revisión bibliográfica sobre preselección de parámetros de realce y botón para **elegir el ajuste**
   que más separa trazas y matriz.
-- Modo Multiproxy con los **datos propios de la tesis** (carpeta del autor), una guía «¿Cómo funciona
+- Modo Multiproxy con los **datos privados del autor** (carpeta del autor), una guía «¿Cómo funciona
   este modo?» y la opción de rellenar variables que faltan.
 
 **Cambios.**
@@ -591,12 +591,12 @@ tener sus sondeos en esta primera versión y empezar a trabajar sobre la rama pr
 - `imageproc.js::separability` (η de Otsu) y `app.js::rankPresets` + botón «Elegir el ajuste que más
   separa trazas y matriz».
 - `geo.js`: `missing: 'mean'` y `colStats`; las reglas no se cumplen sobre valores que faltan.
-- `tools/make_thesis_dataset.py` → `examples/tesis_casanova/privado/` (en `.gitignore`); el archivo
-  único lo incluye si existe; `loadThesisCores` usa esos datos si están y, si no, la versión pública.
+- un script privado (retirado) → `una carpeta privada no incluida` (en `.gitignore`); el archivo
+  único lo incluye si existe; carga de datos privados (retirada) usa esos datos si están y, si no, la versión pública.
 - Interfaz: guía del modo Multiproxy y selector de valores que faltan.
 
 **Por qué.** Petición de Santiago: asignar varias trazas a la vez, que no salte ni haga zoom al
-asignar, buscar publicaciones sobre preselección de parámetros y usar los datos reales de su tesis
+asignar, buscar publicaciones sobre preselección de parámetros y usar los datos reales propios
 (no los de los artículos publicados) en el modo Multiproxy, que además no se entendía bien.
 
 **Comprobación.**
@@ -636,6 +636,22 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.14 — Auditoría, limpieza de datos privados y README (05-11-2026)
+
+- **Qué se hizo:** auditoría completa (ver `docs/AUDITORIA.md`); se retiran del repositorio todas las referencias a los
+  datos y textos privados del autor; librerías externas incluidas; README nuevo con la utilidad y el uso del programa.
+- **Cambios:** `app.js` (sin carga de datos privados ni botón propio; `loadLib` con `app/vendor/` y respaldo en CDN;
+  sin `b64encode` ni `geoPredictAll`), `index.html`, `i18n.js`, `build_standalone.py`; borrados
+  la carpeta de datos privados de ejemplo y su script de preparación; documentación, publicaciones y exportaciones revisadas;
+  `app/vendor/` (UTIF 3.1.0, pako 2.1.0, SheetJS 0.18.5 con licencias); `README.md`; `docs/AUDITORIA.md`.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 54 pruebas JS y 10 Python; recorrido sin pantalla de los tres ejemplos por todos los modos sin
+  errores; librerías cargadas sin internet; ejemplo Python del README ejecutado.
+- **Pendiente:** el historial de git conserva lo retirado (requiere reescritura, decisión del autor); resto de
+  recomendaciones en `docs/AUDITORIA.md`.
 
 ---
 
@@ -935,7 +951,7 @@ secciones trabaja en profundidad aunque la columna esté en edad.
 
 **Qué se hizo.** Cambios pedidos por Santiago: recortar en altura la imagen de una sección (escalas, etiquetas) con
 ajuste de techo y muro; ocultar en la columna las zonas excluidas; triángulos «Start» y «End» para el inicio y el final de
-lo analizado; arranque limpio sin la tesis precargada; y, por los problemas de memoria del navegador, un programa de
+lo analizado; arranque limpio sin los datos privados precargada; y, por los problemas de memoria del navegador, un programa de
 escritorio para Windows, macOS y Linux descargable desde GitHub.
 
 **Cambios.**
@@ -945,8 +961,8 @@ escritorio para Windows, macOS y Linux descargable desde GitHub.
 - Sección: triángulos **Start** y **End** a la izquierda de la imagen para mover el inicio y el final del área de análisis.
 - Columna: casilla **Ocultar zonas excluidas** (salen en blanco en la imagen).
 - Memoria: la copia de cada sección para la columna se reduce a ≤ 512 px de ancho.
-- Arranque limpio: sin proyectos precargados y sin guardar nada hasta crear o abrir uno; botón «Proyecto de la tesis»
-  solo donde existen los datos privados; `build_standalone.py` ya no los incluye salvo con `--with-thesis`.
+- Arranque limpio: sin proyectos precargados y sin guardar nada hasta crear o abrir uno; botón «proyecto de datos privados»
+  solo donde existen los datos privados; `build_standalone.py` ya no los incluye salvo con una opción retirada.
 - **Programa de escritorio** (`desktop/`, Electron): ventana propia, más memoria, proyectos en el disco, enlaces externos
   en el navegador del sistema. `.github/workflows/desktop.yml` compila Windows, macOS y Linux al subir la etiqueta de la
   entrega y los publica en **Releases** con instrucciones (`desktop/RELEASE_NOTES.md`). README con la sección de descarga.
@@ -1069,7 +1085,7 @@ poco claro y no permitía clasificar a mano sondeos sin intervalos ni comparar m
 se valida dejando un sondeo fuera); `pytest`: 9. En navegador (proyecto de entrenamiento): clasificador creado desde
 los ajustes antiguos (bosque aleatorio, 90,6 % de acierto equilibrado), duplicado como red neuronal (≈ 80 %), ambas
 columnas ⚙ en las curvas, tabla comparativa, intervalo dibujado en la familia «Eventos» de un sondeo y clase cambiada
-desde el panel, panel de copia en una columna ⚙, mapa con las columnas automáticas. Versión sin conexión con la tesis:
+desde el panel, panel de copia en una columna ⚙, mapa con las columnas automáticas. Versión sin conexión con los datos privados:
 clasificador creado desde los ajustes guardados (18 % de acierto equilibrado, como en §21.8 ter). Sin errores.
 
 **Pendiente o problemas conocidos.** Elegir el mejor modelo con la misma validación sesga el acierto al alza
@@ -1140,7 +1156,7 @@ análisis guardados.
 **Por qué.** Petición de Santiago: el análisis multiproyecto debe estar por encima de los proyectos,
 no mezclado con ellos.
 
-**Comprobación.** `npm test`: 41 correctas. En navegador: se crea «Alborán» con GP03 (tesis) y ENT-01
+**Comprobación.** `npm test`: 41 correctas. En navegador: se crea «Alborán» con GP03 (privado) y ENT-01
 (entrenamiento); la lista de proyectos sigue mostrando 3 tarjetas; «Alborán» aparece solo en
 «Entre proyectos»; abrir un proyecto y luego el análisis cambia la cabecera (Proyecto ↔ Análisis); sin
 errores de consola.
@@ -1151,7 +1167,7 @@ errores de consola.
 
 ## V23 — Pantalla inicial para cualquier usuario, sondeos compartidos y paneles redimensionables (31-10-2026)
 
-**Qué se hizo.** La pantalla inicial deja de estar pensada para la tesis: muestra todos los proyectos
+**Qué se hizo.** La pantalla inicial deja de estar pensada para los datos privados: muestra todos los proyectos
 guardados (ninguno, dos o los que haya) como tarjetas iguales, con una miniatura de sus sondeos. Los
 sondeos que aparecen en más de un proyecto se reconocen y no se cuentan dos veces. Los paneles laterales
 de configuración se pueden ensanchar, estrechar u ocultar, y el mapa se redimensiona arrastrando su
@@ -1164,7 +1180,7 @@ borde derecho o inferior (pedido antes y no hecho hasta ahora).
   aviso de sondeo compartido; número de sondeos, imágenes y compartidos; Abrir, Renombrar, Eliminar
   con confirmación en dos pasos; etiqueta de tipo). Estado vacío con acciones. Ejemplos (recorrido
   guiado, sondeo IODP, ejemplo idealizado) en un desplegable «Ejemplos y aprendizaje»; «Exportar este
-  proyecto» pasa a «Copias de seguridad». Desaparece el botón propio de la tesis: es un proyecto más.
+  proyecto» pasa a «Copias de seguridad». Desaparece el botón propio de esos datos: es un proyecto más.
 - Sondeos compartidos (mismo nombre normalizado: sin mayúsculas, acentos ni signos; solo letras y cifras):
   - mapa de todos los sondeos: un único punto; el valor es la media de los proyectos con datos;
   - tabla: ordenada por sondeo, con la etiqueta «en N proyectos» y la lista de los otros;
@@ -1179,7 +1195,7 @@ borde derecho o inferior (pedido antes y no hecho hasta ahora).
   (`fitBBoxAspect`). Se guardan en `ichantool.mapFrames`.
 - Plurales correctos en los textos de recuento (clave `.one`).
 
-**Por qué.** El programa debe servir a cualquiera desde el primer arranque; los datos de la tesis
+**Por qué.** El programa debe servir a cualquiera desde el primer arranque; los datos privados del autor
 solo son una prueba. Un sondeo puede estar en dos proyectos (por ejemplo, uno de imágenes y otro de
 geoquímica): contarlo dos veces sesgaría el mapa, duplicaría muestras en el análisis multiproyecto y
 filtraría ejemplos repetidos entre entrenamiento y evaluación del modelo de todos los proyectos.
@@ -1219,7 +1235,7 @@ usabilidad; diseño visual y código) y se aplicaron los cambios de más valor.
   columnas, registros, ajustes e intervalos automáticos; **un nombre por concepto** («Columna» para la vista
   del sondeo, «Curvas» en Multiproxy, «Tramos» para la discretización, «Opacidad de trazas», «Sugerencias»,
   «categorías»); textos que aún citaban modos antiguos; parámetros con nombre en español; pantalla inicial con
-  «Primeros pasos» (aprender, crear, tesis) y copias de seguridad plegadas; el recorrido empieza en el proyecto
+  «Primeros pasos» (aprender, crear, datos privados) y copias de seguridad plegadas; el recorrido empieza en el proyecto
   abierto, entrena antes de explicar el modelo y deja la pantalla inicial al final; cartel de ayuda a la
   derecha; Esc cierra la pantalla inicial; pestañas con roles accesibles; botón «Entrenar» en Modelo vacío.
 - **Interfaz y código:** el panel derecho quedaba en blanco al usar las pestañas de Multiproxy (selector
@@ -1406,7 +1422,7 @@ multiproxy entre proyectos; entrenar la clasificación por sondeo, proyecto y to
 guardar esos pesos y ver la probabilidad de cada taxón según el modelo.
 
 **Comprobación.** 33 pruebas de la aplicación y 9 de Python. En Chromium: análisis «Prueba multi» con
-GP03, LC10 (Tesis) y U1385I-1H (prueba): 3 sondeos, 7 capas unidas por nombre, 41 intervalos, 12
+GP03, LC10 (privado) y U1385I-1H (prueba): 3 sondeos, 7 capas unidas por nombre, 41 intervalos, 12
 variables, 182 muestras; «Actualizar» lo rehace; con 12 objetos etiquetados en el sondeo de prueba los
 tres modelos tienen 12 ejemplos y el panel muestra la tabla de probabilidades; ningún error.
 
@@ -1416,23 +1432,23 @@ copia ligera guardada de cada proyecto, que se actualiza al guardarlo.
 
 ---
 
-## V16 — CorAnTool y todos los sondeos de la tesis (31-10-2026)
+## V16 — CorAnTool y todos los sondeos privados de prueba (31-10-2026)
 
 **Qué se hizo.**
 - **Nombre:** el programa pasa a llamarse **CorAnTool** (*Core Analysis Tool*, antes IchAnTool), como
   eligió Santiago, porque ya no es solo icnología. Se conserva todo lo necesario para no perder datos:
   claves del navegador, paquete Python `ichantool` y lectura de archivos antiguos.
-- **Datos de la tesis completos:** además de ODP 977A, ODP 976, GP03 y LC10, el proyecto «Tesis» carga
+- **Datos privados del autor completos:** además de ODP 977A, ODP 976, GP03 y LC10, el proyecto de datos privados carga
   GP14, LC21, LC01, LC05, LC06, LC12, LC14 y LC20 desde la carpeta «Proyectos Investigación».
 - **Foraminíferos:** GP03 suma arena > 63 µm, P/B, riqueza y N/g de bentónicos (a los grupos de
   oxigenación ya cargados); LC21 trae los isótopos de foraminíferos planctónicos de Amies et al. (2019).
-- El proyecto «Tesis» guardado en el navegador se actualiza solo una vez.
+- El proyecto de datos privados guardado en el navegador se actualiza solo una vez.
 
 **Cambios.**
-- `tools/make_thesis_dataset.py`: `extra_cores` (GP14, LC21, LC12, LC01, LC05, LC06, LC14, LC20),
+- un script privado (retirado): `extra_cores` (GP14, LC21, LC12, LC01, LC05, LC06, LC14, LC20),
   `xrf_ratios`, `itrax_txt`, `write_core`; manifiesto `extra_cores.json`; variables nuevas de GP03.
-- `app.js`: carga de los sondeos del manifiesto en `loadThesisCores`; `THESIS_DATA = 2` y
-  actualización en `ensureThesisProject`; `APP`/`APP_NAMES`; nombres de los archivos exportados
+- `app.js`: carga de los sondeos del manifiesto en carga de datos privados (retirada); carga de datos privados (retirada) y
+  actualización en carga de datos privados (retirada); `APP`/`APP_NAMES`; nombres de los archivos exportados
   (`.corantool.json`, `corantool_*`).
 - `index.html`, `i18n.js`, cabeceras de los módulos, `README.md`, `app/README.md`, `CLAUDE.md`,
   `tools/build_standalone.py` (salida `dist/CorAnTool_V<n>.html`).
@@ -1442,7 +1458,7 @@ preguntó si era el momento de cambiar el nombre; eligió CorAnTool.
 
 **Comprobación.** 32 pruebas de la aplicación y 9 de Python. Salidas: GP14 401 filas (83 variables),
 LC21 2726 (18), LC12 265, LC01 1356, LC05 2082, LC06 2669, LC14 316, LC20 290 (medias de 1 cm). En
-Chromium, el proyecto «Tesis» se crea con los 12 sondeos y sin errores; el título y la marca dicen
+Chromium, el proyecto de datos privados se crea con los 12 sondeos y sin errores; el título y la marca dicen
 CorAnTool.
 
 **Pendiente o problemas conocidos.** Coordenadas de GP14, LC01, LC05, LC06, LC12, LC14 y LC20 (no
@@ -1509,7 +1525,7 @@ publicar un mapa con fondo Esri o GEBCO hay que revisar sus condiciones de uso y
   o en un panel flotante dentro de la misma.
 - **Figuras:** trazas representativas por icnotaxón (elección manual o automática), sondeo entero
   interpretado, registro, registro multiproxy y mapa, con título y pie, en SVG y PNG.
-- La tesis pasa a ser un proyecto propio («Tesis Casanova-Arenillas (2023)») que se crea la primera
+- La datos privados pasa a ser un proyecto propio («datos privados») que se crea la primera
   vez; ya no se mezcla con el sondeo de prueba.
 
 **Cambios.**
@@ -1529,12 +1545,12 @@ navegar por todos los proyectos con mapas multiproyecto y sacar figuras.
 
 **Comprobación.**
 - 31 pruebas de la aplicación (2 nuevas de fórmulas) y 9 de Python.
-- En Chromium, perfil limpio: se crean el sondeo de prueba y el proyecto de la tesis; pantalla
+- En Chromium, perfil limpio: se crean el sondeo de prueba y el proyecto de datos privados; pantalla
   inicial con 2 proyectos y 6 sondeos en la tabla; mapa multiproyecto por proyecto; figura de
   trazas (2 icnotaxones × 4 trazas elegidas automáticamente) y figura del sondeo entero; pestaña
   Datos (2174 filas), columna calculada `[Bioturbación %] * 2` y celda `=MEAN(COL("Bio_x2"))`;
   multiproxy con los sondeos del proyecto; panel flotante del mapa; sondeo nuevo añadido; ventana
-  nueva del mapa en solo lectura; ventana del registro del sondeo; proyecto de la tesis con
+  nueva del mapa en solo lectura; ventana del registro del sondeo; proyecto de datos privados con
   validación dejando un sondeo fuera; selección por recuadro y exclusión rectangular siguen igual;
   ningún error de JavaScript.
 
@@ -1543,7 +1559,7 @@ navegar por todos los proyectos con mapas multiproyecto y sacar figuras.
   comprobación cada 4 s y el panel flotante).
 - Los proyectos restaurados desde archivo aparecen en «Todos los proyectos» cuando se abren una vez.
 - El registro del sondeo necesita imágenes; los sondeos solo con datos se ven en Multiproxy.
-- La bioturbación de GP03 y LC10 de la tesis sigue sin cargar.
+- La bioturbación de GP03 y LC10 privados sigue sin cargar.
 
 ---
 

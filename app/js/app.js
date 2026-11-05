@@ -16,7 +16,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.13';
+const DELIVERY = 'V0.14';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -229,6 +229,9 @@ const rowAtDepth = (s, d) => s.roi.y0 + ((d - s.top) / (s.bottom - s.top)) * (s.
 
 /* ───────────── image files ───────────── */
 
+/** V0.14: the libraries ship with the program (app/vendor); the internet copy is only a fallback (e.g. single offline file). */
+const VENDOR = { 'pako.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', 'UTIF.js': 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'xlsx.full.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' };
+function loadLib(file) { return loadScript(`vendor/${file}`).catch(() => loadScript(VENDOR[file])); }
 function loadScript(src) {
   return new Promise((res, rej) => {
     const el = document.createElement('script'); el.src = src; el.onload = res;
@@ -246,8 +249,8 @@ async function decodeBytes(bytes, name, type, opt = {}) {
   if (/\.tiff?$/i.test(name) || /tiff/.test(type || '')) {
     if (bytes instanceof Blob) bytes = new Uint8Array(await bytes.arrayBuffer());
     if (!window.UTIF) {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js').catch(() => {});
-      await loadScript('https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js');
+      await loadLib('pako.min.js').catch(() => {});
+      await loadLib('UTIF.js');
     }
     const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     const ifds = window.UTIF.decode(buf);
@@ -277,11 +280,6 @@ async function decodeBytes(bytes, name, type, opt = {}) {
   } finally { URL.revokeObjectURL(url); }
 }
 
-function b64encode(bytes) {
-  let s = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-  return btoa(s);
-}
 function b64decode(str) { const s = atob(str), out = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; }
 
 /**
@@ -2306,7 +2304,6 @@ async function startup() {
   if (storageOK) setTimeout(() => gcImages().catch(() => {}), 15000);   // V0.1: images of deleted sections
   await loadPresets(); await initBackups();
   const firstRun = storageOK && !(await listProjects().catch(() => [])).length;
-  if (storageOK && PRELOAD_THESIS) await ensureThesisProject();
   showHome();
   if (firstRun) { blankStart = true; return; }   // V31: clean start — the start screen invites to create or open a project (examples on demand)
   if (storageOK) {
@@ -2781,7 +2778,7 @@ $('recFile').addEventListener('change', async (e) => {
   try {
     let text;
     if (/\.xlsx?$|\.ods$/i.test(f.name)) {
-      if (!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      if (!window.XLSX) await loadLib('xlsx.full.min.js');
       const wb = window.XLSX.read(await f.arrayBuffer(), { type: 'array' });
       text = window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t' });
     } else text = await f.text();
@@ -2994,7 +2991,6 @@ function geoComputeSamples() {
   syncCurrent();
 }
 
-function geoPredictAll() { for (const c of S.geo.classifiers) predictRun(c); syncCurrent(); }
 
 const scaleOf = (samples, nNum) => colStats(samples, nNum); // same statistics as buildSamples (missing values ignored)
 
@@ -3317,7 +3313,7 @@ function openGeoImport(kind, tabs, names) {
 }
 async function readTableFile(f) {
   if (/\.xlsx?$|\.ods$/i.test(f.name)) {
-    if (!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    if (!window.XLSX) await loadLib('xlsx.full.min.js');
     const wb = window.XLSX.read(await f.arrayBuffer(), { type: 'array' });
     return parseTable(window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t' }));
   }
@@ -3415,93 +3411,6 @@ async function loadGeoDemo() {
   geoMarkDirty(); geoTrain();
 }
 
-/** First version only: the thesis cores are loaded when the Multiproxy mode opens on a project without cores. Set to false for the clean release. */
-const PRELOAD_THESIS = false;   // V31: the program starts empty; the thesis is loaded only from its project file
-
-/** Real data of the cores of Casanova-Arenillas (2023): PANGAEA records + intervals from the thesis (examples/tesis_casanova/README.md). */
-async function loadThesisCores(train = true) {
-  const g = S.geo, txt = async (f) => (await fetchAsset('tesis_casanova/' + f)).text();
-  let priv = null; // the author's own data (git-ignored folder, only in local/private builds)
-  try { priv = parseTable(await txt('privado/ODP977A_tesis.csv')); } catch { priv = null; }
-  const ix = (tab, n) => tab.headers.indexOf(n);
-  const t976 = parseTable(await txt('ODP976_pangaea.csv'));
-  t976.headers = t976.headers.map((h) => (h === 'SST_alkenonas_C' ? 'SST_alquenonas_C' : h));
-  let c976 = coreFromRows('ODP 976', t976.rows, t976.headers, { depth: -1, age: 0, proxies: t976.headers.slice(1).map((n) => ix(t976, n)) });
-  const lcModel = (await txt('LC10_age_model.txt')).split('\n').filter((l) => l.trim() && !l.startsWith('#'));
-  let c977, gp03, lc10;
-  if (priv) {
-    c977 = coreFromRows('ODP 977A', priv.rows, priv.headers, { depth: 0, age: 1, proxies: priv.headers.slice(2).map((n) => ix(priv, n)) });
-    const tg = parseTable(await txt('privado/GP03_tesis.csv'));
-    gp03 = coreFromRows('GP03', tg.rows, tg.headers, { depth: 0, age: -1, proxies: tg.headers.slice(2).map((n) => ix(tg, n)) });
-    gp03.ageText = (await txt('privado/GP03_age_model.txt')).split('\n').filter((l) => l.trim() && !l.startsWith('#')).join('\n');
-    const tl = parseTable(await txt('privado/LC10_tesis.csv'));
-    lc10 = coreFromRows('LC10', tl.rows, tl.headers, { depth: 0, age: -1, proxies: tl.headers.slice(1).map((n) => ix(tl, n)) });
-  } else {
-    const t977 = parseTable(await txt('ODP977A_pangaea.csv'));
-    t977.headers = t977.headers.map((h) => (h === 'SST_alkenonas_C' ? 'SST_alquenonas_C' : h));
-    c977 = coreFromRows('ODP 977A', t977.rows, t977.headers, { depth: 0, age: 1, proxies: t977.headers.slice(2).map((n) => ix(t977, n)) });
-    gp03 = { name: 'GP03', depth: null, age: null, proxies: {} };
-    lc10 = { name: 'LC10', depth: lcModel.map((l) => +l.split(',')[0]), age: null, proxies: {} };
-  }
-  lc10.ageText = lcModel.join('\n');
-  Object.assign(c977, { units: 'm' }); Object.assign(gp03, { units: 'cm' }); Object.assign(lc10, { units: 'cm' });
-  S.cores = S.cores.filter((c) => c.source !== 'tesis' && (c.sections.length || c.imp || c.records.length));
-  // V16: the other cores of the thesis folder (manifest written by tools/make_thesis_dataset.py; private builds only)
-  const extra = [];
-  if (priv) {
-    let man = [];
-    try { man = JSON.parse(await txt('privado/extra_cores.json')); } catch { man = []; }
-    for (const m of man) {
-      try {
-        const tb = parseTable(await txt('privado/' + m.file)), off = m.age ? 2 : 1;
-        const c = coreFromRows(m.name, tb.rows, tb.headers, { depth: 0, age: m.age ? 1 : -1, proxies: tb.headers.slice(off).map((n) => ix(tb, n)) });
-        c.units = m.units || 'cm';
-        if (m.ageModel) c.ageText = (await txt('privado/' + m.ageModel)).split('\n').filter((l) => l.trim() && !l.startsWith('#')).join('\n');
-        extra.push([c, m]);
-      } catch (e) { console.warn('tesis', m.name, e); }
-    }
-  }
-  const list = [c977, c976, gp03, lc10, ...extra.map((q) => q[0])].map((c) => addImported(c, 'tesis', 'tesis-' + c.name.replace(/\W+/g, '')));
-  [c977, c976, gp03, lc10] = list;
-  extra.forEach(([, m], i) => { const core = list[4 + i]; if (m.lat != null) core.lat = m.lat; if (m.lon != null) core.lon = m.lon; if (m.wd != null) core.waterDepth = m.wd; core.notes = m.note || ''; });
-  if (!S.cores.find((c) => c.id === S.curCore)) activateCore(list[0].id, true);
-  renderCoreBar();
-  applyCatalogue(S.cores, parseTable(await txt('catalogue.csv')), { core: 0, lat: 1, lon: 2, wd: 3 });
-  g.intervals = g.intervals.filter((q) => !String(q.core).startsWith('tesis-'));
-  const ia = intervalsFromTable(parseTable(await txt('intervals_age.csv')), { core: 0, from: 1, to: 2, layer: 3, values: [4] });
-  const id = intervalsFromTable(parseTable(await txt('intervals_depth.csv')), { core: 0, from: 1, to: 2, layer: 4, values: [5] });
-  if (priv) {
-    // GP03 intervals come from the author's labels in the data; the thesis-text ones are only the fallback.
-    addNamedIntervals(ia.filter((r) => r.core !== 'GP03'), 'age'); addNamedIntervals(id, 'depth');
-    addNamedIntervals(intervalsFromTable(parseTable(await txt('privado/intervals_age.csv')), { core: 0, from: 1, to: 2, layer: 3, values: [4] }), 'age');
-    addNamedIntervals(intervalsFromTable(parseTable(await txt('privado/intervals_depth.csv')), { core: 0, from: 1, to: 2, layer: 4, values: [5] }), 'depth');
-  } else { addNamedIntervals(ia, 'age'); addNamedIntervals(id, 'depth'); }
-  const L = (n) => g.layers.find((l) => l.name === n), org = L('Capas orgánicas');
-  if (L('Fases internas') && org) L('Fases internas').parent = org.id;
-  // "Outside organic layer" = complement of the described organic layers within the studied interval of each core
-  const out = org.cats.find((c) => c.name === 'Fuera de capa orgánica') || addCat(org, 'Fuera de capa orgánica');
-  const complement = (coreId, axis, a0, a1) => {
-    const core = geoCore(coreId);
-    g.intervals = g.intervals.filter((q) => !(q.core === coreId && q.layer === org.id && q.cat === out.id));
-    const occ = intervalsOnAxis(g.intervals.filter((q) => q.core === coreId && q.layer === org.id), axis, core).sort((p, q) => p.from - q.from);
-    let x = a0;
-    for (const q of occ) { if (q.from > x) g.intervals.push({ id: uid(), core: coreId, layer: org.id, axis, from: x, to: q.from, cat: out.id }); x = Math.max(x, q.to); }
-    if (x < a1) g.intervals.push({ id: uid(), core: coreId, layer: org.id, axis, from: x, to: a1, cat: out.id });
-  };
-  complement(c977.id, 'age', 0, 147);
-  complement(lc10.id, 'depth', 0, 653);
-  const col = { 'ORL tipo 1 (bioturbada)': '#4f8f5f', 'ORL tipo 2 (larga y cíclica)': '#2b6f8f', 'ORL tipo 3 (laminada)': '#1c2f5a', 'ORL (sin tipo)': '#5a6f8f', 'ORL nueva (sin tipo)': '#8aa1c1', Sapropel: '#4a2f63', 'Fuera de capa orgánica': '#d9d2bf', 'Fase euxínica': '#14213d', 'Fase subóxica': '#7f9fcf', 'Interrupción': '#e0b04a', 'Heinrich Stadial 1': '#8fc1e3', 'Cálido': '#d9822b', 'Frío': '#3b7dd8', 'Templado': '#9bbf85', Holoceno: '#f2c14e', 'Younger Dryas': '#5b8bd9', 'Bølling-Allerød': '#e07a3f', 'Último Máximo Glacial': '#2c4f8c' };
-  for (const l of g.layers) for (const c of l.cats) if (col[c.name]) c.color = col[c.name];
-  const st = g.settings;
-  Object.assign(st, priv ? {
-    features: ['XRF Ti/Ca', 'XRF Zr/Ti', 'XRF Mn/Ti', 'XRF Br/Ti', 'XRF Ba/Ti', 'XRF K/Ti', 'XRF Fe/Ca', 'XRF Sr/Ca', 'Bioturbacion_total_pct', 'Gris_imagen', 'TOC_pct', 'SST_alquenonas_C'],
-    logs: [], axis: 'age', step: 0.5, scaling: 'core', missing: 'mean', target: org.id, useLayers: [],
-  } : {
-    features: ['SST_alquenonas_C', 'CaCO3_pct', 'TOC_pct', 'L_star', 'a_star', 'b_star', 'MS_kappa_1e-6SI'], logs: [], axis: 'age', step: 0.5, scaling: 'global', missing: 'drop', target: org.id, useLayers: null,
-  });
-  g.activeLayer = org.id; g.view.core = (priv ? gp03 : c977).id; g.map = { ...g.map, a0: 9, a1: 14, mode: 'class' };
-  geoMarkDirty(); if (train) geoTrain();
-}
 
 /** Join touching intervals of the same core, layer and category (keeps the list short). */
 function mergeIntervals(list) {
@@ -4378,29 +4287,6 @@ function geoOverlay(axis) {
 
 /* ───────────── home: projects, all-projects data and multiproject maps ───────────── */
 
-const THESIS_ID = 'tesis-casanova';
-/** First version only: the thesis cores live in their own project, created once. */
-/** Version of the bundled thesis data: a stored thesis project older than this is refreshed once (V16: all cores of the thesis folder). */
-const THESIS_DATA = 2;
-/** V31: the thesis project is opened only on request, and only where its private files exist (owner's copy). */
-fetchAsset('tesis_casanova/privado/ODP977A_tesis.csv').then(() => { $('openThesis').hidden = false; }).catch(() => {});
-$('openThesis').addEventListener('click', async () => {
-  await flushSave(); await ensureThesisProject();
-  const d = await getProject(THESIS_ID).catch(() => null); if (d) { await busy(() => loadProject(d)); hideHome(); }
-});
-async function ensureThesisProject() {
-  const metas = await listProjects().catch(() => []), have = metas.some((m) => m.id === THESIS_ID);
-  const ver = (await getPref('thesisData').catch(() => 0)) || 0;
-  if (have && ver >= THESIS_DATA) return;
-  await busy(async () => {
-    const d = have ? await getProject(THESIS_ID) : null;
-    if (d) await loadProject(d);
-    else { resetState(); S.id = THESIS_ID; S.name = 'Tesis Casanova-Arenillas (2023)'; S.cores = []; }
-    S.notes = 'Sondeos de la tesis doctoral (ODP 977A, ODP 976, GP03, LC10, GP14, LC21, LC01, LC05, LC06, LC12, LC14, LC20). Ver examples/tesis_casanova/README.md.';
-    await loadThesisCores(true);
-    await saveToDB(); await setPref('thesisData', THESIS_DATA).catch(() => {});
-  });
-}
 
 async function showHome() {
   if (VIEW_ONLY) return;

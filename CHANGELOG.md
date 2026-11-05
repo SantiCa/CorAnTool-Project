@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.14 — 2026-11-05
+- Audit (docs/AUDITORIA.md); private data references removed; TIFF and Excel libraries bundled (work offline); new README with purpose and usage.
+
 ## V0.13 — 2026-11-05
 - Review of V0.9–V0.12; drawing errors other than invalid axes are now shown with their own message.
 
@@ -61,7 +64,7 @@ Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_
 ## V31 — App 2.1 + desktop — 2026-11-05
 - Crop section images (top/bottom) with depth recalculation; draggable Start/End markers for the analysis area.
 - Column: option to hide excluded zones; reduced-size column canvases (memory).
-- Clean start (no preloaded projects; thesis only on demand where its private data exist; offline build excludes it).
+- Clean start (no preloaded projects; private data only on demand where its private data exist; offline build excludes it).
 - Desktop program (Electron) for Windows, macOS and Linux; GitHub Actions builds and publishes it as a Release on `V*` tags.
 
 ## V30 — 2026-11-05
@@ -96,7 +99,7 @@ Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_
 
 ## V23 — Web app 1.8 — 2026-10-31
 - Generic start screen: every saved project as a card (core thumbnails, counts, open/rename/delete), search,
-  empty state; examples in a collapsible section; no dedicated thesis entry.
+  empty state; examples in a collapsible section; no dedicated private data entry.
 - Cores present in several projects (matched by normalised name) count once: merged map point, «in N
   projects» tag, one merged core in multi-project analyses, duplicate ichnotaxon examples dropped.
 - Side panels resizable (drag), resettable (double click) and collapsible; maps resizable from their right
@@ -143,7 +146,7 @@ Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_
 ## V16 — Web app 1.0 — 2026-10-31
 - Renamed **CorAnTool** (Core Analysis Tool), formerly IchAnTool; old project files, browser data and the
   `ichantool` Python package keep working.
-- Thesis project now holds all cores of the author's folder (GP14, LC21, LC01, LC05, LC06, LC12, LC14,
+- Private-data project now holds all cores of the author's folder (GP14, LC21, LC01, LC05, LC06, LC12, LC14,
   LC20) and more foraminifera data (GP03 indices, LC21 planktonic isotopes); private build only.
 
 ## V15 — Web app 0.9 — 2026-10-31
@@ -161,7 +164,7 @@ Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_
 - Map, multiproxy logs and core log in a synchronized read-only window or a floating panel.
 - Figures: representative traces per ichnotaxon (manual or automatic choice), whole interpreted core,
   logs and maps, with title/caption, SVG and PNG.
-- Thesis data become their own project.
+- Private data become their own project.
 
 ## V13 — Web app 0.7.1 — 2026-10-31
 - Selection tool: dragging draws a selection box (Shift/Ctrl adds); Shift/Ctrl+click toggles.
@@ -172,16 +175,16 @@ Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_
   and joint assignment/acceptance/deletion in one undo step.
 - Assigning no longer jumps or zooms; "jump to next" is off by default and keeps the zoom.
 - "Pick the setting that best separates traces and matrix" (Otsu separability η).
-- Multiproxy: missing-value option (fill with the mean); how-to panel; the author's own thesis data
-  (private, git-ignored, built by tools/make_thesis_dataset.py) used when present.
+- Multiproxy: missing-value option (fill with the mean); how-to panel; the author's private data
+  (private, git-ignored, built by un script privado (retirado)) used when present.
 
 ## V11 — Web app 0.6 — 2026-10-31
 - Light/dark mode toggle.
 - "Test automatic classification on this core" (trained on other cores, or out-of-block within the
   core), with Test/Match bands and optional class colouring behind the record curves.
 - Interval ends outside a core's depth–age data are clamped instead of dropping the interval.
-- Real thesis cores preloaded in Multiproxy (first version only): ODP 977A and 976 records from
-  PANGAEA, and intervals from the thesis (ORL types, ichnological units, ORL 1 phases, sapropels).
+- Real private test cores preloaded in Multiproxy (first version only): ODP 977A and 976 records from
+  PANGAEA, and published intervals (ORL types, ichnological units, ORL 1 phases, sapropels).
 - Development moves to the `master` branch.
 
 ## V10 — Web app 0.5 — 2026-10-31

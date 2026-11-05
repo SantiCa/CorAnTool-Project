@@ -111,7 +111,7 @@
 \makeatother
 \subtitle{Cartera, métodos, defensa ante revisores y borradores}
 \author{Santiago Casanova-Arenillas}
-\date{01-11-2026 · software V29}
+\date{05-11-2026 · software}
 
 \begin{document}
 \maketitle
@@ -132,7 +132,7 @@ es definitivo.
 
 \begin{quote}
 Aviso: si el repositorio es \textbf{público}, no subir aquí datos ni
-resultados inéditos de la tesis hasta que el manuscrito esté enviado o
+resultados inéditos privados hasta que el manuscrito esté enviado o
 publicado como preprint (o pasar los borradores a un repositorio
 privado).
 \end{quote}
@@ -224,8 +224,8 @@ Precisión de la segmentación (faltan datos anotados) \\
 3 & La app registra BI/ii manuales junto a los automáticos &
 Concordancia con observadores (falta el experimento) \\
 4 & La cadena funciona con verdad conocida (sintético: RF $\approx$ 91 \%, red $\approx$
-80 \%) & Capacidad predictiva real: con los datos de la tesis, 18 \% de
-acierto equilibrado dejando un sondeo fuera (7 clases) \\
+80 \%) & Capacidad predictiva real: con los datos privados del autor, 18
+\% de acierto equilibrado dejando un sondeo fuera (7 clases) \\
 5 & Funcionalidad y ejemplo con datos públicos & --- \\
 \end{longtable}
 
@@ -314,10 +314,21 @@ artículo}\label{lo-que-hay-que-saber-del-software-antes-de-escribir-cualquier-a
   entre sondeos: úsense para patrones relativos. Los fondos (Esri,
   GEBCO) son contexto visual y se citan en el pie.
 \item
-  \textbf{Datos de la tesis:} LC06, LC14 y LC20 tienen profundidad
-  supuesta (secciones apiladas, §21.8 ter): no usarlos en una figura
-  publicada sin verificarla. Las cifras obtenidas con versiones
-  anteriores a V22 deben recalcularse.
+  \textbf{Modo identificación (V32):} registra presencia de icnotaxones
+  (marcas puntuales), no abundancia: con él no se pueden dar
+  porcentajes, BI ni ii, solo distribución de presencias por intervalo.
+  Indicar en los métodos qué tramos se analizaron en este modo.
+\item
+  \textbf{Figuras de secciones (V32):} paneles original / tratada /
+  trazas resaltadas / flechas, al estilo de Dorador y Rodríguez-Tovar;
+  las trazas resaltadas son las clasificadas en el programa (incluidas
+  las predicciones aceptadas si así está configurado), lo que debe
+  constar en el pie.
+\item
+  \textbf{Datos privados del autor:} LC06, LC14 y LC20 tienen
+  profundidad supuesta (secciones apiladas, §21.8 ter): no usarlos en
+  una figura publicada sin verificarla. Las cifras obtenidas con
+  versiones anteriores a V22 deben recalcularse.
 \end{itemize}
 
 Para cada artículo previsto: qué partes de IchAnTool usa, qué se puede
@@ -684,7 +695,7 @@ necesarios}\label{experimentos-necesarios-1}}
   \tightlist
   \item
     Elegir testigos con buenas imágenes y datos de indicadores ya
-    publicados (material de la tesis).
+    publicados (material de la datos privados).
   \item
     Correlación con desfase y prueba de significación que tenga en
     cuenta la autocorrelación de las series.
@@ -770,7 +781,7 @@ hoy}\label{quuxe9-se-puede-afirmar-hoy-2}}
   sintéticos de verdad conocida (§21.8).
 \item
   Primera prueba con datos reales (§21.8 bis): con registros públicos de
-  ODP 977A, los tipos de ORL de la tesis se reconocen mal (acierto
+  ODP 977A, los tipos de ORL privados se reconocen mal (acierto
   equilibrado 36 \% por bloques). No se puede afirmar capacidad
   predictiva; faltan los datos geoquímicos propios (XRF) y más sondeos
   etiquetados.
@@ -781,11 +792,11 @@ hoy}\label{quuxe9-se-puede-afirmar-hoy-2}}
   artículo tendría que resolver (armonizar variables, más sondeos por
   tipo de variable).
 \item
-  V26 (misma tesis): el clasificador creado desde los ajustes guardados
-  da 18 \% de acierto equilibrado, coherente con la cifra anterior. En
-  el proyecto sintético de entrenamiento, bosque aleatorio $\approx$ 91 \% y red
-  neuronal $\approx$ 80 \% (verdad conocida; solo demuestra que la cadena
-  funciona).
+  V26 (misma datos privados): el clasificador creado desde los ajustes
+  guardados da 18 \% de acierto equilibrado, coherente con la cifra
+  anterior. En el proyecto sintético de entrenamiento, bosque aleatorio
+  $\approx$ 91 \% y red neuronal $\approx$ 80 \% (verdad conocida; solo demuestra que la
+  cadena funciona).
 \end{itemize}
 
 \hypertarget{experimentos-necesarios-2}{%
@@ -1202,8 +1213,7 @@ against visual indices and application to {[}region/period{]} {[}TODO{]}
 \begin{itemize}
 \tightlist
 \item[$\square$]
-  Choose cores with good images and existing proxy data (thesis
-  material).
+  Choose cores with good images and existing proxy data (own material).
 \item[$\square$]
   Recruit 3--5 observers for the blind test.
 \end{itemize}

@@ -1,5 +1,5 @@
 // Copies the web application and the public examples into desktop/web (the folder packaged in the executable).
-// Never copies the owner's private thesis data (examples/tesis_casanova is left out entirely).
+// Copies only the app and the public examples.
 const fs = require('node:fs');
 const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..', '..'), WEB = path.resolve(__dirname, '..', 'web');

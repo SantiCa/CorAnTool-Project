@@ -23,5 +23,5 @@ indices and application to [region/period] [TODO]
 6. Conclusions
 
 ## Needs
-- [ ] Choose cores with good images and existing proxy data (thesis material).
+- [ ] Choose cores with good images and existing proxy data (own material).
 - [ ] Recruit 3–5 observers for the blind test.

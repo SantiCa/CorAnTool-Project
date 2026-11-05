@@ -550,7 +550,7 @@ identificaciones automáticas en etiquetas, que pasan a ser ejemplos.
 ### 10.6 ter Métodos, parámetros, evaluación y ejemplos (desde V18)
 Diálogo «Modelos y entrenamiento» (pestaña Aprendizaje): guía para no especialistas, método y
 parámetros, evaluación, galería de ejemplos usados y ejemplos de otros proyectos.
-- **Métodos** (`learn.js::TaxonModel`, ajustes en `settings.ml`, valores por defecto entre paréntesis):
+- **Métodos** (`learn.js::TaxonModel`, ajustes en `settings.ml`, valores por defecto entre paréndatos privados):
   - k-NN (§10.2): `k` (5), peso del voto `distance` = `1/(d + 0,05)` o `uniform` = 1.
   - Random Forest (`geo.js::fitModel('rf')`, §21.4) sobre los descriptores estandarizados `z`:
     árboles (100), profundidad máxima (12), ejemplos mínimos por hoja (2), compensación de clases (sí);
@@ -1295,77 +1295,6 @@ interpolado en su centro.
 - **Ayuda emergente:** todo elemento con `title` o `data-tip` muestra una ayuda propia a los 350 ms (también
   con el teclado); el `title` se pasa a `data-tip` para no duplicar la ayuda del navegador.
 
-### 21.8 ter Datos propios de la tesis (desde V12)
-`tools/make_thesis_dataset.py` lee los archivos originales del autor (carpeta «Proyectos
-Investigación») y escribe `examples/tesis_casanova/privado/`, que **no se sube a GitHub** (datos no
-publicados, coautores). Solo entra en el archivo único construido en el ordenador del autor y en la
-página de prueba privada. Contenido:
-- ODP 977A: bioturbación de trazas discretas y total con BI e ii, gris de la imagen (medias cada
-  5 cm), número y área de trazas cada 5 cm, CaCO3, TOC y TS, más los registros de PANGAEA (SST,
-  C37:4, color, susceptibilidad).
-- GP03 (cap. VIII): XRF (19 razones), ICP (óxidos y traza), susceptibilidad magnética y grupos de
-  foraminíferos bentónicos, en cm; modelo de edad de la tabla XRF del autor; intervalos de las
-  etiquetas del autor en esa tabla (periodo climático, clima cálido/frío/templado, ORL/no ORL);
-  marcas de una sola muestra (H2–H5) descartadas.
-- LC10 (cap. IX): razones ITRAX (medias cada 1 cm) y factores de enriquecimiento ICP; edad del
-  modelo de la tabla IX.1.
-- ODP 977A: estadiales H1–H6 y límites MIS del archivo de eventos de la tesis; ORL nuevas a–f.
-- ODP 976: ORL A1–A6 con profundidad y edad del autor y tipo de la tabla VII.3.
-- «Fuera de capa orgánica» se recalcula al cargar como complemento de las capas orgánicas de cada
-  sondeo (977A 0–147 ka, 976 0–135 ka, LC10 0–653 cm; GP03 lo trae en sus etiquetas).
-
-- **Desde V16, el resto de sondeos de la carpeta** (manifiesto `privado/extra_cores.json`, que la
-  aplicación lee para crear un sondeo por entrada):
-  - GP14 (Alborán, «Big One West off mound»): FRX en pastilla (óxidos %, ppm), ICP-MS (traza y
-    tierras raras), razones y factores de enriquecimiento de la hoja «ratios»; edad de cada muestra
-    (`Age1`, años → ka) de `Datos geoquimicas_santiago.xlsx`.
-  - LC21 (Egeo, 35,66° N 26,58° E, 1522 m, PANGAEA): susceptibilidad magnética y gris cada 0,5 cm,
-    susceptibilidad másica, ARM y Sr–Nd de las muestras del autor; isótopos δ13C y δ18O de
-    foraminíferos planctónicos (Amies et al., 2019), biomarcadores y Nd–Sm (PANGAEA, profundidades
-    en m × 100); modelo de edad de la hoja «Generado por mi»; sapropeles S1, S3, S4, S5 e
-    interrupción de S4 (hoja «Sapropel ages») como intervalos en edad.
-  - LC12: razones ITRAX del proyecto Grapher del autor; LC01: tabla ITRAX normalizada
-    (profundidad en mm); LC05: razones normalizadas y PCA del autor (profundidad en mm). Medias de
-    1 cm.
-  - LC06, LC14 y LC20: archivos ITRAX brutos por sección (`result.txt` u hojas de Excel). Solo
-    puntos con `validity = 1`; razones `XRF A/B` = cuentas A / cuentas B (denominador > 0), medias
-    de 1 cm. **La profundidad es supuesta:** las secciones se apilan sin huecos desde la de número
-    mayor (techo, como en LC05 «Sec 37_0-1m»), usando la longitud escaneada de cada una; en LC06 se
-    usa la repetición «A»/«Final» si existe. En LC14 (secciones 24–27) y LC20 (1 y 2) la profundidad
-    es relativa. Hay que verificarla antes de interpretar.
-  - GP03: además, arena > 63 µm, P/B, riqueza S y N/g de foraminíferos bentónicos (hoja «core GP03»).
-  - Razones calculadas: Ti/Ca, Fe/Ca, Zr/Ti, Zr/Rb, Mn/Ti, Ba/Ti, Br/Cl, S/Cl, Sr/Ca, K/Ti, Si/Ti, Rb/Ti y
-    Fe/Ti (las que permitan los elementos de cada archivo).
-  - Sin coordenadas conocidas (no están en los archivos ni en PANGAEA): GP14, LC01, LC05, LC06, LC12,
-    LC14 y LC20; se añaden con ✎. Sin modelo de edad: LC01, LC05, LC06, LC12, LC14 y LC20 (solo en
-    profundidad hasta que se añada).
-  - Un proyecto «Tesis» guardado con una versión anterior de los datos (`THESIS_DATA` < 2) se
-    actualiza una vez al abrir el programa (se recargan los sondeos de la tesis; las imágenes y los
-    sondeos propios del proyecto se conservan).
-
-Configuración al cargar con estos datos: 12 variables (8 razones XRF comunes a GP03 y LC10,
-bioturbación total, gris, TOC y SST), escalado por sondeo (las cuentas de dos escáneres distintos,
-Avaatech e ITRAX, no son comparables en valor absoluto), valores que faltan con la media, capa
-objetivo «Capas orgánicas» sin capas como variables. Resultado V12 (Random Forest, semilla 42):
-validación dejando un sondeo fuera, acierto 61,1 %, acierto equilibrado 17,7 % (7 clases); prueba en
-LC10 entrenando con los otros tres: 85,6 % de coincidencia, sobre todo por «fuera de capa orgánica»;
-en GP03, 29,8 %. Con variables tan distintas entre sondeos, la transferencia entre sondeos es pobre.
-
-### 21.8 bis Sondeos de la tesis (datos reales, primera versión)
-`examples/tesis_casanova/` y `loadThesisCores` (app.js). Registros de PANGAEA de ODP 977A (0–30 mbsf;
-color y susceptibilidad promediados cada 5 cm; edad interpolada con el modelo de Martrat et al.,
-2004) y ODP 976 (por edad), e intervalos y posiciones tomados de la tesis (Caps. IV, VI–IX). Fuentes
-y DOI en el README de la carpeta. Configuración al cargar: eje edad, paso 0,5 ka, escalado global,
-variables SST, CaCO3, TOC, L\*, a\*, b\* y susceptibilidad; capa objetivo «Capas orgánicas»
-(ORL tipo 1, 2 y 3, ORL sin tipo, sapropel, fuera de capa orgánica); «Fases internas» es
-subdivisión de «Capas orgánicas». Se cargan solos al abrir Multiproxy en un proyecto sin sondeos
-mientras `PRELOAD_THESIS` sea `true`.
-
-Resultado en V11 (Random Forest, valores por defecto, semilla 42): validación por 5 bloques en
-977A, acierto 78,8 %, acierto equilibrado 36 %. Las ORL tipo 1–3 suman pocas muestras; el modelo
-aprende sobre todo «fuera de capa orgánica». «Fuera de capa orgánica» es el complemento de las ORL
-descritas, no una observación.
-
 ### 21.8 Datos de demostración (sintéticos)
 `tools/make_geochem_demo.py` (semilla 397) genera 15 sondeos **ficticios** en el Mediterráneo
 (0–150 ka cada 0,5 ka, 4515 muestras) con eventos conocidos (columna `event_true`): baja
@@ -1511,7 +1440,7 @@ lista de gráficos (`plots`, `plotCur`).
   (§22.6 bis).
 
 ### 22.6 bis Pantalla inicial genérica, sondeos compartidos, paneles y marcos de mapa (desde V23)
-- **Pantalla inicial:** todos los proyectos guardados (también los de ejemplo) como tarjetas; la tesis no tiene acceso propio. Pestañas «Proyectos» y «Todos los sondeos»; buscador
+- **Pantalla inicial:** todos los proyectos guardados (también los de ejemplo) como tarjetas; los datos privados no tiene acceso propio. Pestañas «Proyectos» y «Todos los sondeos»; buscador
   sobre nombres de proyecto y de sondeo (`coreKey`).
 - **Clave de sondeo:** `coreKey(nombre)` = minúsculas, sin acentos (NFD) y solo letras a–z y cifras
   (se quita cualquier otro carácter). `sharedCores(lites)` → `Map(coreKey → Map(idProyecto → nombreProyecto))`
@@ -1551,10 +1480,10 @@ lista de gráficos (`plots`, `plotCur`).
   (`S.logView.hideExcl`). La copia de cada sección para la columna se reduce a ≤ 512 px de ancho (antes, resolución
   completa) para ahorrar memoria.
 - **Arranque limpio:** ningún proyecto precargado; nada se guarda hasta crear, importar o abrir un proyecto. El proyecto de
-  la tesis solo se abre con su botón y solo donde existen sus datos privados; el archivo sin conexión ya no los incluye
-  salvo con `--with-thesis`.
+  los datos privados solo se abre con su botón y solo donde existen sus datos privados; el archivo sin conexión ya no los incluye
+  salvo con una opción retirada.
 - **Programa de escritorio** (`desktop/`, Electron 33): sirve `app/` y los ejemplos públicos por el esquema `app://`
-  (sin `examples/tesis_casanova`); límite de memoria de JavaScript = 75 % de la RAM entre 2 y 32 GB
+  (sin datos privados (retirados)); límite de memoria de JavaScript = 75 % de la RAM entre 2 y 32 GB
   (`--max-old-space-size`), aunque Electron limita cada ventana a unos 4 GB de objetos JavaScript (compresión de punteros);
   las imágenes (ArrayBuffer) quedan fuera de ese límite y, por encima de la RAM, el sistema pagina a disco. Los proyectos se
   guardan en IndexedDB dentro de la carpeta de datos del programa, con almacenamiento persistente. Versión del ejecutable =

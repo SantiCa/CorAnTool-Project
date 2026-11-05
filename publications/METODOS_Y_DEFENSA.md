@@ -29,7 +29,7 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 - **Figuras de secciones (V32):** paneles original / tratada / trazas resaltadas / flechas, al estilo de Dorador y
   Rodríguez-Tovar; las trazas resaltadas son las clasificadas en el programa (incluidas las predicciones aceptadas si así
   está configurado), lo que debe constar en el pie.
-- **Datos de la tesis:** LC06, LC14 y LC20 tienen profundidad supuesta (secciones apiladas, §21.8 ter): no usarlos en
+- **Datos privados del autor:** LC06, LC14 y LC20 tienen profundidad supuesta (secciones apiladas, §21.8 ter): no usarlos en
   una figura publicada sin verificarla. Las cifras obtenidas con versiones anteriores a V22 deben recalcularse.
 
 Para cada artículo previsto: qué partes de IchAnTool usa, qué se puede afirmar con lo que ya está
@@ -219,7 +219,7 @@ datos abierto**, la herramienta de anotación libre y la comparación con concor
    - Diagrama de Bland-Altman para el porcentaje.
 3. **Aplicación:**
    - Elegir testigos con buenas imágenes y datos de indicadores ya publicados (material de la
-     tesis).
+     datos privados).
    - Correlación con desfase y prueba de significación que tenga en cuenta la autocorrelación de
      las series.
 
@@ -265,12 +265,12 @@ la icnología (bioturbación, BI, ii, icnotaxones) como variables.
 - La implementación funciona y es reproducible (semilla) con datos sintéticos de verdad conocida
   (§21.8).
 - Primera prueba con datos reales (§21.8 bis): con registros públicos de ODP 977A, los tipos de ORL
-  de la tesis se reconocen mal (acierto equilibrado 36 % por bloques). No se puede afirmar
+  privados se reconocen mal (acierto equilibrado 36 % por bloques). No se puede afirmar
   capacidad predictiva; faltan los datos geoquímicos propios (XRF) y más sondeos etiquetados.
 - Con los datos propios (V12, §21.8 ter): acierto equilibrado 17,7 % dejando un sondeo fuera con 7
   clases. La transferencia entre sondeos con variables y escáneres distintos es el problema principal
   que un artículo tendría que resolver (armonizar variables, más sondeos por tipo de variable).
-- V26 (misma tesis): el clasificador creado desde los ajustes guardados da 18 % de acierto equilibrado, coherente con
+- V26 (misma datos privados): el clasificador creado desde los ajustes guardados da 18 % de acierto equilibrado, coherente con
   la cifra anterior. En el proyecto sintético de entrenamiento, bosque aleatorio ≈ 91 % y red neuronal ≈ 80 %
   (verdad conocida; solo demuestra que la cadena funciona).
 

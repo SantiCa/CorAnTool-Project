@@ -4,7 +4,7 @@ Owner: Santiago Casanova-Arenillas. Communicate in Spanish.
 
 ## Documentation is part of every change
 Every delivery that changes code, algorithms, defaults or files must, in the same commit:
-1. Get the next delivery number **V0.<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V0.13) and mention it in the reply. Since 05-11-2026 the numbering is V0.<n> (V33 = V0.1); V1 is reserved for when Santiago declares the program fully functional. Below, `V0.<n>` means this number.
+1. Get the next delivery number **V0.<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V0.14) and mention it in the reply. Since 05-11-2026 the numbering is V0.<n> (V33 = V0.1); V1 is reserved for when Santiago declares the program fully functional. Below, `V0.<n>` means this number.
 2. Add a `V0.<n>` section to `docs/HISTORIAL_VERSIONES.md` (Qué se hizo / Cambios / Por qué / Comprobación / Pendiente) and a row in its summary table.
 3. Update `docs/DOCUMENTACION_TECNICA.md` if any algorithm, formula, default value, file format or validation result changes. Formulas there must match the code exactly.
 4. Update `publications/METODOS_Y_DEFENSA.md` if the change affects what a paper can claim.
@@ -17,7 +17,7 @@ Every delivery that changes code, algorithms, defaults or files must, in the sam
 - Current state, how to run and pending work: `docs/TRASPASO_CLAUDE_CODE.md`.
 
 ## Desktop
-- `desktop/` (Electron) packages `app/` and the public examples (never `examples/tesis_casanova`). `npm start` to try it, `npm run dist` to build for the current OS.
+- `desktop/` (Electron) packages `app/` and the public examples. `npm start` to try it, `npm run dist` to build for the current OS.
 
 ## Git
 - Work on `master` (the main branch); commit each delivery there.
@@ -28,4 +28,4 @@ Every delivery that changes code, algorithms, defaults or files must, in the sam
 - Analysis definitions (binning, indices, depth mapping) must stay identical in Python and JS; keep the regression test against `legacy/v2.1_console/example_output.csv` passing.
 - Never modify `legacy/`.
 - Name: the app is **CorAnTool** since V16; keep the Python import name `ichantool`, the IndexedDB/localStorage keys `ichantool*` and accept project files with `app: 'IchAnTool'`.
-- `examples/tesis_casanova/privado/` holds the owner's unpublished data: never commit it (git-ignored).
+- Never commit the owner's unpublished data or results (the repository is public-ready and contains none).

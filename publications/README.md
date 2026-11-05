@@ -3,7 +3,7 @@
 Borradores, revistas candidatas y estado de cada trabajo. Estado al **01-11-2026** (software en la entrega V28).
 Todo lo marcado `[TODO]` está pendiente; ningún resultado de estos borradores es definitivo.
 
-> Aviso: si el repositorio es **público**, no subir aquí datos ni resultados inéditos de la tesis hasta que el
+> Aviso: si el repositorio es **público**, no subir aquí datos ni resultados inéditos privados hasta que el
 > manuscrito esté enviado o publicado como preprint (o pasar los borradores a un repositorio privado).
 
 ## Cartera de publicaciones
@@ -29,7 +29,7 @@ Todo lo marcado `[TODO]` está pendiente; ningún resultado de estos borradores 
 | 1 | Reproduce exactamente los resultados de 2020; es determinista; integra imágenes, registros, intervalos, clasificación, mapas y figuras | Rendimiento de la detección automática en datos reales |
 | 2 | Las herramientas de anotación existen y producen máscaras abiertas | Precisión de la segmentación (faltan datos anotados) |
 | 3 | La app registra BI/ii manuales junto a los automáticos | Concordancia con observadores (falta el experimento) |
-| 4 | La cadena funciona con verdad conocida (sintético: RF ≈ 91 %, red ≈ 80 %) | Capacidad predictiva real: con los datos de la tesis, 18 % de acierto equilibrado dejando un sondeo fuera (7 clases) |
+| 4 | La cadena funciona con verdad conocida (sintético: RF ≈ 91 %, red ≈ 80 %) | Capacidad predictiva real: con los datos privados del autor, 18 % de acierto equilibrado dejando un sondeo fuera (7 clases) |
 | 5 | Funcionalidad y ejemplo con datos públicos | — |
 
 ## Documentación de métodos
