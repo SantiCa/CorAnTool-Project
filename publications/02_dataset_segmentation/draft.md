@@ -3,7 +3,7 @@
 **Target:** Earth System Science Data (data focus) or Computers & Geosciences / Artificial
 Intelligence in Geosciences (method focus). Decide once the dataset size and model results are known.
 
-**Status (V0.15, 05-11-2026):** the full workflow is implemented in CorAnTool and tested on synthetic
+**Status (V0.16, 05-11-2026; training plan added in §3.5):** the full workflow is implemented in CorAnTool and tested on synthetic
 data (export → tiles split by core → training → evaluation on whole images of independent cores →
 use in the app). **No model has been trained on real cores yet; every number below is a placeholder.**
 Methods text describes the code exactly; keep it in sync with `docs/DOCUMENTACION_TECNICA.md` §7.5.
@@ -98,6 +98,32 @@ unconfirmed trace is not a reliable negative.
 - Human ceiling: agreement between annotators.
 - [Optional] Cross-source test: train on one source (e.g. IODP scans), test on another.
 
+### 3.5 Training protocol and experiments (plan, V0.16)
+Run in this order; each step uses only commands that exist in CorAnTool V0.15.
+
+1. **Pilot (3–5 cores).** Annotate, export, prepare, train for a few epochs and evaluate, to check the
+   whole chain on real images and measure annotation time per metre of core. Pilot cores can be
+   re-used later only if their annotation follows the final protocol.
+2. **Dataset (target 15–20 cores, ≥ 2 sources/sites).** Annotate following the written protocol.
+   Record source, equipment, resolution and lithology per core.
+3. **Lock the test set before training.** Choose the test cores (≈ 20 %, covering every source and
+   lithology) and write their names in `dataset.json` (`--test`). They are not looked at again until
+   the final evaluation: no training, no early stopping, no threshold or parameter choice on them.
+4. **Validation cores (≈ 20 %)** for early stopping and for choosing the probability threshold:
+   evaluate the validation cores (`evaluate --cores …`) at thresholds 0.3–0.7 and keep the one with the
+   best Dice; that value is then fixed for the test set.
+5. **Main model:** ResNet-34 pre-trained on ImageNet, settings of §3.2, seed 42. Repeat with 3 seeds
+   and report mean ± SD to show the variability due to training.
+6. **Baselines and human ceiling** on the same test images with the same scoring code (§3.4).
+7. **Learning curve:** retrain with 25, 50, 75 and 100 % of the training cores (same test set) to show
+   how many annotated cores are needed.
+8. **Cross-source test (if ≥ 2 sources):** train on one source, test on the other.
+9. **Correction loop (optional, reported separately):** the model's doubtful zones guide the expert's
+   corrections on new cores; corrected cores are added to training. Annotation time with and without
+   the model's proposal is measured. Cores annotated this way never go to the test set, because the
+   proposal could bias the expert.
+10. **Release:** model `.onnx` + `.json` (with split, seed and history), dataset and protocol with DOIs.
+
 ## 4. Results [TODO — no results yet]
 
 | Method | IoU | Dice | Precision | Recall | MAE % (b cm) | BI agreement | ii agreement |
@@ -130,7 +156,9 @@ contrast class / lithology.
 - [ ] Annotation by ≥ 2 experts on a subset to measure agreement.
 - [ ] Classical baselines scored with the same evaluation code.
 - [ ] Equipment and lighting per image recorded.
-- [ ] Training on a GPU (a single consumer GPU is enough) and learning curve.
+- [ ] Pilot with 3–5 cores (§3.5, step 1).
+- [ ] Test cores chosen and locked before any training.
+- [ ] Training on a GPU (a single consumer GPU is enough), 3 seeds, learning curve.
 - [ ] Verify all references in §1.
 
 ## References (to complete and verify)

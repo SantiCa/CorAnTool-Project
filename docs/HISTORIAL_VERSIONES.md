@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
 | V0.14 | 05-11-2026 | Aplicación | Auditoría; sin referencias a datos privados del autor; librerías incluidas (TIFF y Excel sin internet); README de uso |
 | V0.13 | 05-11-2026 | Aplicación | Revisión de V0.9–V0.12; mensajes de error de dibujo |
@@ -637,6 +638,18 @@ ningún error.
 
 **Pendiente o problemas conocidos.** Reestructuración del programa en proyectos → sondeos (pedida a
 la vez; se planifica aparte).
+
+---
+
+## V0.16 — Plan de entrenamiento de la U-Net en el artículo 2 (05-11-2026)
+
+- **Qué se hizo:** se añade al borrador del artículo 2 el protocolo de entrenamiento y los experimentos.
+- **Cambios:** `publications/02_dataset_segmentation/draft.md` §3.5 (piloto, conjunto de datos, prueba bloqueada
+  antes de entrenar, umbral elegido en validación, 3 semillas, comparaciones, curva de aprendizaje, prueba entre
+  fuentes, bucle de corrección fuera de la prueba, publicación) y lista de necesidades; `DELIVERY` = V0.16.
+- **Por qué:** petición de Santiago de explicar y planificar el entrenamiento.
+- **Comprobación:** solo texto; cada paso usa órdenes que ya existen en V0.15. Pruebas sin cambios.
+- **Pendiente:** el de V0.15.
 
 ---
 

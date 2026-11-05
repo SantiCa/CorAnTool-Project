@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.16 — 2026-11-05
+- Paper 2 draft: U-Net training protocol and experiments (§3.5).
+
 ## V0.15 — 2026-11-05
 - U-Net segmentation: training-data export from the app (images, masks with an ignore value, manifest); new detection method running a trained ONNX model in the app (probability threshold, doubtful zones); Python `ichantool.unet` (prepare with split by core, train, evaluate on whole images of independent cores, predict) with identical tiling rules in Python and JS. Draft of paper 2 updated.
 
