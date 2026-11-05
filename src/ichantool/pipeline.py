@@ -66,17 +66,25 @@ def analyze_mask(mask: np.ndarray, top: float, bottom: float, *, units: str = "c
     mask: 2-D int array, 0 = matrix, 1..n = bioturbation classes; row 0 = top.
     bin_px: number of pixel rows averaged into each data point (may be fractional).
     bin_cm: interval thickness in cm; if given, bin_px = bin_cm × pixel rows per cm (as in the web app).
+
+    Overlapping traces (V0.20, as in the web app): mask may instead be a 3-D boolean stack
+    (n_classes, rows, cols), one layer per class. A pixel is bioturbated once if any layer is set, and
+    counts for every class whose layer is set, so the class percentages may add up to more than the total.
     """
     mask = np.asarray(mask)
-    if mask.ndim != 2:
-        raise ValueError("mask must be 2-D")
+    layers = None
+    if mask.ndim == 3:
+        layers = mask.astype(bool)
+        mask = layers.any(axis=0).astype(np.int32)
+    elif mask.ndim != 2:
+        raise ValueError("mask must be 2-D, or 3-D (classes, rows, cols) for overlapping traces")
     if bin_cm is not None:
         span_cm = (bottom - top) * {"mm": 0.1, "cm": 1.0, "m": 100.0}[units]
         bin_px = bin_cm * mask.shape[0] / span_cm
     if bin_px < 1:
         raise ValueError("bin_px must be >= 1")
     n_rows, n_cols = mask.shape
-    n_classes = int(mask.max()) if mask.size else 0
+    n_classes = layers.shape[0] if layers is not None else (int(mask.max()) if mask.size else 0)
     names = list(class_names) if class_names else [f"class_{i}" for i in range(1, n_classes + 1)]
     if len(names) < n_classes:
         raise ValueError("fewer class_names than classes present in the mask")
@@ -90,7 +98,7 @@ def analyze_mask(mask: np.ndarray, top: float, bottom: float, *, units: str = "c
     }
     if len(names) > 1:
         for label, cname in enumerate(names, start=1):
-            row_c = (mask == label).mean(axis=1) * 100
+            row_c = (layers[label - 1] if layers is not None else mask == label).mean(axis=1) * 100
             cols[f"{cname}_pct"] = _binned_mean(row_c, bin_px, keep_partial)
     df = pd.DataFrame(cols)
     for scheme in schemes:

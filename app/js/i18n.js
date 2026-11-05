@@ -1656,3 +1656,25 @@ Object.assign(D.en, {
   'h.#cdDel': 'Removes the core from the project.',
   'h.#floatClose': 'Closes the floating panel.'
 });
+
+// V0.20: overlapping traces, scissors and merge
+Object.assign(D.es, {
+  'tool.cut': 'Tijeras: traza una línea a través de una traza para dividirla (C)',
+  'tool.erase': 'Borrador (E). Mayús = borra solo la traza seleccionada',
+  'tool.overlap': 'Superponer',
+  'h.tool.overlap': 'Activado: la traza nueva se solapa con las de debajo y ambas cuentan (cada icnotaxón con su superficie completa; la bioturbación total cuenta el solape una vez). Desactivado: la nueva sustituye a la de debajo. Con el pincel, Mayús amplía la traza seleccionada.',
+  'cut.none': 'La línea no cruza ninguna traza.',
+  'cut.noSplit': 'La línea no separa la traza: tiene que cruzarla de lado a lado.',
+  'cut.done': 'Traza dividida en {n}.',
+  'obj.merge': 'Unir', 'obj.mergeTip': 'Une las trazas seleccionadas en una sola (conserva la clase de la mayor identificada a mano).',
+});
+Object.assign(D.en, {
+  'tool.cut': 'Scissors: draw a line across a trace to split it (C)',
+  'tool.erase': 'Eraser (E). Shift = erase only the selected trace',
+  'tool.overlap': 'Overlap',
+  'h.tool.overlap': 'On: the new trace overlaps those underneath and all count (each ichnotaxon with its full area; total bioturbation counts the overlap once). Off: the new trace replaces what is underneath. With the brush, Shift extends the selected trace.',
+  'cut.none': 'The line does not cross any trace.',
+  'cut.noSplit': 'The line does not split the trace: it must cross it from side to side.',
+  'cut.done': 'Trace split into {n}.',
+  'obj.merge': 'Merge', 'obj.mergeTip': 'Merges the selected traces into one (keeps the class of the largest one identified by hand).',
+});

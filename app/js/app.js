@@ -1,5 +1,5 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
-import { BI, II, UNIT_TO_CM, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
+import { BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
 import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.19';
+const DELIVERY = 'V0.20';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -96,7 +96,7 @@ function newSection({ name, file, w, h, orig, ds = 1, labels = null, exclude = n
   if (file.bytes && !file.blob) { file = { name: file.name, type: file.type, blob: new Blob([file.bytes], { type: file.type || 'image/jpeg' }) }; }
   const s = {
     id: uid(), name, file, rot: 0, ds, crop: null, full, logVer: 0, w, h, orig, enh: null,
-    objects: new Map(), nextId: 1,
+    objects: new Map(), nextId: 1, stacks: [null],   // V0.20: overlapping traces (core.js)
     top: 0, bottom: 100, units: 'cm', roi: { x0: 0, y0: 0, x1: w, y1: h }, marks: [],
     filters: { ...DEFAULT_FILTERS }, preset: 'none', detect: { ...DEFAULT_DETECT }, manual: [], bins: [], view: null,
   };
@@ -380,7 +380,7 @@ function effClassId(o) {
 function refreshObjects(s, ids, region) {
   if (!s.orig) return;   // V0.1: stats are kept from the last time the pixels were in memory
   const R = region ? { x0: Math.max(0, region.x0), y0: Math.max(0, region.y0), x1: Math.min(s.w, region.x1), y1: Math.min(s.h, region.y1) } : null;
-  const acc = objectStats(s.labels, s.w, s.h, s.orig, ids, R), ppu = pxPerCm(s);
+  const acc = objectStats(s.labels, s.w, s.h, s.orig, ids, R, s.stacks), ppu = pxPerCm(s);
   for (const id of ids) {
     const a = acc.get(id), o = s.objects.get(id);
     if (!o) continue;
@@ -396,7 +396,21 @@ function beginOp(s) {
   s._mv = (s._mv || 0) + 1;   // V0.2: invalidates cached row counts and packed masks
   return { s, lm: [], ex: [], objs: [...s.objects.values()].map((o) => ({ ...o })), nextId: s.nextId, sel: S.selected, ext: { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }, touched: new Set() };
 }
-function setLabel(op, i, v) { const L = op.s.labels; if (L[i] !== v) { if (L[i]) op.touched.add(L[i]); op.lm.push(i, L[i]); L[i] = v; } }
+function setLabel(op, i, v) { const L = op.s.labels, o = L[i]; if (o !== v) { for (const id of idsAt(o, op.s.stacks)) op.touched.add(id); op.lm.push(i, o); L[i] = v; } }
+/* V0.20: overlapping traces. With «Superponer» a new trace keeps what is underneath; without it, it replaces it (as before). */
+const six = (s) => s._six || (s._six = stackIndex(s.stacks));
+const topLab = (s, i) => topAt(s.labels[i], s.stacks);
+const addPx = (op, i, id) => setLabel(op, i, S.overlap ? withId(op.s.labels[i], id, op.s.stacks, six(op.s)) : id);
+const subPx = (op, i, id) => setLabel(op, i, withoutId(op.s.labels[i], id, op.s.stacks, six(op.s)));
+/** Remove a set of ids from every pixel. */
+function dropIds(op, set) {
+  const s = op.s, L = s.labels, st = s.stacks;
+  for (let i = 0; i < L.length; i++) {
+    const v = L[i]; if (!v) continue;
+    if (v > 0) { if (set.has(v)) setLabel(op, i, 0); }
+    else if (st[-v].some((x) => set.has(x))) setLabel(op, i, codeFor(st[-v].filter((x) => !set.has(x)), st, six(s)));
+  }
+}
 function setEx(op, i, v) { const E = op.s.exclude; if (E[i] !== v) { op.ex.push(i, E[i]); E[i] = v; } }
 function grow(op, x, y) { const e = op.ext; if (x < e.x0) e.x0 = x; if (y < e.y0) e.y0 = y; if (x > e.x1) e.x1 = x; if (y > e.y1) e.y1 = y; }
 
@@ -443,8 +457,8 @@ function applyPixels(pixels, mode) {
   for (const i of pixels) {
     grow(op, i % s.w, (i / s.w) | 0);
     const old = s.labels[i];
-    if (mode === 'sub') { if (old && (!S.selected || old === S.selected)) setLabel(op, i, 0); }
-    else setLabel(op, i, target);
+    if (mode === 'sub') { if (old) { if (S.selected) { if (hasId(old, S.selected, s.stacks)) subPx(op, i, S.selected); } else setLabel(op, i, 0); } }
+    else addPx(op, i, target);
   }
   finishPixelOp(op, target);
   if (target && s.objects.has(target)) select(target);
@@ -457,7 +471,7 @@ function deleteObjects(ids) {
   const op = beginOp(s);
   for (const o of objs) {
     const [x0, y0, x1, y1] = o.bbox;
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * s.w + x; if (s.labels[i] === o.id) setLabel(op, i, 0); }
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * s.w + x; if (hasId(s.labels[i], o.id, s.stacks)) subPx(op, i, o.id); }
     s.objects.delete(o.id);
   }
   S.selected = 0; S.multi.clear();
@@ -476,6 +490,77 @@ function assignClassMany(ids, clsId) {
 }
 /** Objects selected now: the multi-selection if any, else the single selected object. */
 function selectedIds() { const s = sec(); if (!s) return []; const ids = S.multi.size ? [...S.multi] : S.selected ? [S.selected] : []; return ids.filter((id) => s.objects.has(id)); }
+
+/* ───────────── V0.20: split a trace along a drawn line (scissors) and merge traces ───────────── */
+/** Pixels of a 3-px-wide polyline (indices). */
+function linePixels(s, pts) {
+  const out = new Set();
+  for (let k = 1; k < pts.length; k++) {
+    const [ax, ay] = pts[k - 1], [bx, by] = pts[k], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) * 2));
+    for (let q = 0; q <= n; q++) {
+      const cx = ax + ((bx - ax) * q) / n, cy = ay + ((by - ay) * q) / n;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const x = Math.floor(cx) + dx, y = Math.floor(cy) + dy;
+        if (x >= 0 && y >= 0 && x < s.w && y < s.h) out.add(y * s.w + x);
+      }
+    }
+  }
+  return out;
+}
+function splitAlong(pts) {
+  const s = sec(); if (!s || !pts || pts.length < 2) return;
+  const cut = linePixels(s, pts), L = s.labels, st = s.stacks;
+  let id = 0;
+  if (S.selected && [...cut].some((i) => hasId(L[i], S.selected, st))) id = S.selected;
+  else for (const i of cut) { const v = topAt(L[i], st); if (v) { id = v; break; } }
+  const o = id && s.objects.get(id);
+  if (!o?.bbox) { toast(t('cut.none')); return; }
+  const [x0, y0, x1, y1] = o.bbox, bw = x1 - x0 + 1, bh = y1 - y0 + 1, comp = new Int32Array(bw * bh);   // −1 cut, 0 outside, k ≥ 1 piece
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * s.w + x; if (hasId(L[i], id, st)) comp[(y - y0) * bw + x - x0] = cut.has(i) ? -1 : -2; }
+  let n = 0; const size = [0];
+  for (let j = 0; j < comp.length; j++) {   // pieces: 4-connected, without the cut pixels
+    if (comp[j] !== -2) continue;
+    n++; size.push(0); const q = [j]; comp[j] = n;
+    while (q.length) {
+      const c = q.pop(), x = c % bw; size[n]++;
+      for (const d of [x > 0 ? c - 1 : -1, x < bw - 1 ? c + 1 : -1, c - bw, c + bw]) if (d >= 0 && d < comp.length && comp[d] === -2) { comp[d] = n; q.push(d); }
+    }
+  }
+  if (n < 2) { toast(t('cut.noSplit')); return; }
+  for (let changed = true; changed;) {   // cut pixels go to the neighbouring piece
+    changed = false;
+    for (let j = 0; j < comp.length; j++) {
+      if (comp[j] !== -1) continue; const x = j % bw;
+      for (const d of [x > 0 ? j - 1 : -1, x < bw - 1 ? j + 1 : -1, j - bw, j + bw]) if (d >= 0 && d < comp.length && comp[d] > 0) { comp[j] = comp[d]; changed = true; break; }
+    }
+  }
+  const main = size.indexOf(Math.max(...size.slice(1)));   // the largest piece keeps the id
+  const op = beginOp(s), ids = [0];
+  for (let k = 1; k <= n; k++) ids.push(k === main ? id : newObject(s, o.cls, o.src).id);
+  for (let k = 1; k <= n; k++) if (k !== main) { const c = s.objects.get(ids[k]); c.pred = o.pred; c.conf = o.conf; c.nt = o.nt; op.touched.add(ids[k]); }
+  for (let j = 0; j < comp.length; j++) {
+    const k = comp[j]; if (k <= 0 || k === main) continue;
+    const i = (y0 + ((j / bw) | 0)) * s.w + x0 + (j % bw); grow(op, i % s.w, (i / s.w) | 0);
+    setLabel(op, i, renameId(L[i], id, ids[k], st, six(s)));
+  }
+  finishPixelOp(op, id);
+  toast(t('cut.done', { n }));
+}
+/** Merge the selected traces into one (the largest with a class given by hand, else the largest, keeps its id and class). */
+function mergeObjects(list) {
+  const s = sec(); if (!s) return;
+  const objs = list.map((id) => s.objects.get(id)).filter((o) => o?.bbox); if (objs.length < 2) return;
+  const keep = [...objs].sort((a, b) => (!!b.cls - !!a.cls) || b.area - a.area)[0], L = s.labels, st = s.stacks;
+  const op = beginOp(s);
+  for (const o of objs) {
+    if (o === keep) continue;
+    const [x0, y0, x1, y1] = o.bbox; grow(op, x0, y0); grow(op, x1, y1);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * s.w + x; if (hasId(L[i], o.id, st)) setLabel(op, i, renameId(L[i], o.id, keep.id, st, six(s))); }
+  }
+  S.multi.clear();
+  finishPixelOp(op, keep.id);
+  select(keep.id);
+}
 
 /* ───────────── detection ───────────── */
 
@@ -652,7 +737,7 @@ function detectSection(s) {
     const cand = new Set();
     for (const o of s.objects.values()) if (!o.cls && o.src === 'auto') cand.add(o.id);
     if (cand.size) {
-      for (let i = 0; i < L.length; i++) { const id = L[i]; if (id && cand.has(id)) { op.lm.push(i, id); L[i] = 0; } }
+      dropIds(op, cand);
       for (const id of cand) s.objects.delete(id);
       if (cand.has(S.selected)) S.selected = 0;
     }
@@ -662,7 +747,7 @@ function detectSection(s) {
     for (let i = 0; i < L.length; i++) { const k = cl[i]; if (k && !L[i]) { op.lm.push(i, 0); L[i] = base + k - 1; } }
     const ids = new Set();
     for (let k = 0; k < count; k++) { const o = newObject(s, null, 'auto'); ids.add(o.id); }
-    const acc = objectStats(L, s.w, s.h, s.orig, ids, null), ppu = pxPerCm(s);
+    const acc = objectStats(L, s.w, s.h, s.orig, ids, null, s.stacks), ppu = pxPerCm(s);
     let kept = 0;
     for (const id of ids) {
       const a = acc.get(id), o = s.objects.get(id);
@@ -681,7 +766,7 @@ function detectSection(s) {
 function clearCandidates() {
   const s = sec(); if (!s) return;
   const op = beginOp(s), cand = new Set([...s.objects.values()].filter((o) => !o.cls).map((o) => o.id));
-  for (let i = 0; i < s.labels.length; i++) if (cand.has(s.labels[i])) setLabel(op, i, 0);
+  dropIds(op, cand);
   for (const id of cand) s.objects.delete(id);
   if (cand.has(S.selected)) S.selected = 0;
   commitOp(op, true); $('detectStatus').textContent = ''; afterChange(s);
@@ -784,7 +869,7 @@ function analyze(s) {
   const eff = effClassArray(s);
   let h = 2166136261; for (let i = 0; i < eff.length; i++) h = Math.imul(h ^ (eff[i] + 2), 16777619);   // signature of the class of each object
   const key = `${s._mv || 0}|${s.w}x${s.h}|${s.roi.x0},${s.roi.y0},${s.roi.x1},${s.roi.y1}|${S.classes.length}|${eff.length}|${h}`;
-  if (s._rc?.key !== key) s._rc = { key, counts: rowCounts({ labels: s.labels, width: s.w, roi: s.roi, exclude: s.exclude, effClass: eff, nClasses: S.classes.length }) };   // V0.2: cached
+  if (s._rc?.key !== key) s._rc = { key, counts: rowCounts({ labels: s.labels, width: s.w, roi: s.roi, exclude: s.exclude, effClass: eff, nClasses: S.classes.length, stacks: s.stacks }) };   // V0.2: cached
   const counts = s._rc.counts;
   s.bins = binRows(counts, { top: s.top, bottom: s.bottom, binPx: binRowsOf(s), minValid: (S.settings.minValid ?? 20) / 100 });
   const pad = (S.settings.noDataPad || 0) / UNIT_TO_CM[s.units];   // V0.3: widen the no-data zones by this length (cm) on each side
@@ -852,6 +937,7 @@ function render() {
   }
   if (!s.lutFill || s.lutFill.length < s.nextId * 4) rebuildLUT(s);
   if (!imgData || imgData.width !== cw || imgData.height !== ch) imgData = vctx.createImageData(cw, ch);
+  const stk = s.stacks, own = (w, id) => w === id || (w < 0 && stk[-w].includes(id));
   const d = imgData.data, src = S.showOrig ? s.orig : s.enh, lab = s.labels, ex = s.exclude, dprob = S.showDoubt && s._unet?.key === unetKey(s) ? s._unet.prob : null;
   const W = s.w, H = s.h, { x: vx, y: vy, zoom: z } = S.view, roi = s.roi;
   const fill = s.lutFill, line = s.lutLine, sty = s.lutStyle, sel = S.selected, step = Math.max(1, Math.round(1 / z));
@@ -866,12 +952,13 @@ function render() {
       if (!rowIn || ix < 0 || ix >= W) { d[o] = 22; d[o + 1] = 26; d[o + 2] = 25; d[o + 3] = 255; continue; }
       const i = base + ix, j = i * 4;
       let r = src[j], g = src[j + 1], b = src[j + 2];
-      const id = lab[i];
-      if (id && sty[id] !== 3) {
+      const v = lab[i], list = v < 0 ? stk[-v] : null;   // V0.20: overlaps are drawn bottom → top
+      for (let q = 0, n = list ? list.length : v ? 1 : 0; q < n; q++) {
+        const id = list ? list[q] : v; if (sty[id] === 3) continue;
         const k = id * 4, a = fill[k + 3] / 255;
         if (a) { r += (fill[k] - r) * a; g += (fill[k + 1] - g) * a; b += (fill[k + 2] - b) * a; }
-        const edge = (ix < step || lab[i - step] !== id) || (ix + step >= W || lab[i + step] !== id) ||
-          (iy < step || lab[i - step * W] !== id) || (iy + step >= H || lab[i + step * W] !== id);
+        const edge = (ix < step || !own(lab[i - step], id)) || (ix + step >= W || !own(lab[i + step], id)) ||
+          (iy < step || !own(lab[i - step * W], id)) || (iy + step >= H || !own(lab[i + step * W], id));
         if (edge) {
           if (id === sel || inSel[id]) { r = 255; g = 255; b = 255; }
           else if (sty[id] !== 1 || ((sx + sy) & 4)) { r = line[k]; g = line[k + 1]; b = line[k + 2]; }
@@ -1184,8 +1271,8 @@ function paintAt(op, cx, cy) {
   for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) {
     if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 > r2) continue;
     const i = y * s.w + x; grow(op, x, y);
-    if (op.mode === 'brush') setLabel(op, i, op.target);
-    else if (op.mode === 'erase') setLabel(op, i, 0);
+    if (op.mode === 'brush') addPx(op, i, op.target);
+    else if (op.mode === 'erase') { if (op.only) subPx(op, i, op.only); else setLabel(op, i, 0); }   // V0.20: Mayús = only the selected trace
     else setEx(op, i, op.mode === 'exclude' ? 1 : 0);
   }
 }
@@ -1208,6 +1295,7 @@ view.addEventListener('pointerdown', (e) => {
   else if ((tool === 'exclude' || tool === 'include') && (e.shiftKey || S.exShape === 'rect')) { boxDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drag = { type: 'exrect', mode: tool }; }
   else if (tool === 'roi') { roiDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drag = { type: 'roi' }; }
   else if (tool === 'mark') { toggleMark(s, p, e.altKey); return; }
+  else if (tool === 'cut') { lassoPts = [[p.x, p.y]]; drag = { type: 'cut' }; }
   else if (tool === 'lasso') { lassoPts = [[p.x, p.y]]; drag = { type: 'lasso', mode: e.altKey ? 'sub' : e.shiftKey ? 'add' : 'new' }; }
   else if (tool === 'wand') {
     if (!inImg(s, p)) return;
@@ -1216,10 +1304,11 @@ view.addEventListener('pointerdown', (e) => {
   } else {
     const op = beginOp(s); op.mode = tool;
     if (tool === 'brush') {
-      const under = inImg(s, p) ? s.labels[Math.floor(p.y) * s.w + Math.floor(p.x)] : 0;
-      op.target = e.shiftKey && S.selected ? S.selected : under || newObject(s, S.active, 'brush').id;
+      const under = inImg(s, p) ? topLab(s, Math.floor(p.y) * s.w + Math.floor(p.x)) : 0;
+      op.target = e.shiftKey && S.selected ? S.selected : (!S.overlap && under) || newObject(s, S.active, 'brush').id;   // V0.20: with «Superponer», a new trace
       rebuildLUT(s);
     }
+    if (tool === 'erase' && e.shiftKey && S.selected) op.only = S.selected;
     paintAt(op, p.x, p.y);
     drag = { type: 'paint', op, last: p };
     requestRender();
@@ -1244,7 +1333,7 @@ view.addEventListener('pointermove', (e) => {
     const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
     S.view.x = drag.vx - dx / S.view.zoom; S.view.y = drag.vy - dy / S.view.zoom; clampView(); requestRender();
   } else if (drag.type === 'paint') { paintSeg(drag.op, drag.last, p); drag.last = p; requestRender(); }
-  else if (drag.type === 'lasso') { lassoPts.push([p.x, p.y]); requestRender(); }
+  else if (drag.type === 'lasso' || drag.type === 'cut') { lassoPts.push([p.x, p.y]); requestRender(); }
   else if (drag.type === 'roi') { roiDrag.x1 = p.x; roiDrag.y1 = p.y; requestRender(); }
   else if (drag.type === 'box' || drag.type === 'exrect') { boxDrag.x1 = p.x; boxDrag.y1 = p.y; requestRender(); }
 });
@@ -1253,7 +1342,9 @@ function endDrag() {
   const s = sec(); const d = drag; drag = null; if (!d || !s) return;
   if (d.type === 'edge') { if (!cropState) setRoi(s, { ...s.roi }); return; }
   if (d.type === 'select') {
-    const p = d.p, id = inImg(s, p) ? s.labels[Math.floor(p.y) * s.w + Math.floor(p.x)] : 0;
+    const p = d.p, v = inImg(s, p) ? s.labels[Math.floor(p.y) * s.w + Math.floor(p.x)] : 0, ids = idsAt(v, s.stacks);
+    // V0.20: clicking again on an overlap selects the trace underneath
+    const k = ids.indexOf(S.selected), id = ids.length > 1 && k >= 0 ? ids[(k + ids.length - 1) % ids.length] : topAt(v, s.stacks);
     if (d.add) toggleSelect(id); else select(id);
   } else if (d.type === 'exrect') {
     const r = boxDrag; boxDrag = null;
@@ -1271,6 +1362,7 @@ function endDrag() {
     for (const o of s.objects.values()) { if (!o.bbox) continue; const cx = (o.bbox[0] + o.bbox[2]) / 2, cy = (o.bbox[1] + o.bbox[3]) / 2; if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) S.multi.add(o.id); }
     S.selected = [...S.multi][0] || 0; renderObject(); requestRender(); if (S.multi.size) showTab('object', true);
   } else if (d.type === 'paint') finishPixelOp(d.op, d.op.mode === 'brush' ? d.op.target : 0);
+  else if (d.type === 'cut') { const pts = lassoPts; lassoPts = null; splitAlong(pts); requestRender(); }
   else if (d.type === 'lasso') {
     const pts = lassoPts; lassoPts = null;
     applyPixels(polygonPixels(pts, s.w, s.roi), d.mode); requestRender();
@@ -1297,7 +1389,7 @@ function updateStatus(s, p) {
   const inside = inImg(s, p);
   $('stDepth').textContent = inside ? t('status.depth', { d: fmt(depthAtRow(s, p.y), 3), u: s.units }) : '';
   $('stPx').textContent = inside ? `x ${Math.floor(p.x)} · y ${Math.floor(p.y)}` : '';
-  const id = inside ? s.labels[Math.floor(p.y) * s.w + Math.floor(p.x)] : 0, o = id && s.objects.get(id);
+  const id = inside ? topLab(s, Math.floor(p.y) * s.w + Math.floor(p.x)) : 0, o = id && s.objects.get(id);
   $('stObj').textContent = o ? `#${o.id} ${clsById(o.cls || o.pred)?.name || t('obj.unassigned')} · ${t('obj.' + status(o))}` : '';
 }
 
@@ -1314,7 +1406,7 @@ document.addEventListener('keydown', (e) => {
   const k = e.key, s = sec();
   if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
   if (k === ' ') { spaceDown = true; view.classList.add('pan'); e.preventDefault(); return; }
-  const tools = { v: 'select', w: 'wand', b: 'brush', l: 'lasso', e: 'erase', x: 'exclude', h: 'pan', m: 'mark' };
+  const tools = { v: 'select', w: 'wand', b: 'brush', l: 'lasso', c: 'cut', e: 'erase', x: 'exclude', h: 'pan', m: 'mark' };
   if (tools[k.toLowerCase()] && !e.ctrlKey && !e.metaKey) { setTool(tools[k.toLowerCase()]); return; }
   if (!s) return;
   if (/^[0-9]$/.test(k)) {
@@ -1362,10 +1454,12 @@ function setTool(tool) {
   $('optSize').hidden = !['brush', 'erase', 'exclude', 'include'].includes(tool);
   $('optTol').hidden = tool !== 'wand';
   $('optShape').hidden = !['exclude', 'include'].includes(tool);
+  $('optOverlap').hidden = !['brush', 'wand', 'lasso'].includes(tool);
   view.classList.toggle('pan', tool === 'pan');
   requestRender();
 }
 $('exShape').addEventListener('change', (e) => { S.exShape = e.target.value; });
+$('overlapMode').addEventListener('change', (e) => { S.overlap = e.target.checked; });
 function setBrush(v) { S.brushSize = Math.max(1, Math.min(120, v)); $('brushSize').value = S.brushSize; $('brushOut').textContent = S.brushSize; requestRender(); }
 function setActive(id) { S.active = id; if (S.settings.solo) { setHidden(S.classes.filter((c) => c.id !== id).map((c) => c.id)); } renderClasses(); renderSelTools(sec()); }
 function select(id) { S.selected = id || 0; S.multi.clear(); renderObject(); requestRender(); if (id) showTab('object', true); }
@@ -1473,12 +1567,13 @@ function renderMulti(s, box) {
   box.innerHTML = `<p><b>${t('obj.multiN', { n: objs.length })}</b></p>
     <p class="note">${t('obj.multiDetail', { m: n((o) => o.cls), p: n((o) => !o.cls && o.pred), c: n((o) => !o.cls && !o.pred) })}</p>
     <select id="multiCls" style="width:100%">${opts}</select><div class="row"><button class="btn small primary" id="multiAssign">${t('obj.multiAssign')}</button>
-    ${n((o) => !o.cls && o.pred) ? `<button class="btn small" id="multiAccept">${t('obj.multiAccept')}</button>` : ''}<button class="btn small" id="multiClear">${t('obj.multiClear')}</button><button class="btn small" id="multiDel">${t('obj.multiDel')}</button></div>
+    ${n((o) => !o.cls && o.pred) ? `<button class="btn small" id="multiAccept">${t('obj.multiAccept')}</button>` : ''}<button class="btn small" id="multiClear">${t('obj.multiClear')}</button><button class="btn small" id="multiMerge" data-tip="${esc(t('obj.mergeTip'))}">${t('obj.merge')}</button><button class="btn small" id="multiDel">${t('obj.multiDel')}</button></div>
     <p class="note">${t('obj.multiHint')}</p>`;
   $('multiAssign').onclick = () => assignClassMany(objs.map((o) => o.id), $('multiCls').value);
   if ($('multiAccept')) $('multiAccept').onclick = () => acceptSuggestions(objs.map((o) => o.id));
   $('multiClear').onclick = () => select(0);
   $('multiDel').onclick = () => deleteObjects(objs.map((o) => o.id));
+  $('multiMerge').onclick = () => mergeObjects(objs.map((o) => o.id));
 }
 
 /** The list follows the current selection; without one it can show all traces in the section. */
@@ -1967,7 +2062,7 @@ $('expMask').addEventListener('click', () => {
     const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
     const x = c.getContext('2d'), im = x.createImageData(s.w, s.h), d = im.data;
     for (let i = 0, j = 0; i < s.labels.length; i++, j += 4) {
-      const k = s.labels[i] ? eff[s.labels[i]] : -1;
+      const k = s.labels[i] ? eff[topLab(s, i)] : -1;
       if (k >= 0 && !s.exclude[i]) { d[j] = cols[k][0]; d[j + 1] = cols[k][1]; d[j + 2] = cols[k][2]; }
       d[j + 3] = 255;
     }
@@ -1993,7 +2088,7 @@ async function buildTrainingZip() {
     await withPixels(s, async () => {
       const lab = new Int16Array(s.nextId).fill(-1);
       for (const o of objs) if (o.cls) lab[o.id] = idx.get(o.cls) ?? 0;   // classes that do not count (artefacts) = matrix
-      const roi = s.roi, w = roi.x1 - roi.x0, h = roi.y1 - roi.y0, m = trainingMask(s.labels, s.w, roi, s.exclude, lab);
+      const roi = s.roi, w = roi.x1 - roi.x0, h = roi.y1 - roi.y0, m = trainingMask(s.labels, s.w, roi, s.exclude, lab, s.stacks);
       const g = new Uint8ClampedArray(w * h * 4); for (let i = 0; i < m.length; i++) { g[i * 4] = g[i * 4 + 1] = g[i * 4 + 2] = m[i]; g[i * 4 + 3] = 255; }
       const base = `${safe(core.name)}__${safe(s.name)}`;
       files.push({ name: `images/${base}.png`, data: await png(cropRGBA(s.orig, s.w, roi), w, h) }, { name: `masks/${base}.png`, data: await png(g, w, h) });
@@ -2198,7 +2293,7 @@ function serSection(s) {
     file: s.file.key ? { name: s.file.name, type: s.file.type, key: s.file.key, size: s.file.size } : { name: s.file.name, type: s.file.type, blob: s.file.blob },
     top: s.top, bottom: s.bottom, units: s.units, roi: s.roi, filters: s.filters, preset: s.preset, detect: s.detect, manual: s.manual,
     nextId: s.nextId, objects: [...s.objects.values()].map(o2),
-    labels: s._mk.labels.rle(), exclude: s._mk.exclude.rle(), marks: s.marks || [],
+    labels: s._mk.labels.rle(), stacks: s.stacks.length > 1 ? s.stacks : undefined, exclude: s._mk.exclude.rle(), marks: s.marks || [],
   };
 }
 
@@ -2229,6 +2324,7 @@ async function loadSection(q) {
     const r = await decodeWorking(tmp, q.ds || 1); ({ w, h } = r); orig = r.rgba;
   }
   const s = mk(newSection({ name: q.name, file, w, h, orig, ds: q.ds || 1, full: q.full || null, labels: { rle: q.labels }, exclude: { rle: q.exclude } }));
+  if (q.stacks) { s.stacks = compactStacks(q.labels, q.stacks, 2); s._six = null; }   // V0.20: overlaps (RLE values renumbered before first unpack)
   const ppu = pxPerCm(s);
   for (const o of q.objects) {
     const st = o.st || null;
@@ -2810,7 +2906,7 @@ function sectionCanvas(s) {
     for (let i = 0; i < L.length; i++) {
       const j = i * 4;
       if (ex[i]) { if (lv.hideExcl) { d[j] = d[j + 1] = d[j + 2] = d[j + 3] = 255; } continue; }   // V31: excluded zones left blank
-      if (!eff) continue; const id = L[i]; if (!id) continue; const q = eff[id]; if (q < 0) continue;
+      if (!eff) continue; const id = topAt(L[i], s.stacks); if (!id) continue; const q = eff[id]; if (q < 0) continue;
       const col = cols[q]; d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; d[j + 3] = a;
     }
     ctx.putImageData(im, 0, 0); oc.imageSmoothingQuality = 'high'; oc.drawImage(c, 0, 0, sw, sh); c.width = c.height = 0;
@@ -4676,7 +4772,7 @@ async function buildTutorialProject() {
   truth.traces.forEach((q, i) => {
     if (i % 2) return; // the other half stays for the suggestions
     const cls = S.classes.find((c) => c.name === q.taxon); if (!cls) return;
-    const id = s.labels[Math.round(q.y) * s.w + Math.round(q.x)];
+    const id = topLab(s, Math.round(q.y) * s.w + Math.round(q.x));
     const o = id > 0 ? s.objects.get(id) : null; if (o && !o.cls) o.cls = cls.id;
   });
   renderCoreBar(); refreshAllCores(); updateProjHeader(); renderRecList(); setAge(); learnNow(); geoReset(); geoMarkDirty();
@@ -5314,13 +5410,13 @@ function traceCanvas(s, o, size, img, outline, iso = false, fillMask = false) {
   const ctx = c.getContext('2d'), im = ctx.createImageData(cw, ch), d = im.data, col = hex(clsById(o.cls || o.pred)?.color || '#ffffff');
   for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
     const i = (Y0 + y) * s.w + X0 + x, j = (y * cw + x) * 4;
-    const inT = lab[i] === o.id;
+    const inT = hasId(lab[i], o.id, s.stacks);
     if (img === 'none' || (iso && !inT)) { d[j] = d[j + 1] = d[j + 2] = 255; } else { d[j] = src[i * 4]; d[j + 1] = src[i * 4 + 1]; d[j + 2] = src[i * 4 + 2]; }
     d[j + 3] = 255;
     if (fillMask && inT) { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; }
     if (outline && inT) {
       const X = X0 + x, Y = Y0 + y;
-      const edge = X === 0 || Y === 0 || X === s.w - 1 || Y === s.h - 1 || lab[i - 1] !== o.id || lab[i + 1] !== o.id || lab[i - s.w] !== o.id || lab[i + s.w] !== o.id;
+      const edge = X === 0 || Y === 0 || X === s.w - 1 || Y === s.h - 1 || !hasId(lab[i - 1], o.id, s.stacks) || !hasId(lab[i + 1], o.id, s.stacks) || !hasId(lab[i - s.w], o.id, s.stacks) || !hasId(lab[i + s.w], o.id, s.stacks);
       if (edge) { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; }
     }
   }
@@ -5434,11 +5530,11 @@ function sectionModeCanvas(s, mode) {
   for (let i = 0; i < lab.length; i++) {
     const j = i * 4;
     if (ex[i] && (F.hideExcl || !photo)) { const v = photo ? 255 : 236; d[j] = d[j + 1] = d[j + 2] = v; continue; }
-    const id = lab[i]; if (!id) continue; const k = eff[id]; if (k < 0) continue; const col = cols[k];
+    const id = topAt(lab[i], s.stacks); if (!id) continue; const k = eff[id]; if (k < 0) continue; const col = cols[k];
     if (mode === 'fill' || mode === 'mask') { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; }
     else if (mode === 'bw') { d[j] = d[j + 1] = d[j + 2] = 20; }
     else if (mode === 'alpha') { const a = F.alpha; d[j] += (col[0] - d[j]) * a; d[j + 1] += (col[1] - d[j + 1]) * a; d[j + 2] += (col[2] - d[j + 2]) * a; }
-    else if (mode === 'outline') { const x = i % W; if (x === 0 || x === W - 1 || lab[i - 1] !== id || lab[i + 1] !== id || lab[i - W] !== id || lab[i + W] !== id) { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; } }
+    else if (mode === 'outline') { const x = i % W; if (x === 0 || x === W - 1 || !hasId(lab[i - 1], id, s.stacks) || !hasId(lab[i + 1], id, s.stacks) || !hasId(lab[i - W], id, s.stacks) || !hasId(lab[i + W], id, s.stacks)) { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; } }
   }
   ctx.putImageData(im, 0, 0);
   const k = Math.min(1, 900 / s.w), out = document.createElement('canvas'); out.width = Math.max(1, Math.round(s.w * k)); out.height = Math.max(1, Math.round(s.h * k));

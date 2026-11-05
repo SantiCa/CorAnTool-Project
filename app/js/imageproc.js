@@ -1,3 +1,4 @@
+import { hasId } from './core.js';
 // CorAnTool web — image processing (no DOM): enhancement, detection, selection tools, shape features.
 
 export function lumaOf(rgba, n) {
@@ -329,34 +330,40 @@ export function polygonPixels(pts, w, roi) {
  * Accumulate per-object statistics over a region. ids: Set of ids to include, or null for all.
  * Colour statistics use the original (unfiltered) image so learning is independent of the display filters.
  */
-export function objectStats(labels, w, h, rgba, ids = null, region = null) {
+export function objectStats(labels, w, h, rgba, ids = null, region = null, stacks = null) {
+  // V0.20: with `stacks`, a pixel in an overlap counts for every object of its stack.
   const R = region || { x0: 0, y0: 0, x1: w, y1: h };
   const acc = new Map();
   const lum = (i) => 0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2];
+  const own = stacks ? (k, id) => hasId(labels[k], id, stacks) : (k, id) => labels[k] === id;
+  const add = (x, y, i, id) => {
+    if (ids && !ids.has(id)) return;
+    let a = acc.get(id);
+    if (!a) {
+      a = { n: 0, sx: 0, sy: 0, sxx: 0, syy: 0, sxy: 0, x0: x, x1: x, y0: y, y1: y, per: 0, sL: 0, sLL: 0, sA: 0, sB: 0, rL: 0, rN: 0 };
+      acc.set(id, a);
+    }
+    const j = i * 4, r = rgba[j], g = rgba[j + 1], b = rgba[j + 2], L = 0.299 * r + 0.587 * g + 0.114 * b;
+    a.n++; a.sx += x; a.sy += y; a.sxx += x * x; a.syy += y * y; a.sxy += x * y;
+    if (x < a.x0) a.x0 = x; if (x > a.x1) a.x1 = x; if (y < a.y0) a.y0 = y; if (y > a.y1) a.y1 = y;
+    a.sL += L; a.sLL += L * L; a.sA += r - g; a.sB += (r + g) / 2 - b;
+    const edge = x === 0 || !own(i - 1, id) || x === w - 1 || !own(i + 1, id) ||
+      y === 0 || !own(i - w, id) || y === h - 1 || !own(i + w, id);
+    if (edge) {
+      a.per++;
+      for (const [dx, dy] of [[-3, 0], [3, 0], [0, -3], [0, 3]]) {
+        const xx = x + dx, yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        const k = yy * w + xx;
+        if (!own(k, id)) { a.rL += lum(k); a.rN++; }
+      }
+    }
+  };
   for (let y = R.y0; y < R.y1; y++) {
     for (let x = R.x0; x < R.x1; x++) {
-      const i = y * w + x, id = labels[i];
-      if (!id || (ids && !ids.has(id))) continue;
-      let a = acc.get(id);
-      if (!a) {
-        a = { n: 0, sx: 0, sy: 0, sxx: 0, syy: 0, sxy: 0, x0: x, x1: x, y0: y, y1: y, per: 0, sL: 0, sLL: 0, sA: 0, sB: 0, rL: 0, rN: 0 };
-        acc.set(id, a);
-      }
-      const j = i * 4, r = rgba[j], g = rgba[j + 1], b = rgba[j + 2], L = 0.299 * r + 0.587 * g + 0.114 * b;
-      a.n++; a.sx += x; a.sy += y; a.sxx += x * x; a.syy += y * y; a.sxy += x * y;
-      if (x < a.x0) a.x0 = x; if (x > a.x1) a.x1 = x; if (y < a.y0) a.y0 = y; if (y > a.y1) a.y1 = y;
-      a.sL += L; a.sLL += L * L; a.sA += r - g; a.sB += (r + g) / 2 - b;
-      const edge = x === 0 || labels[i - 1] !== id || x === w - 1 || labels[i + 1] !== id ||
-        y === 0 || labels[i - w] !== id || y === h - 1 || labels[i + w] !== id;
-      if (edge) {
-        a.per++;
-        for (const [dx, dy] of [[-3, 0], [3, 0], [0, -3], [0, 3]]) {
-          const xx = x + dx, yy = y + dy;
-          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-          const k = yy * w + xx;
-          if (labels[k] !== id) { a.rL += lum(k); a.rN++; }
-        }
-      }
+      const i = y * w + x, v = labels[i];
+      if (v > 0) add(x, y, i, v);
+      else if (v < 0) for (const id of stacks[-v]) add(x, y, i, id);
     }
   }
   return acc;

@@ -1,3 +1,4 @@
+import { topAt } from './core.js';
 // V0.15: learned segmentation (U-Net) in the app — DOM-free and independent of the inference engine.
 // The same tiling, normalisation, blending, resampling and training-mask rules are implemented in
 // src/ichantool/unet/tiling.py; tests in both languages check identical values.
@@ -117,10 +118,10 @@ export const doubtful = (p, band = 0.2) => Math.abs(p - 0.5) < band;
  * IGNORE for excluded pixels and for objects without a confirmed class. objLabel[id] = value for object id
  * (k ≥ 1 class, 0 matrix/artefact, −1 ignore).
  */
-export function trainingMask(labels, w, roi, exclude, objLabel) {
+export function trainingMask(labels, w, roi, exclude, objLabel, stacks = null) {   // V0.20: an overlap takes its top object
   const cw = roi.x1 - roi.x0, ch = roi.y1 - roi.y0, out = new Uint8Array(cw * ch);
   for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
-    const i = (roi.y0 + y) * w + roi.x0 + x, id = labels[i];
+    const i = (roi.y0 + y) * w + roi.x0 + x, id = stacks ? topAt(labels[i], stacks) : labels[i];
     if (exclude && exclude[i]) { out[y * cw + x] = IGNORE; continue; }
     const v = id ? (objLabel[id] ?? -1) : 0;
     out[y * cw + x] = v < 0 ? IGNORE : v;

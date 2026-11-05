@@ -101,3 +101,15 @@ def test_bin_cm_fractional_edges_match_web_app():
     sec = analyze_mask(mask, 0, 10, units="cm", bin_cm=1.25)   # 10 px/cm → 12.5 rows per interval
     assert len(sec.data) == 8
     assert sec.data["bioturbation_pct"].iloc[0] == 50
+
+
+def test_overlapping_class_layers_v020():
+    """V0.20: per-class layers may overlap; the total counts the union, each class its full area."""
+    import numpy as np
+    from ichantool.pipeline import analyze_mask
+    a = np.zeros((2, 1, 4), bool)
+    a[0, 0, :2] = True   # class 1: px 0-1
+    a[1, 0, 1:3] = True  # class 2: px 1-2 (overlaps px 1)
+    r = analyze_mask(a, 0, 1, bin_px=1, class_names=["A", "B"]).data
+    assert r["bioturbation_pct"].iloc[0] == 75
+    assert r["A_pct"].iloc[0] == 50 and r["B_pct"].iloc[0] == 50

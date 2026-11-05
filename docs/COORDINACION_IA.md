@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.20, 05-11-2026 (Claude):** trazas solapadas (pilas en `labels`, `core.js`), Superponer, tijeras y Unir; Python con máscaras por clase. Siguen: V0.21 columna lateral, V0.22 escalas y estilos de figuras, V0.23 vistas del sondeo, NO DATA y símbolos.
+
 - **V0.19, 05-11-2026 (Claude):** ayuda al pasar el ratón por los controles (`h.*` en `i18n.js`, `autoTip()` en `app.js`), desactivable en Ayuda. Faltan controles dinámicos de Figuras/interpolación/clasificadores.
 
 - **V0.18, 05-11-2026 (Claude):** icono del programa de escritorio (`desktop/build/icon.png`, ya no ignorado por `.gitignore`). Electron 42 (PR #11) comprobado; electron-builder 26.18.0 (PR #12–#14) probado en Linux, pendiente de fusionar. Falta probar Windows/macOS.

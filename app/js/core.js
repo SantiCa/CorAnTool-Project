@@ -17,18 +17,62 @@ export function classify(scheme, pct) {
   return null;
 }
 
+/* ───────── V0.20: overlapping traces ─────────
+ * labels[i] > 0: one object id; 0: matrix; < 0: stack −labels[i] in `stacks` (list of ids, bottom → top).
+ * stacks[0] is unused. A stack table only grows during a session (undo keeps old codes) and is compacted on load.
+ */
+const NO_IDS = [];
+export const idsAt = (v, stacks) => (v > 0 ? [v] : v < 0 ? stacks[-v] : NO_IDS);
+export const topAt = (v, stacks) => (v >= 0 ? v : stacks[-v][stacks[-v].length - 1]);
+export const hasId = (v, id, stacks) => v === id || (v < 0 && stacks[-v].includes(id));
+/** Index key → code of a stack table (rebuilt when a table is loaded). */
+export function stackIndex(stacks) { const m = new Map(); for (let k = 1; k < stacks.length; k++) m.set(stacks[k].join(','), k); return m; }
+/** Pixel value for an ordered list of ids (0, the id itself, or a negative stack code; new stacks are appended). */
+export function codeFor(ids, stacks, index) {
+  if (!ids.length) return 0;
+  if (ids.length === 1) return ids[0];
+  const key = ids.join(',');
+  let k = index.get(key);
+  if (k == null) { k = stacks.length; stacks.push(ids.slice()); index.set(key, k); }
+  return -k;
+}
+/** Value with id on top (moved to the top if already present). */
+export function withId(v, id, stacks, index) { if (v === 0 || v === id) return id; return codeFor([...idsAt(v, stacks).filter((x) => x !== id), id], stacks, index); }
+/** Value without id. */
+export function withoutId(v, id, stacks, index) { if (v === id) return 0; if (v >= 0) return v; return codeFor(stacks[-v].filter((x) => x !== id), stacks, index); }
+/** Value with id `a` renamed to `b` (used to split and to merge; if b is already in the stack, a is just dropped). */
+export function renameId(v, a, b, stacks, index) {
+  if (v === a) return b; if (v >= 0) return v;
+  const ids = stacks[-v]; if (!ids.includes(a)) return v;
+  return codeFor(ids.includes(b) ? ids.filter((x) => x !== a) : ids.map((x) => (x === a ? b : x)), stacks, index);
+}
+/** Drop unused stacks and renumber the codes in labels (in place; step = 2 for an RLE array). Returns the new table. */
+export function compactStacks(labels, stacks, step = 1) {
+  if (!stacks || stacks.length < 2) return [null];
+  const map = new Int32Array(stacks.length), out = [null];
+  for (let i = 0; i < labels.length; i += step) {
+    const v = labels[i]; if (v >= 0) continue;
+    let k = map[-v]; if (!k) { k = map[-v] = out.length; out.push(stacks[-v]); }
+    labels[i] = -k;
+  }
+  return out;
+}
+
 export const UNIT_TO_CM = { mm: 0.1, cm: 1, m: 100 };
 
 /**
  * Per-row pixel counts inside the ROI.
  * effClass[id] = class index counted as bioturbation, or -1 (not counted).
  */
-export function rowCounts({ labels, width, roi, exclude, effClass, nClasses }) {
+export function rowCounts({ labels, width, roi, exclude, effClass, nClasses, stacks = null }) {
+  // V0.20: in an overlap (stack) the pixel is bioturbated once, and once for each distinct class present,
+  // so the class percentages may add up to more than the total.
   const { x0, x1, y0, y1 } = roi;
   const nRows = y1 - y0;
   const valid = new Uint32Array(nRows);
   const bio = new Uint32Array(nRows);
   const cls = new Uint32Array(nRows * nClasses);
+  const seen = new Int32Array(nClasses); let stamp = 0;
   for (let r = 0; r < nRows; r++) {
     const base = (y0 + r) * width;
     let v = 0, b = 0;
@@ -37,9 +81,13 @@ export function rowCounts({ labels, width, roi, exclude, effClass, nClasses }) {
       if (exclude && exclude[i]) continue;
       v++;
       const id = labels[i];
-      if (id) {
+      if (id > 0) {
         const c = effClass[id];
         if (c >= 0) { b++; cls[r * nClasses + c]++; }
+      } else if (id < 0) {
+        stamp++; let any = false;
+        for (const o of stacks[-id]) { const c = effClass[o]; if (c >= 0 && seen[c] !== stamp) { seen[c] = stamp; any = true; cls[r * nClasses + c]++; } }
+        if (any) b++;
       }
     }
     valid[r] = v; bio[r] = b;

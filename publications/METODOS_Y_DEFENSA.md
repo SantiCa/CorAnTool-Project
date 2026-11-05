@@ -29,6 +29,10 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 - **Figuras de secciones (V32):** paneles original / tratada / trazas resaltadas / flechas, al estilo de Dorador y
   Rodríguez-Tovar; las trazas resaltadas son las clasificadas en el programa (incluidas las predicciones aceptadas si así
   está configurado), lo que debe constar en el pie.
+- **Trazas solapadas (V0.20):** una traza puede estar dentro de otra. La bioturbación total cuenta el solape una vez
+  (≤ 100 %), pero cada icnotaxón cuenta su superficie completa, así que la suma de los porcentajes por icnotaxón puede
+  superar al total (y a 100 %). Hay que decirlo en los métodos y no presentar los porcentajes por icnotaxón como
+  partes de un todo. Antes de V0.20 cada píxel tenía una sola traza (la última dibujada).
 - **Datos privados del autor:** LC06, LC14 y LC20 tienen profundidad supuesta (secciones apiladas, §21.8 ter): no usarlos en
   una figura publicada sin verificarla. Las cifras obtenidas con versiones anteriores a V22 deben recalcularse.
 

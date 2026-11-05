@@ -685,6 +685,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <button class="tool" data-tool="wand" data-i18n-title="tool.wand"><svg viewBox="0 0 24 24"><path d="M4 20L15 9M14 4v3M19 9h-3M17.5 5.5l-2 2M10 4.5l1 1.5M19.5 13l-1.5-1"/></svg></button>
         <button class="tool" data-tool="brush" data-i18n-title="tool.brush"><svg viewBox="0 0 24 24"><path d="M19 4l-8.5 8.5M9 13.5c-2.5 0-4 1.6-4 4 0 1-.6 1.8-1.5 2.5 4 .5 7.5-1 7.5-4.5z"/></svg></button>
         <button class="tool" data-tool="lasso" data-i18n-title="tool.lasso"><svg viewBox="0 0 24 24"><path d="M7 15.5C4.6 14.3 3 12.4 3 10.2 3 6.2 7 3 12 3s9 3.2 9 7.2-4 7.3-9 7.3c-1 0-2-.1-2.9-.4M8 15a2 2 0 1 0 0 4c1 0 1.5 1 1 2"/></svg></button>
+        <button class="tool" data-tool="cut" data-i18n-title="tool.cut"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M7.8 16.2L18 4M16.2 16.2L6 4"/></svg></button>
         <button class="tool" data-tool="erase" data-i18n-title="tool.erase"><svg viewBox="0 0 24 24"><path d="M8 20h12M5.5 13.5l7-7a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 18H8z"/></svg></button>
         <button class="tool" data-tool="exclude" data-i18n-title="tool.exclude"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12l8-8M4 20L20 4M12 20l8-8"/></svg></button>
         <button class="tool" data-tool="include" data-i18n-title="tool.include"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M9 12h6M12 9v6"/></svg></button>
@@ -692,6 +693,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <button class="tool" data-tool="mark" data-i18n-title="tool.mark"><svg viewBox="0 0 24 24"><path d="M12 20l-6-10h12z"/><path d="M12 4v5"/></svg></button>
         <label class="opt idmode" data-i18n-title="id.tip"><input type="checkbox" id="idMode"><span data-i18n="id.mode"></span></label>
         <span class="sep"></span>
+        <label class="opt" id="optOverlap" hidden><input type="checkbox" id="overlapMode"><span data-i18n="tool.overlap"></span></label>
         <label class="opt" id="optShape" hidden><span data-i18n="tool.shape"></span><select id="exShape"><option value="brush" data-i18n="tool.shapeBrush"></option><option value="rect" data-i18n="tool.shapeRect"></option></select></label>
         <label class="opt" id="optSize"><span data-i18n="tool.size"></span><input type="range" id="brushSize" min="1" max="120"><output id="brushOut"></output></label>
         <label class="opt" id="optTol"><span data-i18n="tool.tol"></span><input type="range" id="wandTol" min="2" max="120"><output id="tolOut"></output></label>

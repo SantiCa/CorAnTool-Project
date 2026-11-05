@@ -53,6 +53,7 @@ La descripción detallada de los algoritmos está en
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
 | V0.18 | 05-11-2026 | Programa de escritorio | Icono propio de la aplicación (antes salía el genérico de Electron: `.gitignore` ignoraba `desktop/build/`); Electron 42 comprobado tras fusionar la PR #11 de Dependabot |
 | V0.19 | 05-11-2026 | Interfaz | Ayuda al pasar el ratón en casi todos los botones, deslizantes, casillas y menús (es/en), con opción para desactivarla |
+| V0.20 | 05-11-2026 | Edición de trazas | Trazas solapadas sin límite (total sin doble conteo; cada icnotaxón con su superficie completa), opción «Superponer», tijeras para dividir y «Unir» trazas |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -643,6 +644,28 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.20 — Trazas solapadas, dividir y unir (05-11-2026)
+
+- **Qué se hizo:** (1) una traza puede estar dentro de otra sin límite de niveles; (2) herramienta Tijeras para
+  dividir una traza con una línea; (3) botón «Unir» para juntar varias trazas seleccionadas.
+- **Cambios:**
+  - `core.js`: pilas de objetos en la capa de etiquetas (valores negativos, `idsAt`, `topAt`, `hasId`, `withId`,
+    `withoutId`, `renameId`, `compactStacks`); `rowCounts` cuenta el solape una vez en el total y una vez por clase.
+  - `imageproc.js::objectStats` y `unet.js::trainingMask`: aceptan las pilas.
+  - `app.js`: edición (pincel, varita, lazo, borrador con Mayús, borrar trazas, candidatos), clic que alterna entre
+    trazas solapadas, dibujo de todas las capas, exportaciones con la traza superior, guardado (`stacks`) y compactado
+    al abrir; opción «Superponer»; `splitAlong` (tijeras, tecla C) y `mergeObjects` («Unir»).
+  - Python: `analyze_mask` admite una máscara 3-D por clases que se pueden solapar (misma definición).
+  - Documentación técnica §3, §8 y §12; METODOS_Y_DEFENSA.
+  - `DELIVERY` = V0.20.
+- **Por qué:** petición de Santiago: distintos icnotaxones se solapan; contar cada uno con su superficie completa sin
+  inflar la bioturbación total; poder dividir y unir trazas.
+- **Comprobación:** 67 pruebas JS (3 nuevas: pilas, conteo con solape, compactado) y 16 Python (1 nueva) superadas; en
+  Chrome sin pantalla con el ejemplo idealizado: dos trazas solapadas se dibujan y conservan, las tijeras dividen en 2,
+  «Unir» las vuelve a juntar; sin errores.
+- **Pendiente / no probado:** rendimiento con muchísimos solapes en imágenes muy grandes; las figuras dibujan solo la
+  traza superior de cada píxel.
 
 ## V0.19 — Ayuda al pasar el ratón por los controles (05-11-2026)
 

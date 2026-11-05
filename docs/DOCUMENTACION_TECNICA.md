@@ -155,6 +155,20 @@ intervalos.
     %clase_k,j      = 100 · Σ C_r,k / Σ V_r
     profundidad_j   = top + ((r0 + r1) / 2) · Δz       (centro del intervalo)
 
+**Trazas solapadas (desde V0.20).** Un píxel puede pertenecer a varias trazas (p. ej. *Chondrites* dentro de
+*Thalassinoides*). Entonces `B_r` lo cuenta **una vez** (si al menos una de sus trazas cuenta) y `C_r,k` lo cuenta una
+vez **por cada clase distinta** presente en él (dos trazas de la misma clase en el mismo píxel cuentan una vez). Por
+tanto `%bioturbación_j ≤ 100`, pero `Σ_k %clase_k,j` puede ser mayor que `%bioturbación_j` (y que 100): cada
+icnotaxón conserva su superficie completa. Sin solapes, ambas definiciones coinciden con las anteriores.
+Implementación: `core.js::rowCounts` (parámetro `stacks`); en Python, `analyze_mask` con una máscara 3-D
+`(clases, filas, columnas)` de capas booleanas.
+
+**Codificación.** `labels[i] > 0` es un objeto; `0`, matriz; `labels[i] < 0` es la pila `stacks[−labels[i]]`, lista de
+objetos de abajo arriba (`core.js::idsAt, withId, withoutId, renameId`). La tabla de pilas solo crece durante la sesión
+(el deshacer guarda los códigos anteriores) y se compacta al abrir el proyecto (`compactStacks`). Los descriptores de
+cada objeto (§9) usan todos sus píxeles, también los solapados. Lo que necesita un solo objeto por píxel (máscara PNG,
+datos de entrenamiento de la U-Net, figuras de trazas, clic) usa la traza superior.
+
 Si un intervalo tiene menos de `minValid` (20 % por defecto) de sus píxeles válidos —es decir, `Σ V_r < minValid · N · anchura`— no tiene datos (V0.4): porcentajes, BI e ii quedan vacíos (nunca 0) y la columna lo dibuja como SIN DATOS. Opcionalmente (`noDataPad`, cm) se marcan también sin datos los intervalos de la misma sección que solapan con `[techo − pad, muro + pad]` de un intervalo sin datos. Solo en la aplicación web (el paquete Python no tiene capa de exclusión).
 
 ### 3.3 Equivalencia con la versión publicada (V2)
@@ -513,7 +527,16 @@ Implementación: `imageproc.js::regionGrow, polygonPixels` y `app.js` (herramien
 | **Borrador** | Disco de radio `r` px que quita los píxeles de cualquier objeto. |
 | **Excluir / Recuperar** | Pincel que marca o desmarca una capa aparte de **exclusión**. |
 
-Modificadores: Mayús añade al objeto seleccionado y Alt resta (varita y lazo).
+| **Tijeras** (desde V0.20) | El usuario dibuja una línea (3 px de ancho) a través de una traza: la seleccionada si la línea la cruza, si no la primera traza que encuentra la línea. Sin los píxeles de la línea, la traza se divide en piezas conexas (4 vecinos); los píxeles de la línea pasan a la pieza vecina. La pieza mayor conserva el número y las demás son objetos nuevos con la misma clase, sugerencia y origen. Si la línea no separa la traza, no cambia nada. |
+| **Unir** (desde V0.20) | Con varias trazas seleccionadas, las une en una: se conserva la mayor con clase asignada a mano (si no hay, la mayor). Respeta los solapes. |
+
+Modificadores: Mayús añade al objeto seleccionado y Alt resta (varita y lazo). Con el borrador, Mayús borra solo la
+traza seleccionada (V0.20).
+
+**Superponer** (desde V0.20, pincel, varita y lazo; desactivado por defecto). Activado, la traza nueva se añade encima
+de las que ya hay en esos píxeles y todas cuentan (§3, trazas solapadas); con el pincel, empezar sobre una traza crea
+una nueva en vez de ampliarla (Mayús amplía la seleccionada). Desactivado, la traza nueva sustituye a las de debajo, como
+antes. Restar (Alt) quita solo la traza seleccionada. Hacer clic de nuevo sobre un solape selecciona la traza de debajo.
 
 **Selección de varias trazas** (desde V12; arrastre desde V13). Con la herramienta de selección,
 arrastrar dibuja un recuadro y selecciona las trazas cuyo centro del rectángulo envolvente cae dentro
@@ -769,6 +792,9 @@ Los ajustes activos se guardan en el proyecto, así que cualquier resultado se p
 | `*_intervalos.csv` | Intervalos de todas las capas (§21.7) |
 | Preferencia `ichantool.theme` (localStorage) | Tema claro u oscuro elegido |
 | `*.ichantool.json` | Proyecto completo (formato v2; también abre v1): clases, ajustes, modelo de edad, ejemplos importados y, por sección, la imagen original (base64), el giro, profundidades, zona, realce, detección, índices manuales, objetos y capas de etiquetas y exclusión comprimidas por RLE. La v2 añade `ds` (factor de reducción), `records` (registros externos), `logView` (vista del registro) y `notes`. Desde V9, `geo`: sondeos (nombre, lat, lon, profundidad, edad, variables), razones, capas de intervalos con su jerarquía y categorías (desde V10; en V9, lista de etiquetas), intervalos, reglas, ajustes de preparación y del método, mapa y nombres de grupos; el modelo entrenado no se guarda (se reentrena con su semilla) |
+
+Desde V0.20 cada sección del proyecto puede llevar `stacks` (lista de pilas de objetos solapados, §3); `labels` admite
+entonces valores negativos. Los proyectos sin `stacks` se abren igual.
 
 **RLE (codificación por longitud de series):** `[valor, repeticiones, valor, repeticiones, …]`.
 Reduce mucho el tamaño de las máscaras, que tienen grandes zonas iguales.

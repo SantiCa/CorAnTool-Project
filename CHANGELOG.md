@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.20 — 2026-11-05
+- Traces may overlap without limit: total bioturbation counts the overlap once; each ichnotaxon keeps its full area, so taxon percentages may add up to more than the total. «Overlap» option for brush, wand and lasso; the Python package accepts per-class mask layers.
+- Scissors tool (C) to split a trace along a drawn line; «Merge» for several selected traces.
+
 ## V0.19 — 2026-11-05
 - Interface: hover help on almost every button, slider, checkbox and menu (Spanish/English), can be switched off in Help; tips-box buttons no longer show internal action names as tooltips.
 
