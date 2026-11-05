@@ -52,6 +52,23 @@ export function verticalTicks(from, to, height, style = {}) {
   return niceTicks(from * f, to * f, style.yDiv > 0 ? style.yDiv : Math.max(3, Math.round(height / 70))).map((v) => v / f);
 }
 
+/**
+ * V0.22: extra ticks of the vertical axis without labels. Steps are in displayed units (× yFactor):
+ * yMajor = long ticks (default: none besides the labelled ones), yMinor = short ticks. Returns [{ v, len }] in axis units,
+ * skipping positions that already carry a labelled tick (or a long tick, for the short ones).
+ */
+export function extraTicks(from, to, height, style = {}) {
+  const f = +style.yFactor || 1, out = [], lab = verticalTicks(from, to, height, style), eps = Math.abs(to - from) * 1e-7 + 1e-12;
+  const near = (list, v) => list.some((u) => Math.abs(u - v) < eps);
+  const steps = (step) => { const r = []; if (!(step > 0)) return r; const a = Math.ceil(Math.min(from, to) * f / step - 1e-9), b = Math.floor(Math.max(from, to) * f / step + 1e-9); if (b - a > 4000) return r; for (let k = a; k <= b; k++) r.push(k * step / f || 0); return r; };
+  const major = steps(+style.yMajor).filter((v) => !near(lab, v));
+  const minor = steps(+style.yMinor).filter((v) => !near(lab, v) && !near(major, v));
+  for (const v of major) out.push({ v, len: +style.yMajorLen > 0 ? +style.yMajorLen : 6 });
+  for (const v of minor) out.push({ v, len: +style.yMinorLen > 0 ? +style.yMinorLen : 3 });
+  return out;
+}
+const labelLen = (st) => (+st?.yLabelLen > 0 ? +st.yLabelLen : 6);
+
 export function niceRange(min, max) {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
   if (min === max) { min -= Math.abs(min) * 0.1 || 1; max += Math.abs(max) * 0.1 || 1; }
@@ -230,9 +247,10 @@ export function buildLogSVG(o) {
       out.push(`<text transform="translate(${c.x + 10},${top + H / 2}) rotate(-90)" text-anchor="middle" fill="#1c2422" font-weight="600">${escXml(o.axisLabel)}</text>`);
       for (const v of yTicks) {
         const yy = y(v);
-        out.push(`<line x1="${c.x + c.w - 6}" y1="${yy}" x2="${c.x + c.w}" y2="${yy}" stroke="#1c2422" stroke-width="0.8"/>`);
-        out.push(`<text x="${c.x + c.w - 9}" y="${yy + 3}" text-anchor="end" fill="#1c2422">${lbl(v * fy)}</text>`);
+        out.push(`<line x1="${c.x + c.w - labelLen(st)}" y1="${yy}" x2="${c.x + c.w}" y2="${yy}" stroke="#1c2422" stroke-width="0.8"/>`);
+        out.push(`<text x="${c.x + c.w - labelLen(st) - 3}" y="${yy + 3}" text-anchor="end" fill="#1c2422">${lbl(v * fy)}</text>`);
       }
+      for (const e of extraTicks(from, to, H, st)) out.push(`<line x1="${c.x + c.w - e.len}" y1="${y(e.v)}" x2="${c.x + c.w}" y2="${y(e.v)}" stroke="#1c2422" stroke-width="0.6"/>`);
       out.push(`<line x1="${c.x + c.w}" y1="${top}" x2="${c.x + c.w}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
       continue;
     }
@@ -361,9 +379,10 @@ export function buildRangeSVG(o) {
     `<rect width="${W}" height="${Htot}" fill="#ffffff"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`];
   if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
   for (const v of verticalTicks(from, to, H, o.style)) {
-    out.push(`<line x1="${x0 - 6}" y1="${y(v)}" x2="${x0}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 9}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${lbl(v * (+o.style?.yFactor || 1))}</text>`);
+    out.push(`<line x1="${x0 - labelLen(o.style)}" y1="${y(v)}" x2="${x0}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - labelLen(o.style) - 3}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${lbl(v * (+o.style?.yFactor || 1))}</text>`);
     out.push(`<line x1="${x0}" y1="${y(v)}" x2="${W - 14}" y2="${y(v)}" stroke="#eef1f0" stroke-width="0.6"/>`);
   }
+  for (const e of extraTicks(from, to, H, o.style)) out.push(`<line x1="${x0 - e.len}" y1="${y(e.v)}" x2="${x0}" y2="${y(e.v)}" stroke="#1c2422" stroke-width="0.6"/>`);
   out.push(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
   out.push(`<text transform="translate(16,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.axisLabel || '')}</text>`);
   const rangeScale = (id, x, w, defaultMax) => {

@@ -55,6 +55,7 @@ La descripción detallada de los algoritmos está en
 | V0.19 | 05-11-2026 | Interfaz | Ayuda al pasar el ratón en casi todos los botones, deslizantes, casillas y menús (es/en), con opción para desactivarla |
 | V0.20 | 05-11-2026 | Edición de trazas | Trazas solapadas sin límite (total sin doble conteo; cada icnotaxón con su superficie completa), opción «Superponer», tijeras para dividir y «Unir» trazas |
 | V0.21 | 05-11-2026 | Columna lateral | Ancho ajustable, escalas horizontales fijas arriba y registros de Datos como columnas adicionales |
+| V0.22 | 05-11-2026 | Escalas de figuras | Marcas largas y cortas del eje vertical con intervalo y longitud propios; escalas editables también en Multiproxy |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -645,6 +646,21 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.22 — Escalas: marcas del eje vertical y escalas en Multiproxy (05-11-2026)
+
+- **Qué se hizo:** (1) en Columna, Figuras (rango y secciones) y Multiproxy, el eje vertical admite números cada X,
+  marcas largas cada Y y cortas cada Z (p. ej. números cada 10 cm, largas cada 5, cortas cada 1), con su longitud;
+  (2) Multiproxy › Registros tiene un menú «Escalas» con el eje vertical y mínimo, máximo, divisiones, decimales,
+  paso, invertir y logarítmica de cada registro y de la bioturbación (antes solo existía en Columna).
+- **Cambios:** `log.js::extraTicks` (nuevo) usado por `buildLogSVG` y `buildRangeSVG`; `app.js` (figura de secciones,
+  formularios `styleFormHTML`, `verticalStyleHTML`, `axesFormHTML` parametrizados, `onStyleInput` para Multiproxy);
+  `index.html`; `i18n.js` («Escalas y estilo…»). `DELIVERY` = V0.22.
+- **Por qué:** petición de Santiago de tener libertad total en las escalas.
+- **Comprobación:** 68 pruebas JS (1 nueva); en Chrome con el sondeo U1385I, marcas cortas cada 0,05 m en Columna
+  (70 → 237 líneas) y cada 0,1 m en Multiproxy (68 → 938), sin errores.
+- **Pendiente / no probado:** las escalas horizontales de Columna ya eran editables desde V0.6 (tabla «Ejes»);
+  escalas de los gráficos X-Y de Figuras sin cambios.
 
 ## V0.21 — Columna lateral de bioturbación: ancho, escalas y registros (05-11-2026)
 

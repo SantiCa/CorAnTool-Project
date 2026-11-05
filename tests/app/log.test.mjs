@@ -117,3 +117,12 @@ test('V0.12: marker choice follows identification marks into the core column', (
   const range = buildRangeSVG({from:0,to:5,height:100,rows:[],classes:[{name:'Outside',color:'#123456',index:0}],presence:[{a0:10,a1:11,index:0}]}).svg;
   assert.doesNotMatch(range, /Outside/);
 });
+
+test('V0.22: extra vertical ticks skip labelled positions', async () => {
+  const { extraTicks } = await import('../../app/js/log.js');
+  const e = extraTicks(0, 20, 400, { yStep: 10, yMajor: 5, yMinor: 1 });
+  const major = e.filter((x) => x.len === 6).map((x) => x.v), minor = e.filter((x) => x.len === 3).map((x) => x.v);
+  assert.deepEqual(major, [5, 15]);
+  assert.equal(minor.length, 21 - 3 - 2);
+  assert.ok(!minor.includes(10) && !minor.includes(5));
+});

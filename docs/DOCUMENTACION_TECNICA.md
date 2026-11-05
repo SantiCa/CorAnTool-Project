@@ -1751,6 +1751,11 @@ cambia lo que se ve en la imagen de trabajo.
 Las coordenadas de datos permanecen en la unidad original: la etiqueta muestra `v · yFactor`,
 con `yFactor = UNIT_TO_CM[unidad original] / UNIT_TO_CM[unidad mostrada]` para profundidad.
 `yStep` expresa la distancia entre marcas en la unidad mostrada y tiene prioridad sobre `yDiv`.
+Desde V0.22, `yStep` son las marcas con número; `yMajor` añade marcas largas sin número y `yMinor` marcas cortas, en
+la unidad mostrada (`log.js::extraTicks`; no se repiten donde ya hay una marca con número o larga). `yLabelLen` y
+`yMinorLen` fijan la longitud en px (6 y 3 por defecto; las largas usan `yMajorLen`, 6). Multiproxy › Registros tiene
+sus propias escalas (`geo.view.style`, `geo.view.colW`): ejes verticales y mínimo, máximo, divisiones, decimales,
+invertir y logarítmica de cada registro.
 El paso explícito se limita a 400 marcas para evitar bloquear el navegador.
 
 `logView.style.axes[id]` admite `min`, `max`, `div`, `dec`, `rev`, `log` y `step`.

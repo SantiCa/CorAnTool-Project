@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.22 — 2026-11-05
+- Vertical axes: numbered ticks, long ticks and short ticks with their own interval and length (Core column, Figures, Multiproxy). Multiproxy logs get their own editable scales.
+
 ## V0.21 — 2026-11-05
 - Bioturbation side column: drag its edge to change the width, fixed horizontal scales on top, and records from Data as extra tracks.
 

@@ -1,7 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, traceSymbolPath } from './log.js';
+import { LOG_STYLE, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.21';
+const DELIVERY = 'V0.22';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -3056,6 +3056,8 @@ function styleFormHTML() {
     ${sel('yUnit', 'st.yUnit', [['', t('st.native')], ['m', 'm'], ['cm', 'cm'], ['mm', 'mm']])}
     ${sel('yUnitAge', 'st.yUnitAge', [['', t('st.native')], ['a', 'a'], ['ka', 'ka'], ['Ma', 'Ma']])}
     ${num('yStep', 'st.yStep')}${num('yDiv', 'st.yDiv', 1, 1)}
+    ${num('yMajor', 'st.yMajor')}${num('yMinor', 'st.yMinor')}
+    ${num('yLabelLen', 'st.yLabelLen', 1, 1)}${num('yMinorLen', 'st.yMinorLen', 1, 1)}
     ${num('pctDiv', 'st.pctDiv', 1, 1)}${num('fontSize', 'st.fontSize', 1, 6)}
     ${sel('totalStyle', 'st.totalStyle', ['barsline', 'bars', 'line', 'points'].map((v) => [v, t('st.ts.' + v)]))}
     <label class="f"><span>${t('st.colors')}</span><span class="row"><input type="color" data-st="barColor" value="${st.barColor}"><input type="color" data-st="lineColor" value="${st.lineColor}"></span></label>
@@ -3065,9 +3067,9 @@ function styleFormHTML() {
     ${axesFormHTML()}`;
 }
 /** V0.6: width and axis format of each column at the right of the core (total, ichnotaxa, BI, ii and records). */
-function axesFormHTML(only = null) {
-  const lv = S.logView, ax = lv.style?.axes || {}, W = lv.colW || {};
-  const recs = [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))];
+function axesFormHTML(only = null, lv = S.logView, recNames = null) {
+  const ax = lv.style?.axes || {}, W = lv.colW || {};
+  const recs = recNames || [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))];
   const cols = [['total', t('log.total'), 150], ['species', t('log.species'), 150], ['BI', 'BI', 46], ['ii', 'ii', 46], ...recs.map((n) => ['rec:' + n, n, 120])];
   const cell = (id, k, ph, step = 'any') => `<input type="number" data-ax="${esc(id)}" data-k="${k}" step="${step}" value="${ax[id]?.[k] ?? ''}" placeholder="${ph}" aria-label="${esc(id + ' ' + k)}" style="width:100%;min-width:54px">`;
   return `<div class="f"><span>${t('st.axes')}</span><div style="overflow-x:auto"><table class="axtab" style="font-size:11px;border-collapse:collapse;width:100%">
@@ -3080,7 +3082,8 @@ function axesFormHTML(only = null) {
     </table></div><p class="note">${t('st.axesNote')}</p></div>`;
 }
 function onStyleInput(e) {
-  const el = e.target, lv = S.logView;
+  const el = e.target, geo = !!el.closest('[data-stt="geo"]'), lv = geo ? S.geo.view : S.logView;   // V0.22: Multiproxy has its own scales
+  if (geo) setTimeout(renderGeoLogs, 0);
   if (el.dataset.axw != null) { lv.colW ||= {}; const v = +el.value; if (v >= 30) lv.colW[el.dataset.axw] = Math.min(600, v); else delete lv.colW[el.dataset.axw]; markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure(); return; }
   if (el.dataset.ax != null) {
     lv.style ||= {}; lv.style.axes ||= {}; const a = (lv.style.axes[el.dataset.ax] ||= {}), k2 = el.dataset.k;
@@ -3108,6 +3111,7 @@ function renderLogPanel() {
 }
 
 $('logStyle').addEventListener('change', onStyleInput);   // V0.5
+$('geoStyleForm').addEventListener('change', onStyleInput);   // V0.22
 $('logPanel').addEventListener('change', (e) => {
   if (e.target.closest('#logStyle')) return;
   const el = e.target, lv = S.logView;
@@ -3919,8 +3923,9 @@ function renderGeoLogs() {
     axisLabel: axis === 'age' ? `${t('r.age')} (${S.age.units || 'ka'})` : `${t('r.depth')} (${core.units || 'm'})`,
     from, to, height: 700, rows, classes: [], tracks, image, imageWidth: 64, records, boundaries: [], bands, bandLegend: bandLegendOf(bands), shade,
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image') },
-    colWidths: (g.view.colW ||= {}), recWidth: g.view.trackW || 120,
+    colWidths: (g.view.colW ||= {}), recWidth: g.view.trackW || 120, style: g.view.style || {},
   });
+  if (!$('geoStyleBox').open || !$('geoStyleForm').innerHTML) $('geoStyleForm').innerHTML = verticalStyleHTML(g.view.style || {}) + axesFormHTML(['total', ...records.map((r) => 'rec:' + r.name)], g.view, records.map((r) => r.name));
   box.innerHTML = res.svg;
   geoLast = { core, from, to, top: res.plotTop, height: res.plotHeight, axis, layout: res.layout, width: res.width };
   $('geoTrackW').value = g.view.trackW || 120;
@@ -5732,6 +5737,7 @@ function sectionsSVG() {
   out.push(`<text transform="translate(14,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${esc(logStyleOf(D).label)}</text>`);
   out.push(`<line x1="${x0 - 8}" y1="${top}" x2="${x0 - 8}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
   const LS = logStyleOf(D);
+  for (const e of extraTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 8 - e.len}" y1="${y(e.v)}" x2="${x0 - 8}" y2="${y(e.v)}" stroke="#1c2422" stroke-width="0.6"/>`);   // V0.22
   for (const v of verticalTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 13}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 15}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${+(v * LS.style.yFactor).toPrecision(6)}</text>`);
   panels.forEach((p, i) => {
     const X = x0 + i * (W + gap), href = panelDataURL(D, from, to, H, W, p);
@@ -5798,9 +5804,8 @@ function syncCoreFigSize() {
   else $('figRatioNote').textContent = '';
   $('figCoreH').disabled = !!(F.keepRatio && z.r);
 }
-function verticalStyleHTML() {
-  const st = S.logView.style || {};
-  return `<div class="grid2"><label class="f"><span>${t('st.yUnit')}</span><select data-st="yUnit">${['', 'mm', 'cm', 'm'].map((u) => `<option value="${u}" ${(st.yUnit || '') === u ? 'selected' : ''}>${u || t('st.native')}</option>`).join('')}</select></label><label class="f"><span>${t('st.yStep')}</span><input type="number" data-st="yStep" step="any" min="0" value="${st.yStep ?? ''}" placeholder="${t('fig.auto2')}"></label><label class="f"><span>${t('st.yDiv')}</span><input type="number" data-st="yDiv" min="1" step="1" value="${st.yDiv ?? ''}" placeholder="${t('fig.auto2')}"></label></div>`;
+function verticalStyleHTML(st = S.logView.style || {}) {
+  return `<div class="grid2"><label class="f"><span>${t('st.yUnit')}</span><select data-st="yUnit">${['', 'mm', 'cm', 'm'].map((u) => `<option value="${u}" ${(st.yUnit || '') === u ? 'selected' : ''}>${u || t('st.native')}</option>`).join('')}</select></label><label class="f"><span>${t('st.yStep')}</span><input type="number" data-st="yStep" step="any" min="0" value="${st.yStep ?? ''}" placeholder="${t('fig.auto2')}"></label><label class="f"><span>${t('st.yDiv')}</span><input type="number" data-st="yDiv" min="1" step="1" value="${st.yDiv ?? ''}" placeholder="${t('fig.auto2')}"></label>${['yMajor', 'yMinor'].map((k) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="any" min="0" value="${st[k] ?? ''}" placeholder="${t('st.none')}"></label>`).join('')}${['yLabelLen', 'yMinorLen'].map((k) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="1" min="1" value="${st[k] ?? ''}" placeholder="${k === 'yLabelLen' ? 6 : 3}"></label>`).join('')}</div>`;
 }
 function renderFigPanel() {
   const F = S.fig, box = $('figOpts');

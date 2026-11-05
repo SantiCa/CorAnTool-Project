@@ -1688,3 +1688,17 @@ Object.assign(D.en, {
   'p.add': '+ Records', 'p.addTip': 'Add records from Data (geochemistry, etc.) to the side column. Drag the left edge of the column to change its width; double click restores it.',
   'p.noRecs': 'This core has no records. Add them in the Data tab.',
 });
+
+// V0.22: vertical axis ticks and Multiproxy scales
+Object.assign(D.es, {
+  'st.title': 'Escalas y estilo de la columna y su figura',
+  'st.yStep': 'Números del eje cada', 'st.yMajor': 'Marcas largas cada', 'st.yMinor': 'Marcas cortas cada',
+  'st.yLabelLen': 'Largo de las marcas con número (px)', 'st.yMinorLen': 'Largo de las marcas cortas (px)', 'st.none': 'ninguna',
+  'st.scales': 'Escalas',
+});
+Object.assign(D.en, {
+  'st.title': 'Scales and style of the column and its figure',
+  'st.yStep': 'Axis numbers every', 'st.yMajor': 'Long ticks every', 'st.yMinor': 'Short ticks every',
+  'st.yLabelLen': 'Length of numbered ticks (px)', 'st.yMinorLen': 'Length of short ticks (px)', 'st.none': 'none',
+  'st.scales': 'Scales',
+});
