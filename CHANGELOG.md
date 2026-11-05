@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.24 — 2026-11-05
+- Bioturbation side column: each track (bioturbation, BI, ii, records) has its own width (drag its edge in the header or type it) and can be hidden.
+
 ## V0.23 — 2026-11-05
 - Core column: image panels side by side (original, enhanced, traces, traces only, arrows…), true photo proportions by default with a horizontal factor.
 - NO DATA style (show, fill, colours, text, over images); trace symbol size and border; arrows from hand-placed marks only, excluded groups, label style.

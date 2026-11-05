@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.24, 05-11-2026 (Claude):** ancho y visibilidad de cada columna de la columna lateral.
+
 - **V0.23, 05-11-2026 (Claude):** paneles de imagen en Columna, SIN DATOS, símbolos y flechas. Con esto queda hecha la lista de Santiago del 05-11 (V0.20–V0.23).
 
 - **V0.22, 05-11-2026 (Claude):** marcas del eje vertical (`extraTicks`) y escalas en Multiproxy.

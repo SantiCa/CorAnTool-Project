@@ -1726,3 +1726,9 @@ Object.assign(D.en, {
   'ar.objScale': 'Size of those of each trace (× 1)', 'ar.labelSize': 'Label size', 'ar.labelColor': 'Label colour', 'ar.halo': 'White halo',
   'ar.excl': 'Do not point at these groups',
 });
+
+// V0.24: side column tracks
+Object.assign(D.es, { 'p.add': '⚙ Columnas', 'p.tracks': 'Columnas', 'p.width': 'Ancho (px); vacío = automático', 'p.widthNote': 'También puedes arrastrar el borde derecho de cada columna en la cabecera. Bioturbación ocupa el espacio que sobra si no le fijas ancho.',
+  'p.addTip': 'Mostrar u ocultar cada columna, su ancho y registros de Datos. Arrastra el borde izquierdo de la columna lateral para cambiar su ancho total; doble clic lo restablece.' });
+Object.assign(D.en, { 'p.add': '⚙ Tracks', 'p.tracks': 'Tracks', 'p.width': 'Width (px); empty = automatic', 'p.widthNote': 'You can also drag the right edge of each track in the header. Bioturbation takes the remaining space unless given a width.',
+  'p.addTip': 'Show or hide each track, its width and records from Data. Drag the left edge of the side column to change its total width; double click restores it.' });

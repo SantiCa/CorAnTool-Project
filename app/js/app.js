@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.23';
+const DELIVERY = 'V0.24';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -1218,46 +1218,60 @@ function sideSeries(s) {
   return out;
 }
 const tickTxt = (v) => (Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v) ? v.toExponential(0) : String(+v.toPrecision(3)));
+let profLayout = [];   // V0.24: tracks of the side column [{ id, x0, x1 }] for resizing them from the header
 function renderProfile() {
   const s = sec(), W = prof.width, H = prof.height, HEAD = 36;
-  pctx.fillStyle = '#121615'; pctx.fillRect(0, 0, W, H);
+  pctx.fillStyle = '#121615'; pctx.fillRect(0, 0, W, H); profLayout = [];
   if (!s || !s.bins?.length) return;
+  // V0.24: each track has its own width (S.settings.sideW, px; the bioturbation track fills the rest unless set) and can be hidden (sideHide)
+  const SW = S.settings.sideW || {}, HID = new Set(S.settings.sideHide || []), showP = !HID.has('pct'), showB = !HID.has('BI'), showI = !HID.has('ii');
   const recs = sideSeries(s), gap = 6, x0 = 8, colW = Math.max(18, Math.min(30, W * 0.13)), recW = Math.max(48, Math.min(90, W * 0.22));
-  const pw = Math.max(40, W - x0 - 2 * colW - 3 * gap - recs.length * (recW + gap)), bx = x0 + pw + gap, ix = bx + colW + gap, rx0 = ix + colW + gap;
+  const wB = SW.BI || colW, wI = SW.ii || colW, wR = recs.map((r) => SW['rec:' + r.name] || recW);
+  const fixed = (showB ? wB + gap : 0) + (showI ? wI + gap : 0) + wR.reduce((a, w) => a + w + gap, 0);
+  const pw = showP ? SW.pct || Math.max(40, W - x0 - fixed) : 0;
+  let x = x0 + (showP ? pw + gap : 0); const bx = x; if (showB) x += wB + gap; const ix = x; if (showI) x += wI + gap;
+  const rxs = wR.map((w) => { const a = x; x += w + gap; return a; });
+  if (showP) profLayout.push({ id: 'pct', x0, x1: x0 + pw });
+  if (showB) profLayout.push({ id: 'BI', x0: bx, x1: bx + wB });
+  if (showI) profLayout.push({ id: 'ii', x0: ix, x1: ix + wI });
+  recs.forEach((r, k) => profLayout.push({ id: 'rec:' + r.name, x0: rxs[k], x1: rxs[k] + wR[k] }));
   const z = S.view.zoom, vy = S.view.y, yOf = (r) => (s.roi.y0 + r - vy) * z;
   pctx.strokeStyle = '#2c3331'; pctx.lineWidth = 1;
-  for (const p of [0, 25, 50, 75, 100]) { const x = Math.round(x0 + (p / 100) * pw) + 0.5; pctx.beginPath(); pctx.moveTo(x, HEAD); pctx.lineTo(x, H); pctx.stroke(); }
+  if (showP) for (const p of [0, 25, 50, 75, 100]) { const xx = Math.round(x0 + (p / 100) * pw) + 0.5; pctx.beginPath(); pctx.moveTo(xx, HEAD); pctx.lineTo(xx, H); pctx.stroke(); }
   const cols = S.classes.map((c) => hex(c.color));
   const pts = [];
   for (const b of s.bins) {
     const y0 = yOf(b.r0), y1 = yOf(b.r1);
     if (y1 < HEAD || y0 > H) continue;
     const hgt = Math.max(1, y1 - y0);
-    // V0.20: with overlapping traces the class percentages may add up to more than the total: the stack is scaled to the total
-    const sum = b.classPct.reduce((a, v) => a + (v || 0), 0), k0 = b.pct != null && sum > b.pct && sum > 0 ? b.pct / sum : 1;
-    let acc = 0;
-    b.classPct.forEach((v, k) => {
-      if (!v) return;
-      const [r, g, bl] = cols[k]; pctx.fillStyle = `rgba(${r},${g},${bl},.75)`;
-      pctx.fillRect(x0 + (acc / 100) * pw, y0, ((v * k0) / 100) * pw, hgt); acc += v * k0;
-    });
-    for (const [x, val, max, man] of [[bx, b.BI, 6, b.BIm], [ix, b.ii, 6, b.iim]]) {
-      if (val != null) { pctx.fillStyle = '#e0995a'; pctx.fillRect(x, y0, (val / max) * colW, Math.max(1, hgt - (hgt > 3 ? 1 : 0))); }
-      if (man != null) { pctx.strokeStyle = '#ffffff'; pctx.strokeRect(x + (man / max) * colW - 1.5, y0 + 0.5, 3, Math.max(1, hgt - 1)); }
+    if (showP) {
+      // V0.20: with overlapping traces the class percentages may add up to more than the total: the stack is scaled to the total
+      const sum = b.classPct.reduce((a, v) => a + (v || 0), 0), k0 = b.pct != null && sum > b.pct && sum > 0 ? b.pct / sum : 1;
+      let acc = 0;
+      b.classPct.forEach((v, k) => {
+        if (!v) return;
+        const [r, g, bl] = cols[k]; pctx.fillStyle = `rgba(${r},${g},${bl},.75)`;
+        pctx.fillRect(x0 + (acc / 100) * pw, y0, ((v * k0) / 100) * pw, hgt); acc += v * k0;
+      });
+      if (b.pct != null) pts.push([x0 + (b.pct / 100) * pw, (y0 + y1) / 2]);
     }
-    if (b.pct != null) pts.push([x0 + (b.pct / 100) * pw, (y0 + y1) / 2]);
+    for (const [on, xx, w, val, max, man] of [[showB, bx, wB, b.BI, 6, b.BIm], [showI, ix, wI, b.ii, 6, b.iim]]) {
+      if (!on) continue;
+      if (val != null) { pctx.fillStyle = '#e0995a'; pctx.fillRect(xx, y0, (val / max) * w, Math.max(1, hgt - (hgt > 3 ? 1 : 0))); }
+      if (man != null) { pctx.strokeStyle = '#ffffff'; pctx.strokeRect(xx + (man / max) * w - 1.5, y0 + 0.5, 3, Math.max(1, hgt - 1)); }
+    }
   }
   pctx.strokeStyle = '#f3ece0'; pctx.lineWidth = 1.5; pctx.beginPath();
-  pts.forEach(([x, y], k) => (k ? pctx.lineTo(x, y) : pctx.moveTo(x, y))); pctx.stroke();
+  pts.forEach(([px, py], k) => (k ? pctx.lineTo(px, py) : pctx.moveTo(px, py))); pctx.stroke();
   recs.forEach((r, k) => {   // records: own scale per track (min–max of the whole series)
-    const xa = rx0 + k * (recW + gap), xOf = (v) => xa + 2 + (((r.reverse ? r.hi - v : v - r.lo) / (r.hi - r.lo)) * (recW - 4));
-    pctx.strokeStyle = '#2c3331'; pctx.lineWidth = 1; pctx.strokeRect(xa + 0.5, HEAD + 0.5, recW - 1, H - HEAD - 1);
-    pctx.save(); pctx.beginPath(); pctx.rect(xa, HEAD, recW, H - HEAD); pctx.clip();
+    const xa = rxs[k], rw = wR[k], xOf = (v) => xa + 2 + (((r.reverse ? r.hi - v : v - r.lo) / (r.hi - r.lo)) * (rw - 4));
+    pctx.strokeStyle = '#2c3331'; pctx.lineWidth = 1; pctx.strokeRect(xa + 0.5, HEAD + 0.5, rw - 1, H - HEAD - 1);
+    pctx.save(); pctx.beginPath(); pctx.rect(xa, HEAD, rw, H - HEAD); pctx.clip();
     pctx.strokeStyle = r.color; pctx.lineWidth = 1.4; pctx.beginPath(); let on = false;
     for (const [d, v] of r.pts) {
-      const y = (rowAtDepth(s, d) - vy) * z;
+      const yy = (rowAtDepth(s, d) - vy) * z;
       if (d < Math.min(s.top, s.bottom) || d > Math.max(s.top, s.bottom)) { on = false; continue; }
-      if (on) pctx.lineTo(xOf(v), y); else { pctx.moveTo(xOf(v), y); on = true; }
+      if (on) pctx.lineTo(xOf(v), yy); else { pctx.moveTo(xOf(v), yy); on = true; }
     }
     pctx.stroke(); pctx.restore();
   });
@@ -1266,19 +1280,32 @@ function renderProfile() {
   pctx.strokeStyle = '#3a4240'; pctx.beginPath(); pctx.moveTo(0, HEAD - 0.5); pctx.lineTo(W, HEAD - 0.5); pctx.stroke();
   pctx.fillStyle = '#b5aea2'; pctx.font = '600 10.5px "IBM Plex Sans Condensed", sans-serif'; pctx.textBaseline = 'middle'; pctx.textAlign = 'left';
   const clip = (txt, w) => { let t2 = txt; while (t2.length > 2 && pctx.measureText(t2).width > w) t2 = t2.slice(0, -2) + '…'; return t2; };
-  pctx.fillText(clip(t('p.pct'), pw), x0, 10); pctx.fillText('BI', bx, 10); pctx.fillText('ii', ix, 10);
-  recs.forEach((r, k) => { pctx.fillStyle = r.color; pctx.fillText(clip(r.name, recW - 2), rx0 + k * (recW + gap), 10); });
+  if (showP) pctx.fillText(clip(t('p.pct'), pw), x0, 10); if (showB) pctx.fillText('BI', bx, 10); if (showI) pctx.fillText('ii', ix, 10);
+  recs.forEach((r, k) => { pctx.fillStyle = r.color; pctx.fillText(clip(r.name, wR[k] - 2), rxs[k], 10); });
   pctx.font = '9.5px "IBM Plex Mono", monospace'; pctx.fillStyle = '#8f8a80';
-  const tick = (x, txt, align) => { pctx.textAlign = align; pctx.fillText(txt, x, 26); pctx.fillRect(Math.round(x) - (align === 'right' ? 0 : 0), HEAD - 4, 1, 4); };
-  for (const p of pw < 110 ? [0, 50, 100] : [0, 25, 50, 75, 100]) tick(x0 + (p / 100) * pw, String(p), p === 0 ? 'left' : p === 100 ? 'right' : 'center');
-  for (const x of [bx, ix]) { tick(x, '0', 'left'); tick(x + colW, '6', 'right'); }
-  recs.forEach((r, k) => { const xa = rx0 + k * (recW + gap); tick(xa + 2, tickTxt(r.reverse ? r.hi : r.lo), 'left'); tick(xa + recW - 2, tickTxt(r.reverse ? r.lo : r.hi), 'right'); });
+  const tick = (xx, txt, align) => { pctx.textAlign = align; pctx.fillText(txt, xx, 26); pctx.fillRect(Math.round(xx), HEAD - 4, 1, 4); };
+  if (showP) for (const p of pw < 110 ? [0, 50, 100] : [0, 25, 50, 75, 100]) tick(x0 + (p / 100) * pw, String(p), p === 0 ? 'left' : p === 100 ? 'right' : 'center');
+  for (const [on, xx, w] of [[showB, bx, wB], [showI, ix, wI]]) if (on) { tick(xx, '0', 'left'); tick(xx + w, '6', 'right'); }
+  recs.forEach((r, k) => {   // narrow tracks: the second number is left out when the two would touch
+    const xa = rxs[k], lo = tickTxt(r.reverse ? r.hi : r.lo), hi = tickTxt(r.reverse ? r.lo : r.hi);
+    tick(xa + 2, lo, 'left'); if (pctx.measureText(lo).width + pctx.measureText(hi).width + 6 < wR[k] - 4) tick(xa + wR[k] - 2, hi, 'right');
+  });
+  pctx.fillStyle = '#5b6763'; for (const L of profLayout) pctx.fillRect(Math.round(L.x1) + 2, 3, 1, HEAD - 6);   // resize handles
   pctx.textAlign = 'left';
 }
 /** Width of the side column: drag its left edge (double click restores it). */
 const PROF_EDGE = 6;
 function applyProfWidth() { const w = panelPrefs.profW; const vp = prof.parentElement; if (w) vp.style.setProperty('--pw', w + 'px'); else vp.style.removeProperty('--pw'); requestAnimationFrame(() => resizeCanvases()); }
-prof.addEventListener('pointermove', (e) => { if (!prof._drag) prof.style.cursor = e.offsetX <= PROF_EDGE ? 'col-resize' : ''; });
+const trackEdge = (e) => (e.offsetY <= 36 ? profLayout.find((L) => Math.abs(e.offsetX - (L.x1 + 2)) <= 4) : null);
+prof.addEventListener('pointermove', (e) => { if (!prof._drag) prof.style.cursor = e.offsetX <= PROF_EDGE || trackEdge(e) ? 'col-resize' : ''; });
+prof.addEventListener('pointerdown', (e) => {   // V0.24: drag the right edge of a track in the header to change its width
+  const L = e.offsetX > PROF_EDGE && trackEdge(e); if (!L) return;
+  e.preventDefault(); e.stopImmediatePropagation(); prof.setPointerCapture(e.pointerId); prof._drag = true;
+  const r = prof.getBoundingClientRect();
+  const move = (ev) => { (S.settings.sideW ||= {})[L.id] = Math.round(Math.max(16, ev.clientX - r.left - L.x0)); requestRender(); };
+  const up = () => { prof._drag = false; prof.removeEventListener('pointermove', move); markDirty(); if ($('profMenu').open) renderProfMenu(); };
+  prof.addEventListener('pointermove', move); prof.addEventListener('pointerup', up, { once: true });
+});
 prof.addEventListener('pointerdown', (e) => {
   if (e.offsetX > PROF_EDGE) return;
   e.preventDefault(); prof.setPointerCapture(e.pointerId); prof._drag = true;
@@ -1288,13 +1315,22 @@ prof.addEventListener('pointerdown', (e) => {
   prof.addEventListener('pointermove', move); prof.addEventListener('pointerup', up, { once: true });
 });
 prof.addEventListener('dblclick', (e) => { if (e.offsetX <= PROF_EDGE) { delete panelPrefs.profW; savePanels(); applyProfWidth(); } });
-/** Menu of records shown in the side column. */
+/** Menu of the side column: each track shown or hidden, its width, and records from Data. */
 function renderProfMenu() {
   const box = $('profRecs'); if (!box) return;
-  const names = [...new Set((S.records || []).flatMap((r) => r.series.map((x) => x.name)))], on = new Set(S.settings.sideRecs || []);
-  box.innerHTML = names.length ? names.map((n) => `<label class="chk"><input type="checkbox" value="${esc(n)}" ${on.has(n) ? 'checked' : ''}><span>${esc(n)}</span></label>`).join('') : `<p class="note">${t('p.noRecs')}</p>`;
+  const names = [...new Set((S.records || []).flatMap((r) => r.series.map((x) => x.name)))], on = new Set(S.settings.sideRecs || []), hid = new Set(S.settings.sideHide || []), SW = S.settings.sideW || {};
+  const row = (id, label, checked, attr) => `<div class="row" style="gap:6px;flex-wrap:nowrap"><label class="chk" style="flex:1;min-width:0"><input type="checkbox" ${attr} ${checked ? 'checked' : ''}><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span></label><input type="number" data-sw="${esc(id)}" min="16" max="800" step="5" value="${SW[id] ?? ''}" placeholder="${t('fig.auto2')}" title="${esc(t('p.width'))}" style="width:62px"></div>`;
+  box.innerHTML = `<b style="font-size:11px">${t('p.tracks')}</b>${row('pct', t('p.pct'), !hid.has('pct'), 'data-sh="pct"')}${row('BI', 'BI', !hid.has('BI'), 'data-sh="BI"')}${row('ii', 'ii', !hid.has('ii'), 'data-sh="ii"')}
+    <b style="font-size:11px;margin-top:4px">${t('log.records')}</b>${names.length ? names.map((n) => row('rec:' + n, n, on.has(n), `data-rec="${esc(n)}"`)).join('') : `<p class="note">${t('p.noRecs')}</p>`}
+    <p class="note">${t('p.widthNote')}</p>`;
 }
-$('profRecs').addEventListener('change', () => { S.settings.sideRecs = [...$('profRecs').querySelectorAll('input:checked')].map((i) => i.value); markDirty(); requestRender(); });
+$('profRecs').addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.dataset.sw != null) { const W = (S.settings.sideW ||= {}); if (+el.value >= 16) W[el.dataset.sw] = Math.min(800, +el.value); else delete W[el.dataset.sw]; }
+  else if (el.dataset.sh) { const h = new Set(S.settings.sideHide || []); if (el.checked) h.delete(el.dataset.sh); else h.add(el.dataset.sh); S.settings.sideHide = [...h]; }
+  else S.settings.sideRecs = [...$('profRecs').querySelectorAll('[data-rec]:checked')].map((i) => i.dataset.rec);
+  markDirty(); requestRender();
+});
 $('profMenu').addEventListener('toggle', () => { if ($('profMenu').open) renderProfMenu(); });
 
 /* ───────────── view ───────────── */

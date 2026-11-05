@@ -57,6 +57,7 @@ La descripción detallada de los algoritmos está en
 | V0.21 | 05-11-2026 | Columna lateral | Ancho ajustable, escalas horizontales fijas arriba y registros de Datos como columnas adicionales |
 | V0.22 | 05-11-2026 | Escalas de figuras | Marcas largas y cortas del eje vertical con intervalo y longitud propios; escalas editables también en Multiproxy |
 | V0.23 | 05-11-2026 | Figuras | Paneles de imagen en Columna con proporción real, estilo de SIN DATOS, tamaño y borde de símbolos, flechas solo de marcas a mano, grupos excluidos y etiquetas |
+| V0.24 | 05-11-2026 | Columna lateral | Ancho propio y ocultar cada columna (bioturbación, BI, ii, registros) |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -647,6 +648,19 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.24 — Columna lateral: ancho y visibilidad de cada columna (05-11-2026)
+
+- **Qué se hizo:** en la columna lateral de Bioturbación cada columna (bioturbación %, BI, ii y cada registro) tiene
+  su propio ancho y se puede ocultar. El ancho se cambia arrastrando su borde derecho en la cabecera o escribiéndolo
+  en el menú «⚙ Columnas»; vacío = automático (la bioturbación ocupa lo que sobra).
+- **Cambios:** `app.js` (`renderProfile` con `settings.sideW` y `settings.sideHide`, `profLayout`, arrastre en la
+  cabecera, menú `renderProfMenu`), `i18n.js`. Si un registro es estrecho se omite el segundo número de su escala.
+  `DELIVERY` = V0.24.
+- **Por qué:** petición de Santiago (V0.21 solo cambiaba el ancho del conjunto).
+- **Comprobación:** 68 pruebas JS; en Chrome con U1385I: BI oculto, bioturbación fijada a 80 px y ensanchada a
+  122 px arrastrando su borde; sin errores.
+- **Pendiente / no probado:** —
 
 ## V0.23 — Imagen del sondeo, SIN DATOS, símbolos y flechas en figuras (05-11-2026)
 
