@@ -158,9 +158,10 @@ const lbl = (v) => String(+(+v).toPrecision(6));
 
 /** Split a track name into at most two lines of about w px (10 px font); the second line ends in … if cut. */
 export function wrapTitle(text, w) {
-  const max = Math.max(4, Math.floor((w - 4) / 5.6)), words = String(text ?? '').split(/\s+/).filter(Boolean), lines = [''];
-  for (const wd of words) {
-    const cur = lines[lines.length - 1], next = cur ? cur + ' ' + wd : wd;
+  // V0.27: long names also break after "_", "-" or "/" (magnetic_ / susceptibility_IU)
+  const max = Math.max(4, Math.floor((w - 4) / 5.6)), parts = String(text ?? '').match(/\s*[^\s_\-/]+[_\-/]*|\s*[_\-/]+/g) || [], lines = [''];
+  for (const raw of parts) {
+    const sp = /^\s/.test(raw), wd = raw.trim(), cur = lines[lines.length - 1], next = cur ? cur + (sp ? ' ' : '') + wd : wd;
     if (next.length <= max || !cur) lines[lines.length - 1] = next; else lines.push(wd);
   }
   const out = lines.slice(0, 2).map((l) => (l.length > max ? l.slice(0, max - 1) + '…' : l));
@@ -233,6 +234,7 @@ export function buildLogSVG(o) {
   const frame = (c) => { if (st.frame) out.push(`<rect x="${c.x}" y="${top}" width="${c.w}" height="${H}" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`); };
   // track names: up to two lines that fit the column width (V25); the full name is in the returned layout
   const title = (c) => {
+    if (c.w < 34 && c.title) { out.push(`<text transform="translate(${f2(c.x + c.w / 2 + 3)},80) rotate(-90)" text-anchor="start" font-size="9" font-weight="600" fill="#1c2422">${escXml(c.title)}</text>`); return; }   // V0.27: narrow columns, upright title
     const ls = wrapTitle(c.title, c.w);
     out.push(`<text x="${c.x + c.w / 2}" y="${ls.length > 1 ? 46 : 54}" text-anchor="middle" font-weight="600" fill="#1c2422">${ls.map((l, i) => `<tspan x="${c.x + c.w / 2}" dy="${i ? 12 : 0}">${escXml(l)}</tspan>`).join('')}</text>`);
   };

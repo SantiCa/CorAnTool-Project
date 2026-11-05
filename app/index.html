@@ -6,9 +6,7 @@
 <title>CorAnTool</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Quantitative ichnofabric analysis of sediment core images: enhancement, trace detection, learned ichnotaxon identification, bioturbation percentage, BI and ii.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
 <style>
 /* Layout: core-logging workstation. Left = workflow steps; centre = core image with depth ruler and a
    log strip drawn at the same depth scale; right = ichnotaxa, learning and results. */
@@ -71,11 +69,13 @@ label.file:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; 
 .side.right { border-left: 1px solid var(--line); display: flex; flex-direction: column; }
 
 .step { border-bottom: 1px solid var(--line); }
-.step > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 14px; font: 600 12px/1 var(--font-head); text-transform: uppercase; letter-spacing: .07em; }
+.step > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 11px 14px; font: 600 14px/1.2 var(--font-head); }   /* V0.27: sentence case */
+.step.howto > summary .n { background: none; border: 1px solid var(--line-strong); color: var(--muted); }
 .step > summary::-webkit-details-marker { display: none; }
 .step > summary .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text); font: 600 11px/1 var(--font-data); letter-spacing: 0; }
 .step > summary::after { content: ""; margin-left: auto; width: 6px; height: 6px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
 .step[open] > summary::after { transform: rotate(-135deg); }
+.exp.sticky { position: sticky; bottom: 0; padding: 10px 14px; background: var(--panel); border-top: 1px solid var(--line); display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; }
 .step .body { padding: 2px 14px 14px; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
 /* V19.1: nothing in the side panels may be wider than the panel (long labels wrap instead of being cut) */
 .side { overflow-x: hidden; }
@@ -95,6 +95,12 @@ textarea { font: 12px/1.4 var(--font-data); resize: vertical; min-height: 64px; 
 input[type=number] { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 .note { color: var(--muted); font-size: 11.5px; margin: 0; }
 .chk { display: flex; gap: 7px; align-items: flex-start; cursor: pointer; }
+/* V0.27: groups of options as toggle chips (two or more per row) */
+.side .chk2, #figPanel .chk2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px; margin-top: 4px; }
+.side .chk2 > .chk, #figPanel .chk2 > .chk { align-items: center; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--field); font-size: 12px; line-height: 1.25; min-width: 0; }
+.side .chk2 > .chk:has(input:checked), #figPanel .chk2 > .chk:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+.side .chk2 > .chk input, #figPanel .chk2 > .chk input { margin: 0; flex: none; }
+.side .chk2 > .chk:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
 .chk input { margin-top: 2px; accent-color: var(--accent); }
 .slider { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; }
 .slider span { color: var(--muted); font-size: 11.5px; }
@@ -382,6 +388,24 @@ details.bk > summary { cursor: pointer; font-weight: 600; }
 .tipcard { left: auto; right: 16px; bottom: 16px; max-width: 340px; }
 #ageStatus.warn { color: var(--danger); }
 #figOut:empty, #figOut > .note:only-child { background: var(--panel); }
+/* V0.27: empty figure = blank sheet in the middle of the stage */
+#figOut:has(> .figempty) { display: block; max-width: 560px; margin: 8vh auto 0; background: var(--paper); border: 1px dashed var(--line-strong); }
+.figempty { aspect-ratio: 210 / 150; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 32px; text-align: center; color: #3c4744; font-size: 14px; }
+.figempty p { margin: 0; max-width: 34ch; }
+/* V0.27: the top bar stays on one row; below 1500 px the labels give way to icons and the project name shortens */
+.top { flex-wrap: nowrap; gap: 12px; }
+.top .acts { flex-wrap: nowrap; align-items: center; }
+#helpBtn .ico { display: none; font-weight: 600; }
+.btn.proj #projName { max-width: 26vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.savestate { white-space: nowrap; }
+@media (max-width: 1500px) {
+  .btn.proj .lbl, .corebar .lbl, #helpBtn .lbl { display: none; }
+  #helpBtn .ico { display: inline; }
+  .btn.proj #projName { max-width: 18vw; }
+  .top { gap: 8px; }
+  .seg button { padding: 5px 10px; }
+}
+@media (max-width: 1100px) { .savestate { display: none; } .btn.proj #projName { max-width: 14vw; } }
 @media (max-width: 860px) {
   .top { flex-wrap: wrap; gap: 8px; }
   .top > * { min-width: 0; max-width: 100%; }
@@ -536,7 +560,8 @@ details.mini[open] { display: grid; gap: 6px; }
 .clfbody .chips label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .clfbody .chips input { margin: 0; }
 .clfbody details > summary { font-size: 12.5px; cursor: pointer; }
-.clfbody .chk2 { display: grid; gap: 2px; max-height: 180px; overflow: auto; padding: 4px 0 0 4px; font-size: 12px; }
+.clfbody .chk2 > .chk { border: 0; padding: 0; background: none; color: inherit; font-size: 12px; }
+.clfbody .chk2 { grid-template-columns: minmax(0, 1fr); display: grid; gap: 2px; max-height: 180px; overflow: auto; padding: 4px 0 0 4px; font-size: 12px; }
 .clfbody .clfres { font-size: 12px; display: grid; gap: 2px; }
 .clfmodels { display: grid; gap: 4px; }
 .clfmodels label { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: start; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 12px; }
@@ -595,7 +620,7 @@ details.mini[open] { display: grid; gap: 6px; }
       <span class="savestate" id="saveState"></span>
       <button class="btn small danger" id="bkReactivateTop" hidden data-i18n="bk.reactivate"></button>
       <button class="btn ghost" id="cmtBtn" data-i18n-title="cmt.title">💬</button>
-      <button class="btn ghost" id="helpBtn" data-i18n="top.help"></button>
+      <button class="btn ghost" id="helpBtn" data-i18n-title="top.help"><span class="ico" aria-hidden="true">?</span><span class="lbl" data-i18n="top.help"></span></button>
       <button class="btn ghost" id="themeBtn" data-i18n-title="top.theme">☾</button>
       <button class="btn ghost" id="langBtn" data-i18n-title="top.lang">EN</button>
     </div>
@@ -781,7 +806,7 @@ details.mini[open] { display: grid; gap: 6px; }
     </aside>
 
     <aside class="side left" id="logPanel">
-      <div class="body" style="padding:14px;display:grid;gap:12px">
+      <details class="step" open><summary><span data-i18n="logs.win"></span></summary><div class="body">
         <label class="f"><span data-i18n="log.axis"></span><select id="logAxis"><option value="depth" data-i18n="log.depth"></option><option value="age" data-i18n="log.age"></option></select></label>
         <div class="f"><span data-i18n="log.window"></span>
           <div class="grid2"><label class="f"><span data-i18n="log.from"></span><input type="number" id="logFrom" step="any"></label><label class="f"><span data-i18n="log.to"></span><input type="number" id="logTo" step="any"></label></div>
@@ -789,25 +814,31 @@ details.mini[open] { display: grid; gap: 6px; }
         </div>
         <div class="slider"><span data-i18n="log.height"></span><output id="logHeightOut"></output><input type="range" id="logHeight" min="300" max="3000" step="50"></div>
         <label class="f" data-i18n-title="log.noDataPadTip"><span data-i18n="log.noDataPad"></span><input type="number" id="noDataPad" min="0" step="0.5"></label>
-        <details class="mini"><summary data-i18n="st.title"></summary><div id="logStyle"></div></details>
-        <div class="f" id="logTracks"><span data-i18n="log.tracks"></span>
-          <label class="chk"><input type="checkbox" data-track="image"><span data-i18n="log.image"></span></label>
+      </div></details>
+      <details class="step" open><summary><span data-i18n="log.tracks"></span></summary><div class="body">
+        <div class="f" id="logTracks">
+          <div class="chk2"><label class="chk"><input type="checkbox" data-track="image"><span data-i18n="log.image"></span></label>
           <label class="chk"><input type="checkbox" data-track="total"><span data-i18n="log.total"></span></label>
           <label class="chk"><input type="checkbox" data-track="species"><span data-i18n="log.species"></span></label>
           <label class="chk"><input type="checkbox" data-track="BI"><span>BI</span></label>
           <label class="chk"><input type="checkbox" data-track="ii"><span>ii</span></label>
-          <label class="chk"><input type="checkbox" data-track="manual"><span data-i18n="log.manual"></span></label>
+          <label class="chk"><input type="checkbox" data-track="manual"><span data-i18n="log.manual"></span></label></div>
         </div>
+      </div></details>
+      <details class="step"><summary><span data-i18n="logs.img"></span></summary><div class="body">
         <div id="logImgPanels"></div>
         <div class="grid2"><label class="f"><span data-i18n="log.imgMode"></span><select id="logImgMode"><option value="enh" data-i18n="log.enh"></option><option value="orig" data-i18n="log.orig"></option></select></label>
           <label class="chk" style="align-self:end"><input type="checkbox" id="logOverlay"><span data-i18n="log.overlay"></span></label><label class="chk" data-i18n-title="log.hideExclTip"><input type="checkbox" id="logHideExcl"><span data-i18n="log.hideExcl"></span></label></div>
-        <div class="f"><span data-i18n="log.records"></span>
+      </div></details>
+      <details class="step"><summary><span data-i18n="log.records"></span></summary><div class="body">
+        <div class="f">
           <div id="recList" style="display:grid;gap:6px"></div>
           <label class="btn small file"><span data-i18n="log.addRec"></span><input type="file" id="recFile" accept=".csv,.txt,.tsv,.dat,.xlsx,.xls,.ods,text/csv,text/plain"></label>
           <p class="note" data-i18n="log.recNote"></p>
         </div>
-        <div class="exp"><button class="btn small primary" id="logSVGBtn" data-i18n="log.svg"></button><button class="btn small" id="logCSVBtn" data-i18n="log.csv"></button></div>
-      </div>
+      </div></details>
+      <details class="step"><summary><span data-i18n="st.title"></span></summary><div class="body"><div id="logStyle"></div></div></details>
+      <div class="exp sticky"><button class="btn small primary" id="logSVGBtn" data-i18n="log.svg"></button><button class="btn small" id="logCSVBtn" data-i18n="log.csv"></button></div>
     </aside>
     <section id="logStage"><div class="row" style="margin-bottom:8px"><button class="btn small" data-win="corelog" data-i18n="win.new"></button><button class="btn small" data-float="corelog" data-i18n="win.panel"></button></div><div id="logSvg"></div></section>
 
@@ -819,7 +850,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <label class="f"><span data-i18n="fig.title"></span><input type="text" id="figTitle"></label>
         <label class="f"><span data-i18n="fig.caption"></span><textarea id="figCaption" rows="3"></textarea></label>
         <div id="figOpts" style="display:grid;gap:8px"></div>
-        <div class="exp"><button class="btn small primary" id="figSvg">SVG</button><button class="btn small" id="figPng">PNG</button></div>
+        <div class="exp sticky" style="margin:0 -14px -14px"><button class="btn small primary" id="figSvg">SVG</button><button class="btn small" id="figPng">PNG</button></div>
         <p class="note" data-i18n="fig.note"></p>
       </div>
     </aside>

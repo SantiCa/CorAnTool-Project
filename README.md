@@ -168,7 +168,7 @@ ichantool unet evaluate project_segmentation_dataset.zip models/unet_v1.onnx --d
 ## Repository layout
 
 ```
-app/                program (HTML + JavaScript); vendor/ = bundled libraries (UTIF, pako, SheetJS)
+app/                program (HTML + JavaScript); vendor/ = bundled libraries (UTIF, pako, SheetJS) and fonts (IBM Plex, OFL)
 desktop/            desktop packaging (Electron) for Windows, macOS and Linux
 src/ichantool/      Python package
 tests/              automated tests (JavaScript and Python, incl. regression against v2.1)
@@ -200,7 +200,7 @@ If you use CorAnTool, please cite (see also `CITATION.cff`):
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE). Bundled libraries keep their own licences (`app/vendor/LICENSE-*`).
+GPL-3.0 — see [LICENSE](LICENSE). Bundled libraries and fonts keep their own licences (`app/vendor/LICENSE-*`, `app/vendor/fonts/LICENSE-ibm-plex.txt`).
 
 ---
 

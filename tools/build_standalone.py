@@ -58,6 +58,10 @@ def build(out: Path | None = None) -> Path:
     assets_js = "window.ICHANTOOL_ASSETS = " + json.dumps(assets) + ";"
 
     html = (APP / "index.html").read_text(encoding="utf-8").replace("<title>CorAnTool</title>", f"<title>CorAnTool {ver}</title>")
+    # V0.27: the bundled fonts go inline too, so the single file looks the same offline
+    fdir = APP / "vendor" / "fonts"
+    fcss = re.sub(r"url\('([^']+\.woff2)'\)", lambda m: "url(data:font/woff2;base64," + base64.b64encode((fdir / m.group(1)).read_bytes()).decode() + ")", (fdir / "fonts.css").read_text(encoding="utf-8"))
+    html = html.replace('<link rel="stylesheet" href="vendor/fonts/fonts.css">', "<style>" + fcss + "</style>")
     tag = '<script type="module" src="js/app.js"></script>'
     if tag not in html:
         raise SystemExit("script tag not found in app/index.html")

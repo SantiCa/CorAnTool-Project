@@ -1738,3 +1738,7 @@ Object.assign(D.es, { 'view.all': 'Ver todo', 'view.allTip': 'Muestra toda la zo
   'h.view.fit': 'Ajusta el zoom al ancho del sondeo.' });
 Object.assign(D.en, { 'view.all': 'Show all', 'view.allTip': 'Shows the whole analysis area of the section. To move: strip on the right (click or drag), wheel, Page Up / Page Down and Home / End.',
   'h.view.fit': 'Fits the zoom to the core width.' });
+
+// V0.27: interface review
+Object.assign(D.es, { 'logs.win': 'Eje y tramo', 'logs.img': 'Imagen del sondeo', 'log.imgStretch': 'Factor horizontal', 'log.asp.keep': 'Proporción real' });
+Object.assign(D.en, { 'logs.win': 'Axis and window', 'logs.img': 'Core image', 'log.imgStretch': 'Horizontal factor', 'log.asp.keep': 'True proportions' });

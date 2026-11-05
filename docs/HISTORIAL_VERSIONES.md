@@ -60,6 +60,7 @@ La descripción detallada de los algoritmos está en
 | V0.24 | 05-11-2026 | Columna lateral | Ancho propio y ocultar cada columna (bioturbación, BI, ii, registros) |
 | V0.25 | 05-11-2026 | Figuras | Ancho, paneles uno junto a otro y ocultar zonas excluidas en todas las figuras con sondeo |
 | V0.26 | 05-11-2026 | Interfaz | La página ya no se desplaza (solo los paneles), paneles que se adaptan al ancho de pantalla, barra de estado visible, franja de navegación, «Ver todo» y Re Pág/Av Pág/Inicio/Fin |
+| V0.27 | 05-11-2026 | Diseño | Cabecera en una fila, fuentes incluidas, paneles por secciones y opciones en botones, figura vacía como hoja, títulos de columna partidos, paleta de registros; franja de navegación a la izquierda con su regla |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -650,6 +651,32 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.27 — Revisión del diseño de la interfaz (05-11-2026)
+
+- **Qué se hizo** (revisión de diseño pedida por Santiago; ningún cálculo cambia):
+  - Cabecera siempre en una fila (antes dos por debajo de unos 1500 px): por debajo de 1500 px las etiquetas
+    «Proyecto», «Sondeo» y «Ayuda» pasan a icono y el nombre del proyecto se acorta; por debajo de 1100 px se oculta
+    «Guardado».
+  - Fuentes IBM Plex incluidas en el programa (`app/vendor/fonts`, latín, OFL; 165 KB) en vez de Google Fonts: el
+    aspecto es el mismo sin internet, en el archivo offline (van dentro) y en el programa de escritorio.
+  - Paneles: títulos de sección en minúscula normal (antes MAYÚSCULAS espaciadas); «¿Cómo funciona…?» de Multiproxy ya
+    no parece un paso; Columna dividida en secciones plegables (Eje y tramo, Columnas, Imagen del sondeo, Registros,
+    Escalas y estilo) con Exportar fijo abajo, igual que en Figuras.
+  - Grupos de opciones (columnas, paneles, versiones de trazas…) como botones conmutables en dos columnas; campos de
+    ancho de imagen sin cortar.
+  - Figuras: sin figura se muestra una hoja en blanco centrada con la indicación y «Elegir automáticamente».
+  - Títulos de columna partidos en dos líneas también tras «_», «-» o «/» (magnetic_ / susceptibility_IU); las
+    columnas estrechas (imagen) llevan el título en vertical.
+  - Colores nuevos para registros y familias, distinguibles en papel y por daltónicos y distintos del ocre de la
+    bioturbación (solo para registros nuevos; los existentes conservan su color).
+  - Franja de navegación (V0.26) a la izquierda de la regla, en su propio margen y con su regla pequeña de toda la
+    sección (petición de Santiago).
+- **Cambios:** `index.html` (CSS y marcado de cabecera y Columna), `app.js`, `log.js::wrapTitle`, `i18n.js`,
+  `tools/build_standalone.py` (fuentes en línea), `app/vendor/fonts/` (nuevo), README. `DELIVERY` = V0.27.
+- **Comprobación:** 68 pruebas JS; en Chrome cabecera de 48 px a 1440 y 1280 px, fuentes Plex cargadas desde el
+  programa, capturas de Bioturbación, Columna y Figuras; sin errores.
+- **Pendiente / no probado:** barra de pestañas de Multiproxy distinta de la del panel derecho; revisar en modo oscuro.
 
 ## V0.26 — Paneles adaptados a la pantalla y mejor navegación por el sondeo (05-11-2026)
 

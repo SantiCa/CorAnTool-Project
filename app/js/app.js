@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.26';
+const DELIVERY = 'V0.27';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -1107,6 +1107,10 @@ function legendOf(classes, marks) {
 let cropState = null;   // {s, y0, y1} while cropping
 function edgeYs(s) { return cropState?.s === s ? { a: cropState.y0, b: cropState.y1, crop: true } : { a: s.roi.y0, b: s.roi.y1, crop: false }; }
 function drawEdges(s, ch, cw, toS) {
+  const G = navGut(); vctx.save(); vctx.translate(G, 0);   // V0.27: right of the navigation gutter
+  try { drawEdgesAt(s, ch, cw - G, toS); } finally { vctx.restore(); }
+}
+function drawEdgesAt(s, ch, cw, toS) {
   const E = edgeYs(s), [, ya] = toS(0, E.a), [, yb] = toS(0, E.b);
   if (E.crop) {   // darken what will be removed, dashed cut lines
     vctx.fillStyle = 'rgba(160,30,30,.38)';
@@ -1127,8 +1131,8 @@ function drawEdges(s, ch, cw, toS) {
   }
 }
 /** Which marker is under the pointer: 'a' (Start / crop top) or 'b' (End / crop bottom). */
-function edgeHit(s, sx, sy) {
-  const E = edgeYs(s), z = S.view.zoom, ya = (E.a - S.view.y) * z, yb = (E.b - S.view.y) * z;
+function edgeHit(s, sx0, sy) {
+  const sx = sx0 - navGut(), E = edgeYs(s), z = S.view.zoom, ya = (E.a - S.view.y) * z, yb = (E.b - S.view.y) * z;
   const near = (y) => (E.crop ? Math.abs(sy - y) <= 7 && sx >= 50 : sx >= 50 && sx <= 78 && Math.abs(sy - y) <= 11);
   return near(ya) ? 'a' : near(yb) ? 'b' : null;
 }
@@ -1188,19 +1192,35 @@ function niceStep(pxPerUnit, minPx) {
 
 /* ───────────── V0.26: navigation strip — the whole analysis area at the right edge of the view; click or drag to move ───────────── */
 let navBox = null;
+/** V0.27: width of the navigation gutter at the left of the depth ruler (0 when turned off). */
+const navGut = () => (S.settings?.nav === false ? 0 : 66);
 function drawNav(s, cw, ch) {
   navBox = null;
-  if (S.settings.nav === false || !s.orig) return;
-  const roi = s.roi, rh = roi.y1 - roi.y0, rw = roi.x1 - roi.x0, H = ch - 24, z = S.view.zoom;
-  if (H < 80 || rh * z <= ch * 1.05) return;   // the whole section already fits
-  const W = Math.round(Math.max(14, Math.min(48, (H * rw) / rh))), x = cw - W - 10, y = 12;
+  const G = navGut(); if (!G) return;
+  vctx.fillStyle = '#0e1110'; vctx.fillRect(0, 0, G, ch);
+  vctx.fillStyle = '#262c2b'; vctx.fillRect(G - 1, 0, 1, ch);
+  if (!s.orig) return;
+  const roi = s.roi, rh = roi.y1 - roi.y0, rw = roi.x1 - roi.x0, H = ch - 30, z = S.view.zoom, y = 14;
+  if (H < 60) return;
+  const W = Math.round(Math.max(8, Math.min(24, (H * rw) / rh))), x = 6;
   const cv = sectionCanvas(s), kk = s._lc?.k || 1;
-  vctx.fillStyle = 'rgba(14,17,16,.82)'; vctx.fillRect(x - 3, y - 3, W + 6, H + 6);
   try { vctx.drawImage(cv, roi.x0 * kk, roi.y0 * kk, rw * kk, rh * kk, x, y, W, H); } catch { /* pending */ }
+  vctx.strokeStyle = '#3a4240'; vctx.lineWidth = 1; vctx.strokeRect(x - 0.5, y - 0.5, W + 1, H + 1);
+  // its own small ruler: the whole section from top to bottom
+  const span = s.bottom - s.top;
+  if (span > 0) {
+    const st = niceStep(H / span, 34), tx = x + W + 3;
+    vctx.font = '9px "IBM Plex Mono", monospace'; vctx.textBaseline = 'middle'; vctx.textAlign = 'left';
+    for (let v = Math.ceil(s.top / st - 1e-9) * st; v <= s.bottom + 1e-9; v += st) {
+      const yy = Math.round(y + ((v - s.top) / span) * H) + 0.5;
+      vctx.fillStyle = '#e6e1d6'; vctx.fillRect(x + W - 4, yy, 4, 1);   // tick on the strip edge, so it is not read as a minus sign
+      vctx.fillStyle = '#a49d91'; vctx.fillText(fmt(v, 3), tx + 1, yy);
+    }
+  }
   const a = Math.max(0, (S.view.y - roi.y0) / rh), b = Math.min(1, (S.view.y + ch / z - roi.y0) / rh);
-  vctx.strokeStyle = '#e0995a'; vctx.lineWidth = 2; vctx.strokeRect(x - 1, y + a * H, W + 2, Math.max(3, (b - a) * H));
-  vctx.fillStyle = 'rgba(224,153,90,.18)'; vctx.fillRect(x, y + a * H, W, Math.max(3, (b - a) * H));
-  navBox = { x: x - 3, y, w: W + 6, h: H, roi };
+  vctx.fillStyle = 'rgba(224,153,90,.22)'; vctx.fillRect(x, y + a * H, W, Math.max(3, (b - a) * H));
+  vctx.strokeStyle = '#e0995a'; vctx.lineWidth = 2; vctx.strokeRect(x - 1.5, y + a * H, W + 3, Math.max(3, (b - a) * H));
+  navBox = { x: 0, y, w: G, h: H, roi };
 }
 function navTo(py) {
   const s = sec(); if (!s || !navBox) return;
@@ -1218,8 +1238,8 @@ view.addEventListener('pointerdown', (e) => {
 /** Whole analysis area in view (height fits). */
 function fitAll() {
   const s = sec(); if (!s) return;
-  const rh = s.roi.y1 - s.roi.y0, rw = s.roi.x1 - s.roi.x0, z = Math.min(8, Math.max(0.02, Math.min((view.height - 24) / rh, (view.width - 76) / rw)));
-  S.view = { zoom: z, x: s.roi.x0 - (view.width / z - rw) / 2, y: s.roi.y0 - 12 / z }; clampView(); requestRender();
+  const G = navGut(), rh = s.roi.y1 - s.roi.y0, rw = s.roi.x1 - s.roi.x0, z = Math.min(8, Math.max(0.02, Math.min((view.height - 24) / rh, (view.width - 76 - G) / rw)));
+  S.view = { zoom: z, x: s.roi.x0 - (G + 62) / z, y: s.roi.y0 - 12 / z }; clampView(); requestRender();
 }
 $('zoomAll').addEventListener('click', fitAll);
 /** Page Up / Page Down move one screen (90 %); Home / End go to the top or bottom of the analysis area. */
@@ -1233,6 +1253,10 @@ document.addEventListener('keydown', (e) => {
 });
 
 function drawRuler(s, ch) {
+  const G = navGut(); vctx.save(); vctx.translate(G, 0);
+  try { drawRulerAt(s, ch); } finally { vctx.restore(); }
+}
+function drawRulerAt(s, ch) {
   const span = s.bottom - s.top; if (!(span > 0)) return;
   const z = S.view.zoom, pxu = ((s.roi.y1 - s.roi.y0) / span) * z, st = niceStep(pxu, 56);
   const d0 = Math.max(s.top, depthAtRow(s, S.view.y)), d1 = Math.min(s.bottom, depthAtRow(s, S.view.y + ch / z));
@@ -1390,8 +1414,8 @@ function clampView() {
 }
 function fitView() {
   const s = sec(); if (!s) return;
-  const rw = s.roi.x1 - s.roi.x0, z = Math.min(8, Math.max(0.02, (view.width - 76) / rw));
-  S.view = { zoom: z, x: s.roi.x0 - 62 / z, y: s.roi.y0 - 12 / z };
+  const G = navGut(), rw = s.roi.x1 - s.roi.x0, z = Math.min(8, Math.max(0.02, (view.width - 76 - G) / rw));
+  S.view = { zoom: z, x: s.roi.x0 - (62 + G) / z, y: s.roi.y0 - 12 / z };
   requestRender();
 }
 function zoomAt(sx, sy, f) {
@@ -3112,7 +3136,7 @@ function logRecords(D) {
 function renderImgPanelsForm() {
   const lv = S.logView, st = lv.style || {}, on = new Set(lv.imgPanels || []), asp = st.imgAspect || 'keep';
   $('logImgPanels').innerHTML = `<div class="f"><span>${t('log.panels')}</span><div class="chk2">${FIG_PANELS.map((p) => `<label class="chk"><input type="checkbox" data-imgp="${p}" ${on.has(p) ? 'checked' : ''}><span>${t('fig.p.' + p)}</span></label>`).join('')}</div><p class="note">${t('log.panelsNote')}</p></div>
-    <div class="grid2"><label class="f"><span>${t('log.imgAspect')}</span><select data-st="imgAspect"><option value="keep" ${asp === 'keep' ? 'selected' : ''}>${t('log.asp.keep')}</option><option value="fixed" ${asp === 'fixed' ? 'selected' : ''}>${t('log.asp.fixed')}</option></select></label>
+    <div class="grid2" style="grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)"><label class="f"><span>${t('log.imgAspect')}</span><select data-st="imgAspect"><option value="keep" ${asp === 'keep' ? 'selected' : ''}>${t('log.asp.keep')}</option><option value="fixed" ${asp === 'fixed' ? 'selected' : ''}>${t('log.asp.fixed')}</option></select></label>
     ${asp === 'keep' ? `<label class="f"><span>${t('log.imgStretch')}</span><input type="number" data-st="imgStretch" min="0.05" step="0.1" value="${st.imgStretch ?? ''}" placeholder="1"></label>` : `<label class="f"><span>${t('log.imgW')}</span><input type="number" data-st="imgW" min="8" max="600" step="2" value="${st.imgW ?? ''}" placeholder="64"></label>`}</div>`;
 }
 /** V0.23: NO DATA and marker fields of the column style (shared by the core column and the figures). */
@@ -3277,7 +3301,8 @@ $('logCSVBtn').addEventListener('click', () => {
 });
 
 /* external records (CSV, TXT, Excel) */
-const REC_COLORS = ['#1f6fb2', '#2e7d4f', '#b3261e', '#7b4fb2', '#c77c02', '#0f7c8a', '#5b6763'];
+// V0.27: record colours told apart in print and by colour-blind readers, away from the ochre of bioturbation
+const REC_COLORS = ['#0b5394', '#1b7f6a', '#8c2d5a', '#5c4ea0', '#0e7490', '#3c7d22', '#6b5e4b'];
 let pendingTable = null;
 
 function addRecordFromTable(name, tab, xCol, axis, yCols) {
@@ -3352,7 +3377,7 @@ document.addEventListener('change', (e) => { if (e.target.closest('.side.left:no
 /* ───────────── multiproxy tool: numeric records, interval layers and automatic interval classification ─────────────
    Independent of the ichnotaxon suggestions of the Section mode (learn.js). State lives in S.geo (key kept for file compatibility). */
 
-const GROUP_COLORS = ['#1f6fb2', '#c0392b', '#2e7d4f', '#8e44ad', '#d68910', '#16a085', '#7f8c8d', '#c2185b', '#5d4037', '#283593', '#9e9d24', '#00838f'];
+const GROUP_COLORS = ['#0b5394', '#a23b2a', '#1b7f6a', '#5c4ea0', '#8c2d5a', '#0e7490', '#3c7d22', '#6b5e4b', '#2f4b7c', '#7a6f00', '#9c4f96', '#4a6b8a'];   // V0.27
 
 function defaultGeo() {
   return {
@@ -6084,7 +6109,9 @@ function renderFigure() {
     else { if (geoRT.dirty) geoComputeSamples(); svg = renderGeoMap() || null; }
   } catch (e) { console.error(e); $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(axisErr(e))}</p>`; return; }
   figSvgCache = svg ? wrapFigure(svg, F.title, F.caption) : '';
-  $('figOut').innerHTML = figSvgCache || `<p class="note" style="padding:20px">${t(F.type === 'traces' ? 'fig.pickFirst' : 'fig.empty')}</p>`;
+  // V0.27: an empty figure is a blank sheet with what to do next
+  $('figOut').innerHTML = figSvgCache || `<div class="figempty"><p>${t(F.type === 'traces' ? 'fig.pickFirst' : 'fig.empty')}</p>${F.type === 'traces' ? `<button class="btn primary" type="button" data-figauto>${t('fig.auto')}</button>` : ''}</div>`;
+  $('figOut').querySelector('[data-figauto]')?.addEventListener('click', () => $('figAuto')?.click());
   F.textEdits ||= {};
   editSVGLabels($('figOut'), (F.textEdits[F.type] ||= {}), (edited) => { figSvgCache = edited; });
 }

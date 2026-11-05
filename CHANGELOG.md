@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.27 — 2026-11-05
+- Interface review: one-row top bar, bundled IBM Plex fonts (same look offline), sentence-case panel sections, Core column in collapsible sections, option groups as toggle chips, blank-sheet empty figure, two-line column titles, colour-blind-safe record palette.
+- Navigation strip moved to the left of the depth ruler, with its own small ruler.
+
 ## V0.26 — 2026-11-05
 - Layout: the page no longer scrolls (only the panels), panel widths adapt to the screen, status bar always visible.
 - Navigation: overview strip to click or drag through the section, «Show all», Page Up/Down and Home/End.
