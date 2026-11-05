@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.18 — 2026-11-05
+- Desktop: own application icon (desktop/build/icon.png was git-ignored, so builds showed the default Electron icon); Electron 42 verified after Dependabot PR #11.
+
 ## V0.17 — 2026-11-05
 - Desktop: train the U-Net from the program on the computer's GPU (one-time training module, cores marked validation/test, progress, stop and resume, trained-model list).
 - Ichnotaxa: optional DINOv2 vision-model embeddings as classifier input instead of the 12 shape descriptors.

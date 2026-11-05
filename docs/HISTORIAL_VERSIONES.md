@@ -51,6 +51,7 @@ La descripción detallada de los algoritmos está en
 | V29 | 01-11-2026 | Publicaciones | Cartera de publicaciones actualizada (5 trabajos, estado y orden), métodos y defensa reorganizados, borradores 4 y 5, y exportación del dossier a Word y LaTeX |
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
+| V0.18 | 05-11-2026 | Programa de escritorio | Icono propio de la aplicación (antes salía el genérico de Electron: `.gitignore` ignoraba `desktop/build/`); Electron 42 comprobado tras fusionar la PR #11 de Dependabot |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -641,6 +642,24 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.18 — Icono del programa de escritorio y comprobación de Electron 42 (05-11-2026)
+
+- **Qué se hizo:** el programa de escritorio tiene icono propio; antes los instaladores salían con el icono
+  genérico de Electron porque `build/` en `.gitignore` también ignoraba `desktop/build/icon.png`.
+- **Cambios:**
+  - `desktop/build/icon.png` (nuevo, 1024 × 1024 px, original: sección de testigo con láminas y bioturbaciones
+    sobre el color de la marca, #94500F). Lo usa `scripts/build.js` para Windows, macOS y Linux.
+  - `.gitignore`: excepción `!desktop/build/`.
+  - `DELIVERY` = V0.18.
+- **Por qué:** petición de Santiago de corregir los fallos vistos al revisar la PR #11 (Electron 33.2.1 → 42.11.16).
+- **Comprobación:** con Electron 42.11.16 (PR #11 fusionada) y con electron-builder 26.18.0 (PR #12–#14 de
+  Dependabot, aún sin fusionar): 64 pruebas JS y 15 Python (2 omitidas sin PyTorch); arranque de la app con
+  pantalla virtual, proyecto de entrenamiento (7 sondeos, imagen, trazas) y ONNX Runtime Web cargados sin
+  errores; AppImage y .deb de Linux generados con este icono, incluyendo `trainer.js`, `preload.js` y `python/`,
+  y el programa empaquetado arranca.
+- **Pendiente / no probado:** compilación en Windows y macOS (se hará al subir la etiqueta); fusionar la PR #12
+  (las #13 y #14 son idénticas y deberían cerrarse solas).
 
 ## V0.17 — Entrenamiento en el programa y rasgos de visión para icnotaxones (05-11-2026)
 
