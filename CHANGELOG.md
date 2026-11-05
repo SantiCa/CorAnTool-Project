@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.19 — 2026-11-05
+- Interface: hover help on almost every button, slider, checkbox and menu (Spanish/English), can be switched off in Help; tips-box buttons no longer show internal action names as tooltips.
+
 ## V0.18 — 2026-11-05
 - Desktop: own application icon (desktop/build/icon.png was git-ignored, so builds showed the default Electron icon); Electron 42 verified after Dependabot PR #11.
 

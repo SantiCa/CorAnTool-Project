@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.18';
+const DELIVERY = 'V0.19';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -3795,8 +3795,25 @@ function tipText(el) {
   if (v) { el.dataset.tip = v; el.removeAttribute('title'); if (!el.getAttribute('aria-label') && !el.textContent.trim()) el.setAttribute('aria-label', v); }
   return el.dataset.tip || '';
 }
+/* V0.19: automatic hover help. A control without its own tip shows t('h.<key>'): key = its data-i18n, the data-i18n of its label, or '#<id>'. */
+const TIP_CTL = 'button, select, input, textarea, summary, [role="tab"], label, .slider';
+let hoverHelp = true; try { hoverHelp = localStorage.getItem('ichantool.hoverHelp') !== '0'; } catch { /* storage blocked */ }
+function autoTip(el) {
+  const box = el.closest('label, .slider') || el, ctl = box.querySelector?.('input, select, textarea');
+  for (const k of [el.dataset.i18n, box.dataset.i18n, box.querySelector?.('[data-i18n]')?.dataset.i18n, el.id && '#' + el.id, ctl?.id && '#' + ctl.id]) {
+    if (!k) continue; const s = t('h.' + k); if (s !== 'h.' + k) return s;
+  }
+  return '';
+}
+/** Element whose tip applies at target: the nearest of an explicit tip and (if hover help is on) a control with automatic help. */
+function tipEl(target) {
+  const own = target.closest?.('[data-tip], [title]'), c = hoverHelp ? target.closest?.(TIP_CTL) : null;
+  const auto = c && !c.closest('.hovertip') && autoTip(c) ? c : null;
+  if (own && auto) return own.contains(auto) && auto !== own ? auto : own;
+  return own || auto;
+}
 function tipShowFor(el) {
-  const txt = tipText(el); if (!txt) return;
+  const txt = tipText(el) || (hoverHelp ? autoTip(el) : ''); if (!txt) return;
   hoverTip.textContent = txt; hoverTip.hidden = false;
   const r = el.getBoundingClientRect(), w = hoverTip.offsetWidth, h = hoverTip.offsetHeight;
   let x = Math.min(window.innerWidth - w - 8, Math.max(8, r.left + r.width / 2 - w / 2)), y = r.bottom + 8;
@@ -3805,7 +3822,7 @@ function tipShowFor(el) {
 }
 function tipHide() { clearTimeout(tipTimer); tipTarget = null; hoverTip.hidden = true; }
 document.addEventListener('pointerover', (e) => {
-  const el = e.target.closest?.('[data-tip], [title]');
+  const el = tipEl(e.target);
   if (el === tipTarget) return;
   tipHide(); if (!el || el.closest('.lgrsz.drag')) return;
   if (el.hasAttribute('title')) tipText(el);   // suppress the native tooltip at once
@@ -3813,7 +3830,7 @@ document.addEventListener('pointerover', (e) => {
 });
 document.addEventListener('pointerdown', tipHide, true);
 document.addEventListener('scroll', tipHide, true);
-document.addEventListener('focusin', (e) => { const el = e.target.closest?.('[data-tip], [title]'); tipHide(); if (el && el.matches(':focus-visible')) { tipTarget = el; tipShowFor(el); } });
+document.addEventListener('focusin', (e) => { const el = tipEl(e.target); tipHide(); if (el && el.matches(':focus-visible')) { tipTarget = el; tipShowFor(el); } });
 document.addEventListener('focusout', tipHide);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') tipHide(); });
 
@@ -4677,6 +4694,8 @@ async function openTutorial(withTour = true) {
 $('openTutorial').addEventListener('click', () => openTutorial(true));
 
 $('tourBtn').addEventListener('click', () => { $('help').close(); startTour(0); });
+$('hoverHelpToggle').checked = hoverHelp;
+$('hoverHelpToggle').addEventListener('change', (e) => { hoverHelp = e.target.checked; tipHide(); try { localStorage.setItem('ichantool.hoverHelp', hoverHelp ? '1' : '0'); } catch { /* storage blocked */ } });
 $('tipsToggle').addEventListener('change', (e) => { S.settings.tips = e.target.checked; markDirty(); updateTip(); });
 
 /* help card of the current tab */
@@ -4690,11 +4709,11 @@ function updateTip() {
   const box = $('tipCard'), on = S.settings.tips ?? S.kind === 'tutorial', ctx = tipContext();
   $('tipsToggle').checked = !!on;
   if (!on || !ctx || tourStep >= 0) { box.hidden = true; return; }
-  box.innerHTML = `<b>💡 ${t('tip.title')}</b><div>${t('tip.' + ctx)}</div><div class="row"><button class="btn small primary" data-tip="tour">${t('tip.tour')}</button><button class="btn small ghost" data-tip="hide">${t('tip.hide')}</button></div>`;
+  box.innerHTML = `<b>💡 ${t('tip.title')}</b><div>${t('tip.' + ctx)}</div><div class="row"><button class="btn small primary" data-tipact="tour">${t('tip.tour')}</button><button class="btn small ghost" data-tipact="hide">${t('tip.hide')}</button></div>`;
   box.hidden = false;
 }
 $('tipCard').addEventListener('click', (e) => {
-  const a = e.target.closest('[data-tip]')?.dataset.tip; if (!a) return;
+  const a = e.target.closest('[data-tipact]')?.dataset.tipact; if (!a) return;
   if (a === 'hide') { S.settings.tips = false; markDirty(); updateTip(); }
   else { const ctx = tipContext(), k = TOUR.findIndex((st) => st.ctx === ctx || (ctx && st.ctx && ctx.startsWith(st.ctx))); startTour(Math.max(0, k)); }
 });

@@ -52,6 +52,7 @@ La descripción detallada de los algoritmos está en
 | V30 | 05-11-2026 | Coordinación de desarrollo | Instrucciones de Codex, protocolo compartido con Claude y ámbitos de chat; etiqueta de entrega actualizada |
 | V31 | 05-11-2026 | Aplicación 2.1 y programa de escritorio | Recorte de imágenes al importar, triángulos Start/End, ocultar zonas excluidas en la columna, arranque limpio sin proyectos precargados, programa de escritorio para Windows, macOS y Linux con descargas en GitHub |
 | V0.18 | 05-11-2026 | Programa de escritorio | Icono propio de la aplicación (antes salía el genérico de Electron: `.gitignore` ignoraba `desktop/build/`); Electron 42 comprobado tras fusionar la PR #11 de Dependabot |
+| V0.19 | 05-11-2026 | Interfaz | Ayuda al pasar el ratón en casi todos los botones, deslizantes, casillas y menús (es/en), con opción para desactivarla |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -642,6 +643,26 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.19 — Ayuda al pasar el ratón por los controles (05-11-2026)
+
+- **Qué se hizo:** al pasar el ratón (o llegar con el teclado) por un botón, deslizante, casilla, menú o pestaña
+  aparece un mensaje que explica para qué sirve y, en los deslizantes, qué pasa al subir o bajar el valor.
+- **Cambios:**
+  - `app/js/i18n.js`: textos `h.<clave>` en español e inglés (unos 180 controles), donde `<clave>` es el
+    `data-i18n` del botón o de la etiqueta del control, o `#<id>` si no tiene etiqueta.
+  - `app/js/app.js`: `autoTip()` y `tipEl()` en el sistema de tooltips de V25; un control sin `title`/`data-tip`
+    propio muestra su texto `h.*`. Se usa el más cercano al cursor si hay uno propio en un contenedor.
+  - Ayuda: casilla «Mostrar ayuda al pasar el ratón por los controles» (`localStorage` `ichantool.hoverHelp`,
+    activada por defecto).
+  - Corregido: los botones del cuadro de consejos usaban `data-tip` como acción y mostraban «tour»/«hide» como
+    tooltip; ahora `data-tipact`.
+  - `DELIVERY` = V0.19.
+- **Por qué:** petición de Santiago para que el programa se entienda sin manual.
+- **Comprobación:** 64 pruebas JS superadas; versión offline generada y comprobada en Chrome sin pantalla
+  (deslizante de gamma, casillas, botones, campo de techo y casilla IDW muestran su texto).
+- **Pendiente / no probado:** controles creados dinámicamente con etiqueta sin `data-i18n` (formularios de
+  Figuras, interpolación, diálogos de clasificadores) siguen sin ayuda automática; revisar textos en uso real.
 
 ## V0.18 — Icono del programa de escritorio y comprobación de Electron 42 (05-11-2026)
 

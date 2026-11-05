@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.19, 05-11-2026 (Claude):** ayuda al pasar el ratón por los controles (`h.*` en `i18n.js`, `autoTip()` en `app.js`), desactivable en Ayuda. Faltan controles dinámicos de Figuras/interpolación/clasificadores.
+
 - **V0.18, 05-11-2026 (Claude):** icono del programa de escritorio (`desktop/build/icon.png`, ya no ignorado por `.gitignore`). Electron 42 (PR #11) comprobado; electron-builder 26.18.0 (PR #12–#14) probado en Linux, pendiente de fusionar. Falta probar Windows/macOS.
 
 - **V0.17, 05-11-2026 (Claude):** entrenamiento U-Net en el programa de escritorio (`desktop/trainer.js`), rasgos DINOv2 para icnotaxones (`app/js/vision.js`), guía y publicaciones. Falta probar el Electron empaquetado en Windows/macOS.
