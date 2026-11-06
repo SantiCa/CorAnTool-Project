@@ -3,8 +3,8 @@
 **Core Analysis Tool** — quantify bioturbation and ichnotaxa in sediment-core images and combine them with any other
 down-core record (geochemistry, foraminifera, TOC, colour, magnetic susceptibility…) in one project.
 
-CorAnTool started in 2019 as **IchAnTool**, a script that turned hand-segmented core images into bioturbation series
-(Casanova-Arenillas et al., 2020). It is now a desktop program (Windows, macOS, Linux) and a Python package
+CorAnTool started in 2019 as **IchAnTool**, a script that turned hand-segmented core images into bioturbation series.
+It is now a desktop program (Windows, macOS, Linux) and a Python package
 (import name `ichantool`).
 
 > Status: version **0.x** (in development). Version 1.0 will be released when the program is considered complete.
@@ -108,8 +108,10 @@ window, real proportions and editable labels and symbols.
 - **Comments** (💬 button): dated comments with author, linked to a point of a section, with replies, resolve and
   delete. Work by turns: there is no lock between users yet.
 
-The built-in **help** and guided tour explain each step. The *Examples and learning* section of the start screen
-has an idealised core, a public IODP test core and a training project.
+The built-in **help** and guided tour explain each step. The downloads (installers and offline file) carry **no
+sample data**: you open your own images and tables. The examples in `examples/` (idealised core, public IODP test core,
+synthetic geochemistry demo and training project) are only in the repository, for development and automatic tests;
+their buttons appear when the app is run from a copy of the repository.
 
 ---
 
@@ -198,11 +200,8 @@ legacy/             original v2.1 code (2019), unchanged
 
 ## Citing
 
-If you use CorAnTool, please cite (see also `CITATION.cff`):
-
-> Casanova-Arenillas, S., Rodríguez-Tovar, F.J., Martínez-Ruiz, F. (2020). Applied ichnology in sedimentary geology:
-> Python scripts as a method to automatize ichnofabric analysis in marine core images. *Computers & Geosciences*,
-> 136, 104407. https://doi.org/10.1016/j.cageo.2020.104407
+If you use CorAnTool, please cite the software (version used and repository); the citation data are in
+`CITATION.cff` (GitHub shows them under *Cite this repository*).
 
 ## License
 

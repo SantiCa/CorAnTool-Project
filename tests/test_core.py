@@ -65,7 +65,7 @@ def test_example_image_runs():
 
 
 def test_regression_against_published_v21_output():
-    """v3 must reproduce the v2.1 CSV used in Casanova-Arenillas et al. (2020)."""
+    """v3 must reproduce the reference CSV of v2.1 (legacy/v2.1_console)."""
     import pandas as pd
     legacy = pd.read_csv(Path(__file__).parents[1] / "legacy" / "v2.1_console" / "example_output.csv")
     new = analyze_image(EXAMPLE, 0, 500, bin_px=150).data.iloc[: len(legacy)]

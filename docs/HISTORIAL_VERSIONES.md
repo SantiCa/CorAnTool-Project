@@ -21,7 +21,7 @@ La descripción detallada de los algoritmos está en
 | V | Fecha | Componente y versión interna | Qué se hizo |
 |---|-------|------------------------------|-------------|
 | V1 | mayo–ago 2019 | Interfaz tkinter (`legacy/v2.1_gui`) | Primer programa con interfaz gráfica y herramientas auxiliares |
-| V2 | oct 2019 | Script de consola 2.1 (`legacy/v2.1_console`) | Versión usada en el artículo de 2020 |
+| V2 | oct 2019 | Script de consola 2.1 (`legacy/v2.1_console`) | Versión de referencia de los resultados |
 | V3 | 30-10-2026 | Paquete Python `ichantool` 3.0.0.dev0 | Reorganización como paquete profesional + carpeta de publicaciones |
 | V4 | 30-10-2026 | Aplicación web 0.1 (`app/`) | Aplicación en el navegador con detección, edición y aprendizaje |
 | V5 | 30-10-2026 | Documentación | Historial de versiones, documentación técnica y defensa de métodos |
@@ -83,6 +83,7 @@ La descripción detallada de los algoritmos está en
 | V0.47 | 06-11-2026 | Escritorio | Electron 45.2.1 y electron-builder 26.18.0 integrados; macOS 13+ e instaladores para prueba previa mediante Desktop builds sobre master |
 | V0.48 | 07-11-2026 | Preparación de release | Prueba real de Electron con cierre/reapertura, inferencia DINOv2 y fondos Esri; borrador de release con instaladores, HTML sin conexión, manifiesto y SHA-256; Zenodo aplazado |
 | V0.49 | 07-11-2026 | Validación | Prueba final con sondeos reservados (icnotaxones y multiproxy, registrada) y comparación automática web–V2 (exacta con la misma máscara; la diferencia de 0,56 puntos viene del decodificador JPEG, no de los pesos de gris) |
+| V0.50 | 07-11-2026 | Datos y repositorio | Descargas sin datos de ejemplo (solo la costa de Natural Earth); botones de ejemplo ocultos si faltan sus archivos; sin menciones a la tesis ni al artículo de la V2.1 fuera de `publications/` |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -129,8 +130,8 @@ Excel, sin pruebas automáticas.
 ## V2 — Script de consola 2.1 (octubre 2019)
 
 **Qué se hizo.** Script de 129 líneas (`IchAnTool.py`) que calcula el porcentaje de bioturbación
-y los índices BI e ii. Es la versión descrita en Casanova-Arenillas et al. (2020) y archivada en
-Zenodo (registro 3518837). Etiqueta `V2.1` en GitHub.
+y los índices BI e ii. Es la versión de referencia con la que se comprueba el análisis actual. Etiqueta
+`V2.1` en GitHub.
 
 **Cambios.**
 - Lee un JPG con la bioturbación pintada en negro.
@@ -674,6 +675,30 @@ la vez; se planifica aparte).
 
 ---
 
+## V0.50 — Descargas sin datos y repositorio sin menciones a publicaciones propias (07-11-2026)
+
+- **Qué se hizo:**
+  - Los instaladores y el archivo sin conexión ya no llevan datos de ejemplo (sondeo de prueba IODP, imagen
+    idealizada, demo multiproxy ni proyecto de aprendizaje). Solo se incluye la línea de costa de Natural Earth (dominio
+    público) que usan los mapas. Archivo sin conexión: de 7,0 a 2,3 MB.
+  - Los botones de ejemplo se ocultan si sus archivos no existen (en las descargas); desde una copia del repositorio
+    siguen visibles para el desarrollo y las pruebas.
+  - Quitadas las menciones a la tesis y al artículo de la V2.1 (cita preferida de `CITATION.cff`, README,
+    `pyproject.toml`, docstrings, textos de la app, documentación técnica, historial y CHANGELOG). La V2.1 queda como
+    «versión de referencia». Se mantienen las citas de métodos de la literatura (índices, realces, Bacon, kriging) y la
+    carpeta `publications/`, que se retirará más adelante.
+  - `legacy/README.md`: solo se cambia el texto de la mención, por petición expresa de Santiago (el código no se toca).
+- **Cambios:** `desktop/scripts/prepare.js`, `tools/build_standalone.py`, `app/js/app.js` (`assetExists`,
+  `hideMissingExamples`), `app/js/i18n.js`, `CITATION.cff`, `pyproject.toml`, `README.md`, `app/README.md`,
+  `src/ichantool/__init__.py`, `src/ichantool/indices.py`, pruebas (comentarios), `tools/make_v2_fixture.py`,
+  `legacy/README.md`, `CLAUDE.md`, documentación. `DELIVERY` = V0.50.
+- **Por qué:** petición de Santiago: el programa es de uso general; los datos los aporta cada usuario.
+- **Comprobación:** archivo sin conexión abierto fuera del repositorio → los cuatro botones de ejemplo ocultos; desde el
+  servidor del repositorio, visibles. Pruebas JS, Python y e2e correctas.
+- **Pendiente:** el historial de Git conserva los textos antiguos (no se reescribe). Los proyectos que aparecen en el
+  programa instalado son los guardados en el propio ordenador (carpeta de datos de la aplicación), no vienen en la
+  descarga.
+
 ## V0.49 — Prueba final con sondeos reservados y comparación automática web–V2 (07-11-2026)
 
 - **Qué se hizo:**
@@ -683,7 +708,7 @@ la vez; se planifica aparte).
   - **Prueba final** (Modelos → Entrenar; Multiproxy → Clasificadores): acierto, acierto equilibrado y n sobre las
     trazas o intervalos de los sondeos reservados, con confirmación y registro de cada repetición en el proyecto.
   - **Web–V2 automática:** prueba unitaria con la máscara decodificada por Pillow (coincidencia exacta con el CSV
-    publicado en 110 intervalos) y comprobación en Chrome dentro de la prueba de extremo a extremo (BI e ii iguales,
+    de referencia en 110 intervalos) y comprobación en Chrome dentro de la prueba de extremo a extremo (BI e ii iguales,
     diferencia ≤ 0,6 puntos).
   - **Corrección documental:** la diferencia de 0,56 puntos entre la web y la V2 se debe al decodificador JPEG del
     navegador, no a los pesos de gris (en esta imagen los dos criterios seleccionan los mismos píxeles).

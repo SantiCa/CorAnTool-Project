@@ -32,7 +32,7 @@ Start screen (all projects, table of all cores, multiproject map) â†’ project â†
    leave-one-core-out validation; maps by age window; the image core and its ichnological data can
    join the analysis and its classes are overlaid on the core log.
 
-The analysis reproduces the published v2.1 results (BI/ii identical on the example image).
+The analysis reproduces the v2.1 reference results (BI/ii identical on the example image).
 
 ## Run locally
 Any static server from the repository root, e.g.:

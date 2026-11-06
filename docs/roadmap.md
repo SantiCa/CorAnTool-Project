@@ -7,7 +7,7 @@
 - [x] Configurable index schemes (BI, ii)
 - [x] Depth -> age conversion
 - [x] CSV / Excel export
-- [x] Regression test against the published v2.1 results
+- [x] Regression test against the v2.1 reference results
 - [ ] Batch processing of folders and multi-section cores (splices, gaps)
 - [ ] LAS export for well-log software
 - [ ] Documentation site and example notebooks

@@ -1,7 +1,7 @@
 // V0.42: end-to-end check in a headless Chrome. Needs the repository served (python3 -m http.server 8765) and
 // puppeteer-core (npm i --no-save puppeteer-core@23). CHROME = path of Chrome (default /usr/bin/google-chrome).
 // Opens the IODP test core, detects, undoes, saves, reloads and compares; fails on any page error.
-// V0.49: also compares the web analysis of the idealized 2020 core (browser JPEG decoder) with the published V2.1 CSV.
+// V0.49: also compares the web analysis of the idealized core (browser JPEG decoder) with the V2.1 reference CSV.
 import puppeteer from 'puppeteer-core';
 
 const URL = process.env.APP_URL || 'http://localhost:8765/app/index.html';

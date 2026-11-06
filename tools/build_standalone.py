@@ -19,10 +19,9 @@ APP = ROOT / "app"
 ORDER = ["core.js", "edit.js", "imageproc.js", "learn.js", "unet.js", "vision.js", "log.js", "storage.js", "zip.js", "i18n.js", "geo.js", "locmap.js", "interp.js", "plot.js", "sheet.js", "exportio.js", "app.js"]
 EXAMPLES = ROOT / "examples"
 # Files the app loads with fetchAsset(path); embedded so the single file works offline.
-ASSETS = ["data/idealized_core_0-500cm.jpg"] + [f"U1385I-1H/web/397-U1385I-1H-{i}-A_50pxcm.jpg" for i in range(1, 7)] + [
-    "U1385I-1H/records/397-U1385I-1H_RSC_color.csv", "U1385I-1H/records/397-U1385I-1H_MS.csv",
-    "data/land-50m.json", "geochem_demo/demo_long.csv", "geochem_demo/intervals.csv"] + [f"tutorial/{f}" for f in (
-    "cores.csv", "catalogue.csv", "intervals_depth.csv", "intervals_age.csv", "age_models.csv", "tutorial_core.jpg", "tutorial_truth.json")]
+# V0.50: no sample data in the download (no test core, example images, demos nor tutorial): only the public-domain
+# coastline for the maps. The example buttons hide themselves when their files are missing.
+ASSETS = ["data/land-50m.json"]
 MIME = {".jpg": "image/jpeg", ".csv": "text/csv", ".json": "application/json", ".txt": "text/plain"}
 TOP_DECL = re.compile(r"^(?:export\s+)?(?:async\s+)?(?:function\*?|class|const|let|var)\s+([A-Za-z_$][\w$]*)", re.M)
 

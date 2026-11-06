@@ -2,7 +2,7 @@
 """V0.49: fixture for the automatic web–V2 comparison (tests/app/v2.test.mjs).
 
 Decodes examples/data/idealized_core_0-500cm.jpg with Pillow (as the Python package does) and stores the V2.1 mask
-(grey = 0.30 R + 0.56 G + 0.11 B ≤ 5, Casanova-Arenillas et al. 2020) run-length encoded
+(grey = 0.30 R + 0.56 G + 0.11 B ≤ 5, legacy/v2.1_console) run-length encoded
 (`[value, run, value, run, …]`, row-major, as core.js::rleDecode reads it). With this decoder the web app's criterion
 (L = 0.299 R + 0.587 G + 0.114 B < 6) selects exactly the same pixels, which the script checks.
 Run again only if the image changes.

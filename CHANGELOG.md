@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.50 — 2026-11-07
+- Downloads carry no sample data (only the public-domain Natural Earth coastline); example buttons hide when their files are missing. Mentions of the author's thesis and of the V2.1 article removed outside `publications/` (V2.1 is now the "reference version").
+
 ## V0.49 — 2026-11-07
 - Final test on reserved cores: marked cores never train nor take part in model selection (ichnotaxa and multiproxy); a logged final test reports accuracy and balanced accuracy on them. Automatic web–V2 comparison: exact with the same mask (unit test) and in Chrome within the end-to-end test; the 0.56-point difference comes from the JPEG decoder, not the grey weights (documentation corrected).
 
@@ -353,7 +356,7 @@ Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_
   enhancement, automatic detection, wand/brush/lasso/eraser/exclusion tools, ichnotaxon labelling
   with incremental learning, synced depth profile, BI/ii automatic and manual, CSV/PNG/JSON export,
   project save/load, Spanish/English interface.
-- Reproduces published v2.1 indices on the example image.
+- Reproduces the v2.1 reference indices on the example image.
 
 ## V3 — Python package 3.0.0.dev0 — 2026-10-30
 - Rewritten as an installable Python package (`src/ichantool`) with CLI and API.
@@ -365,4 +368,4 @@ Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_
 - Original code moved to `legacy/`.
 
 ## V1–V2 — 2019 (GUI, then console 2.1) — 2019-10-25
-- Console script used in Casanova-Arenillas et al. (2020) and tkinter GUI with auxiliary tools.
+- Console script and tkinter GUI with auxiliary tools.

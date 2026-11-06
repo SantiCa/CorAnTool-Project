@@ -25,7 +25,7 @@ class IndexScheme:
         return out
 
 
-# Tiers identical to IchAnTool v2.1 (Casanova-Arenillas et al., 2020).
+# Tiers identical to IchAnTool v2.1 (legacy/v2.1_console).
 BI_TAYLOR_GOLDRING = IndexScheme(
     name="BI",
     tiers=((0, 1, 0), (1, 5, 1), (5, 31, 2), (31, 61, 3), (61, 91, 4), (91, 100, 5), (100, 101, 6)),

@@ -1,4 +1,4 @@
-// V0.49: automatic comparison of the web analysis with the published V2.1 output (Casanova-Arenillas et al. 2020),
+// V0.49: automatic comparison of the web analysis with the reference output of V2.1 (legacy/v2.1_console),
 // as the Python package already does (tests/test_core.py). Mask decoded once with Pillow (tools/make_v2_fixture.py).
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +7,7 @@ import { rleDecode, rowCounts, binRows } from '../../app/js/core.js';
 import { parseTable } from '../../app/js/log.js';
 
 const R = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8');
-test('V0.49: web binning and indices reproduce the published V2.1 CSV exactly', () => {
+test('V0.49: web binning and indices reproduce the V2.1 reference CSV exactly', () => {
   const fx = JSON.parse(R('tests/app/fixtures/v2_idealized_masks.json'));
   const labels = rleDecode(fx.mask, fx.w * fx.h);
   const counts = rowCounts({ labels, width: fx.w, roi: { x0: 0, x1: fx.w, y0: 0, y1: fx.h }, exclude: null, effClass: [-1, 0], nClasses: 1 });

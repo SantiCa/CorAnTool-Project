@@ -21,7 +21,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.49';
+const DELIVERY = 'V0.50';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -31,6 +31,19 @@ async function fetchAsset(path) {
     try { const r = await fetch(u); if (r.ok) return r; } catch { /* next */ }
   }
   throw new Error('file not found: ' + path);
+}
+
+/** V0.50: whether an example file is available (the downloads carry no sample data; the repository does, for tests). */
+async function assetExists(path) {
+  if (window.ICHANTOOL_ASSETS?.[path]) return true;
+  for (const b of ASSET_BASES) { try { const r = await fetch(b + path, { method: 'HEAD' }); if (r.ok) return true; } catch { /* next */ } }
+  return false;
+}
+/** V0.50: example and demo buttons only where their files exist. */
+async function hideMissingExamples() {
+  for (const [id, path] of [['loadExample', 'data/idealized_core_0-500cm.jpg'], ['openTest', 'U1385I-1H/records/397-U1385I-1H_MS.csv'], ['geoDemo', 'geochem_demo/intervals.csv'], ['openTutorial', 'tutorial/cores.csv']]) {
+    const el = $(id); if (el && !(await assetExists(path))) el.hidden = true;
+  }
 }
 
 function defaultClasses() {
@@ -3036,7 +3049,7 @@ async function startup() {
   setSaveState(storageOK ? 'saved' : 'off');
   if (VIEW_ONLY) { await startWindow(); return; }
   if (storageOK) setTimeout(() => gcImages().catch(() => {}), 15000);   // V0.1: images of deleted sections
-  await loadPresets(); await initBackups(); setTimeout(() => checkBackupAge().catch(() => {}), 4000);
+  await loadPresets(); await initBackups(); setTimeout(() => checkBackupAge().catch(() => {}), 4000); hideMissingExamples().catch(() => {});
   const firstRun = storageOK && !(await listProjects().catch(() => [])).length;
   showHome();
   if (firstRun) { blankStart = true; return; }   // V31: clean start — the start screen invites to create or open a project (examples on demand)

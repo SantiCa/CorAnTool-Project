@@ -4,7 +4,7 @@ Versión del documento: V22 (31-10-2026). Componentes descritos: paquete Python 
 aplicación web 1.7.
 
 **Nombre (desde V16).** El programa pasa a llamarse **CorAnTool** (*Core Analysis Tool*): nació como
-IchAnTool (icnología, Casanova-Arenillas et al., 2020) y ahora analiza también registros multiproxy.
+IchAnTool (icnología) y ahora analiza también registros multiproxy.
 Por compatibilidad se mantienen el nombre del paquete Python (`ichantool`), las claves del
 almacenamiento del navegador (`ichantool*`) y la lectura de archivos con `app: 'IchAnTool'`; los
 nuevos archivos llevan `app: 'CorAnTool'` y la extensión `.corantool.json`.
@@ -49,7 +49,7 @@ El proyecto tiene dos implementaciones que comparten las mismas definiciones de 
 |------------|----------|-----|---------|
 | Paquete `ichantool` | Python (NumPy, Pillow, pandas) | Análisis por lotes, scripts, reproducibilidad | `src/ichantool/` |
 | Aplicación web | JavaScript (sin librerías, salvo UTIF para TIFF) | Trabajo interactivo: realce, detección, edición, etiquetado | `app/` |
-| Código original | Python 3.7 | Reproducir el artículo de 2020 | `legacy/` |
+| Código original | Python 3.7 | Referencia de la V2.1 | `legacy/` |
 
 Flujo de trabajo común:
 
@@ -173,7 +173,7 @@ datos de entrenamiento de la U-Net, figuras de trazas, clic) usa la traza superi
 
 Si un intervalo tiene menos de `minValid` (20 % por defecto) de sus píxeles válidos —es decir, `Σ V_r < minValid · N · anchura`— no tiene datos (V0.4): porcentajes, BI e ii quedan vacíos (nunca 0) y la columna lo dibuja como SIN DATOS. Opcionalmente (`noDataPad`, cm) se marcan también sin datos los intervalos de la misma sección que solapan con `[techo − pad, muro + pad]` de un intervalo sin datos. Solo en la aplicación web (el paquete Python no tiene capa de exclusión).
 
-### 3.3 Equivalencia con la versión publicada (V2)
+### 3.3 Equivalencia con la versión de referencia (V2.1)
 La V2 calculaba el porcentaje de cada fila y después la **media** de las filas del intervalo.
 Si todas las filas tienen el mismo número de píxeles válidos (sin exclusiones), la media de los
 porcentajes es igual al cociente de sumas de §3.2. Con exclusiones, el cociente de sumas es el
@@ -276,8 +276,7 @@ Implementación: `depth.py::depth_to_age` (Python) y `core.js::parseAgeModel, in
   - Python: `NaN`, o extrapolación lineal con la pendiente del primer o último tramo si
     `extrapolate=True`.
 
-**Para el revisor.** Es el mismo procedimiento usado en el artículo de 2020 para el testigo 977
-(modelo de Martrat et al., 2004). La incertidumbre del modelo de edad no se propaga; habría que
+**Para el revisor.** Es la interpolación lineal habitual entre puntos de control de edad. La incertidumbre del modelo de edad no se propaga; habría que
 hacerlo aparte.
 
 ---
@@ -877,12 +876,12 @@ Recuento en V0.49: **18 de Python** (16 se ejecutan; 2 se omiten si faltan `onnx
 prueba de extremo a extremo.
 - **Python (`tests/test_core.py`, `tests/test_unet.py`):** tramos de índices, porcentajes e intervalos en
   casos calculados a mano, último intervalo incompleto, multiclase por colores, gris y RGB,
-  profundidad y edad, imagen de ejemplo, línea de comandos, U-Net y **regresión frente al CSV publicado
+  profundidad y edad, imagen de ejemplo, línea de comandos, U-Net y **regresión frente al CSV de referencia
   de la V2** (coincidencia exacta en profundidad, porcentaje, BI e ii).
 - **Web–V2 automática (V0.49):** `tests/app/v2.test.mjs` aplica `rowCounts` y `binRows` de la web a la máscara de la
   imagen idealizada decodificada con Pillow (`tests/app/fixtures/v2_idealized_masks.json`, RLE de 247 kB generado por
   `tools/make_v2_fixture.py`, que comprueba además que los dos criterios de gris dan la misma máscara) y exige
-  coincidencia exacta con el CSV publicado (110 intervalos: profundidad y porcentaje con diferencia < 10⁻⁹, BI e ii
+  coincidencia exacta con el CSV de referencia (110 intervalos: profundidad y porcentaje con diferencia < 10⁻⁹, BI e ii
   iguales). La prueba de extremo a extremo repite la comparación con el decodificador de Chrome (umbral `L < 6`):
   BI e ii iguales en todos los intervalos y diferencia máxima de porcentaje ≤ 0,6 puntos (0,56 medida).
 - **Web (`tests/app/*.test.mjs`):** `core` 13 (mismos casos de índices e intervalos que en Python,
@@ -899,8 +898,8 @@ prueba de extremo a extremo.
   píxeles por sección; falla con cualquier error de la página. Se ejecuta en el CI.
 - Se ejecutan automáticamente en GitHub en cada cambio (`.github/workflows/tests.yml`).
 
-### 13.2 Comparación de la aplicación web con la V2 publicada
-- Imagen idealizada del artículo de 2020 (620 × 16 726 px, 0–500 cm), intervalos de 150 px,
+### 13.2 Comparación de la aplicación web con la V2.1 de referencia
+- Imagen idealizada de referencia (620 × 16 726 px, 0–500 cm), intervalos de 150 px,
   110 intervalos comparados.
 
 | Medida | Resultado |
@@ -1766,8 +1765,12 @@ lista de gráficos (`plots`, `plotCur`).
 - **Arranque limpio:** ningún proyecto precargado; nada se guarda hasta crear, importar o abrir un proyecto. El proyecto de
   los datos privados solo se abre con su botón y solo donde existen sus datos privados; el archivo sin conexión ya no los incluye
   salvo con una opción retirada.
-- **Programa de escritorio** (`desktop/`, Electron 45.2.1 y electron-builder 26.18.0 desde V0.47): sirve `app/` y los ejemplos públicos por el esquema `app://`
-  (sin datos privados (retirados)); límite de memoria de JavaScript = 75 % de la RAM entre 2 y 32 GB
+- **Descargas sin datos (V0.50):** ni los instaladores ni el archivo sin conexión llevan datos de ejemplo (sondeo de
+  prueba IODP, imagen idealizada, demo multiproxy ni proyecto de aprendizaje); solo `examples/data/land-50m.json`
+  (costa de dominio público). Los botones de ejemplo comprueban si su archivo existe (`assetExists`, petición HEAD o
+  recurso incrustado) y se ocultan si no. Los ejemplos siguen en el repositorio para el desarrollo y las pruebas.
+- **Programa de escritorio** (`desktop/`, Electron 45.2.1 y electron-builder 26.18.0 desde V0.47): sirve `app/` por el esquema `app://`
+  (desde V0.50 sin ningún dato de ejemplo: solo la línea de costa de Natural Earth para los mapas); límite de memoria de JavaScript = 75 % de la RAM entre 2 y 32 GB
   (`--max-old-space-size`), aunque Electron limita cada ventana a unos 4 GB de objetos JavaScript (compresión de punteros);
   las imágenes (ArrayBuffer) quedan fuera de ese límite y, por encima de la RAM, el sistema pagina a disco. Los proyectos se
   guardan en IndexedDB dentro de la carpeta de datos del programa, con almacenamiento persistente. Versión del ejecutable =
@@ -1933,9 +1936,6 @@ proyecto con latitud y longitud.
 
 ## 23. Referencias
 
-- Casanova-Arenillas, S., Rodríguez-Tovar, F.J., Martínez-Ruiz, F. (2020). Applied ichnology in
-  sedimentary geology: Python scripts as a method to automatize ichnofabric analysis in marine core
-  images. *Computers & Geosciences* 136, 104407. https://doi.org/10.1016/j.cageo.2020.104407
 - Cressie, N. (1985). Fitting variogram models by weighted least squares. *Mathematical Geology*, 17,
   563–586.
 - Dorador, J., Rodríguez-Tovar, F.J. (2014). Quantitative estimation of bioturbation based on

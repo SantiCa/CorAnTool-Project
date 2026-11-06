@@ -45,6 +45,7 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.50, 07-11-2026 (Claude):** descargas sin datos de ejemplo; sin menciones a la tesis ni al artículo de la V2.1 fuera de `publications/`.
 - **V0.49, 07-11-2026 (Claude):** prueba final con sondeos reservados y comparación automática web–V2 (corrige la causa de la diferencia de 0,56 puntos: decodificador JPEG).
 - **V0.48, 07-11-2026 (Codex):** preparación de release mediante `Desktop builds` manual en `master`
   con `draft_release=true`: borrador con cinco instaladores, HTML sin conexión, manifiesto del commit y

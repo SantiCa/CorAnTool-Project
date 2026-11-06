@@ -17,7 +17,7 @@ Every delivery that changes code, algorithms, defaults or files must, in the sam
 - Current state, how to run and pending work: `docs/TRASPASO_CLAUDE_CODE.md`.
 
 ## Desktop
-- `desktop/` (Electron) packages `app/` and the public examples. `npm start` to try it, `npm run dist` to build for the current OS.
+- `desktop/` (Electron) packages `app/` and only the Natural Earth coastline (no sample data in any download since V0.50). `npm start` to try it, `npm run dist` to build for the current OS.
 
 ## Git
 - Work on `master` (the main branch); commit each delivery there.
