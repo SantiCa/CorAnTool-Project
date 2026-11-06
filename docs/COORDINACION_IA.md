@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.36, 06-11-2026 (Claude):** datos seguros (auditoría §1). Siguen V0.37–V0.42 (resto de la auditoría) y V0.43 (mapa de localización).
+
 - **V0.35, 06-11-2026 (Claude):** Datos como hoja de cálculo editable con trazabilidad y columnas calculadas.
 
 - **V0.34, 06-11-2026 (Claude):** colorear por familia; intervalos sin solape y unión de contiguos.

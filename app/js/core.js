@@ -206,6 +206,14 @@ export function rleEncode(arr) {
   return out;
 }
 
+/** V0.36: an RLE mask is valid when its runs are non-negative integers that add up to exactly n pixels. */
+export function rleValid(rle, n) {
+  if (!Array.isArray(rle) && !ArrayBuffer.isView(rle)) return false;
+  if (rle.length % 2) return false;
+  let p = 0; for (let k = 1; k < rle.length; k += 2) { const r = rle[k]; if (!(r >= 0) || r !== Math.floor(r)) return false; p += r; }
+  return p === n;
+}
+
 export function rleDecode(rle, n, Type = Int32Array) {
   const out = new Type(n);
   let p = 0;

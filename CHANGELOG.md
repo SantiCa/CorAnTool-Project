@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.36 — 2026-11-06
+- Safer data (audit §1): project format 5, newer files open read-only; RLE masks validated on import/open; a failed load saves nothing; pending changes saved on page hide/close; provenance header in every CSV; replacing on import keeps the local copy; daily backup history rotated; storage quota warning; uncaught errors shown; one-step undo after class merges. Fixed an empty project with no id being saved on first start.
+
 ## V0.35 — 2026-11-06
 - Data is now a spreadsheet: every value can be edited (with a warning); edited cells are flagged, keep the original and date, can be restored and are listed in the CSV. Computed columns from formulas (with linear interpolation between records measured at different depths) and manual columns are added inline.
 

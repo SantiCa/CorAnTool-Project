@@ -1826,3 +1826,21 @@ Object.assign(D.en, {
 });
 Object.assign(D.es, { 'ds.interp': 'Interpolar las columnas usadas a la profundidad de cada fila (lineal, sin extrapolar; necesario si se midieron a profundidades distintas)' });
 Object.assign(D.en, { 'ds.interp': 'Interpolate the columns used to the depth of each row (linear, no extrapolation; needed when they were measured at different depths)' });
+
+// V0.36: data safety
+Object.assign(D.es, {
+  'fig.keepRatio': 'Mantener las proporciones de la foto', 'fig.ratioNote': 'Alto/ancho del testigo: {r}', 'geo.cancel': 'Cancelar',
+  'load.failed': 'No se ha podido abrir el proyecto: {e}. No se ha guardado nada encima de la copia guardada.',
+  'load.badMask': 'la máscara «{k}» de la sección «{s}» está dañada',
+  'load.newer': 'Este proyecto se guardó con una versión más nueva ({v}). Se abre solo para consultar: los cambios no se guardarán. Actualiza CorAnTool para editarlo.',
+  'bk.previous': 'anterior', 'err.generic': 'Error: {e}',
+  'quota.use': 'Almacenamiento del navegador: {u} MB de {q} MB ({p} %)', 'quota.high': 'El almacenamiento del navegador está al {p} %. Exporta o borra proyectos que no uses para evitar perder cambios.',
+});
+Object.assign(D.en, {
+  'fig.keepRatio': 'Keep the photo proportions', 'fig.ratioNote': 'Core height/width: {r}', 'geo.cancel': 'Cancel',
+  'load.failed': 'The project could not be opened: {e}. Nothing was saved over the stored copy.',
+  'load.badMask': 'the «{k}» mask of section «{s}» is damaged',
+  'load.newer': 'This project was saved with a newer version ({v}). It opens read-only: changes will not be saved. Update CorAnTool to edit it.',
+  'bk.previous': 'previous', 'err.generic': 'Error: {e}',
+  'quota.use': 'Browser storage: {u} MB of {q} MB ({p} %)', 'quota.high': 'Browser storage is {p} % full. Export or delete projects you do not use to avoid losing changes.',
+});

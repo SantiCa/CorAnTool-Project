@@ -99,3 +99,9 @@ test('V0.28: age model with range and Bacon table', async () => {
   assert.deepEqual(baconToAgeText(bac, { center: 'mean', depthUnit: 'cm', ageDiv: 1 })[1], '100, 10100, 9000, 11000');
   assert.equal(baconToAgeText('a,b\n1,2'), null);
 });
+
+test('V0.36: RLE validation', async () => {
+  const { rleValid, rleEncode } = await import('../../app/js/core.js');
+  assert.ok(rleValid(rleEncode(new Int32Array([0, 0, 3, 3, 3])), 5));
+  assert.ok(!rleValid([0, 4], 5)); assert.ok(!rleValid([0, 2, 1], 3)); assert.ok(!rleValid([0, -1, 1, 6], 5)); assert.ok(!rleValid(null, 1));
+});

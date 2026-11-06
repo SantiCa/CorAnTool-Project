@@ -821,6 +821,18 @@ entonces valores negativos. Los proyectos sin `stacks` se abren igual.
 **RLE (codificación por longitud de series):** `[valor, repeticiones, valor, repeticiones, …]`.
 Reduce mucho el tamaño de las máscaras, que tienen grandes zonas iguales.
 
+**Formato 5 (V0.36).** Los proyectos se guardan con `version: 5` (el 5 marca las `stacks` de V0.20). Un archivo con
+`version` mayor que la del programa se abre **en solo lectura**: se avisa y no se guarda nada (ni en la biblioteca
+ni en la copia automática). Al importar y al abrir se comprueba que cada RLE de `labels` y `exclude` tenga longitud
+par, repeticiones enteras no negativas y sume exactamente `w × h` (`core.js::rleValid`); si no, el archivo se rechaza
+y la copia guardada no se toca.
+
+**Procedencia de los CSV (V0.36).** Todos los CSV exportados (bioturbación, objetos, registro, intervalos, mapa,
+clasificación, figuras, datos) empiezan con líneas `#`:
+`# CorAnTool <entrega> (format 5) · <fecha ISO> · <proyecto>` y
+`# settings: binCm=…; minValid=…; includePred=…; predThr=…; countCandidates=…; detection=…; age model=…`.
+Los lectores de CorAnTool y del paquete Python ya ignoran las líneas que empiezan por `#`.
+
 ---
 
 ## 13. Validación realizada
@@ -992,6 +1004,14 @@ Implementación: `storage.js` y `app.js` (bloque *projects*).
   pasan al almacén `images`.
 - Si el navegador no permite almacenamiento (ventana privada o datos bloqueados), la aplicación lo
   indica y hay que exportar el proyecto a mano.
+- **Seguridad del guardado (V0.36):** el guardado no se ejecuta durante una carga ni sobre un proyecto en solo
+  lectura, y abrir otro proyecto cancela el guardado pendiente del anterior. Si la carga falla a mitad, el estado se
+  vacía, no se guarda nada y se avisa. El estado inicial (antes de arrancar, sin id ni sondeos) nunca se guarda: antes
+  podía quedar un proyecto vacío sin identificador en el primer arranque. Al ocultar o cerrar la página se guarda lo
+  pendiente (`visibilitychange`, `pagehide`); en el escritorio, cerrar con cambios espera a terminar el guardado.
+  Cada 10 guardados se mira la cuota (`navigator.storage.estimate`) y se avisa por encima del 80 %.
+- **Errores (V0.36):** los errores no capturados y los de las operaciones largas (`busy`) se muestran en un aviso
+  (como mucho uno cada 5 s) en lugar de perderse en la consola.
 
 ---
 
@@ -1098,7 +1118,8 @@ ajuste.
 En la carpeta automática se escriben:
 - `<proyecto>__<id>.ichantool.json`: estado actual de cada proyecto;
 - `historial/<proyecto>__<id>__AAAA-MM-DD.ichantool.json`: última versión de cada día, para volver
-  a un día anterior si algo se estropea;
+  a un día anterior si algo se estropea. Desde V0.36 se conservan las 30 copias diarias más recientes de cada
+  proyecto y, de las anteriores, la primera de cada mes durante 12 meses; el resto se borra;
 - `ichantool_ajustes.json`: ajustes propios.
 
 El identificador de la carpeta se guarda en IndexedDB. El navegador pide confirmar el permiso en cada
@@ -1113,8 +1134,9 @@ sesión, con el botón «Reactivar copia automática».
 - vista del registro.
 
 **Restauración:** «Importar archivo…» acepta varios archivos de proyecto, copias completas o archivos
-de ajustes. Si un proyecto ya existe con el mismo identificador, se importa como copia
-(«restaurado») sin sobrescribir.
+de ajustes. Si un proyecto ya existe con el mismo identificador, se pregunta si reemplazarlo o importarlo como
+copia («restaurado»). Desde V0.36, al reemplazar, la versión local se guarda antes como copia
+«<nombre> (anterior <fecha>)».
 
 ---
 

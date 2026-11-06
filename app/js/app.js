@@ -1,5 +1,5 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
-import { interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
+import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
 import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.35';
+const DELIVERY = 'V0.36';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -460,6 +460,11 @@ function commitOp(op, force = false) {
 
 function undo() {
   const op = S.undo.pop(); if (!op) return;
+  // V0.36: steps made together (e.g. assigning a class that joins traces of the same ichnotaxon) are undone together
+  if (op.group && S.undo[S.undo.length - 1]?.group === op.group) { undoOne(op); undo(); return; }
+  undoOne(op);
+}
+function undoOne(op) {
   const s = op.s;
   for (let k = op.lm.length - 2; k >= 0; k -= 2) s.labels[op.lm[k]] = op.lm[k + 1];
   for (let k = op.ex.length - 2; k >= 0; k -= 2) s.exclude[op.ex[k]] = op.ex[k + 1];
@@ -510,8 +515,10 @@ function assignClassMany(ids, clsId) {
   const objs = ids.map((id) => s.objects.get(id)).filter(Boolean); if (!objs.length) return;
   const op = beginOp(s);
   for (const o of objs) { o.cls = clsId; o.pred = null; o.conf = 0; }
+  const grp = op.group = uid();   // V0.36
   commitOp(op, true); afterChange(s);
-  mergeSameTaxon(s, objs.map((o) => o.id));   // V0.30
+  const n0 = S.undo.length; mergeSameTaxon(s, objs.map((o) => o.id));   // V0.30
+  for (let k = n0; k < S.undo.length; k++) S.undo[k].group = grp;
   if (objs.length === 1 && $('autoNext').checked) nextReview();
 }
 /** Objects selected now: the multi-selection if any, else the single selected object. */
@@ -688,7 +695,7 @@ if (DESK) DESK.onEvent((type, d) => {
   if (type === 'log') { TR.log.push(d); if (TR.log.length > 300) TR.log.splice(0, TR.log.length - 300); }
   else if (type === 'progress') TR.prog = d;
   else if (type === 'state') TR.running = !!d.busy;
-  else if (type === 'done') { TR.last = d; trainDone(d).catch(() => {}); }
+  else if (type === 'done') { TR.last = d; trainDone(d).catch((err) => toast(t('err.generic', { e: err?.message || String(err) }), 8000)); }
   if ($('trainDlg')?.open) renderTrain();
 });
 async function trainDone(d) {
@@ -2283,7 +2290,7 @@ $('expCSV').addEventListener('click', () => {
     for (const b of s.bins) rows.push([s.name, b.dTop, b.dBottom, b.depth, s.units, b.age, ...(rng ? [b.ageMin, b.ageMax] : []), S.age.model ? S.age.units : null, b.valid, b.pct, ...counted.map(([, k]) => b.classPct[k]), b.BI, b.ii, b.BIm, b.iim]);
   }
   analyze(sec());
-  saveFile(`${safe(S.name)}_bioturbation.csv`, toCSV(rows), 'text/csv');
+  saveFile(`${safe(S.name)}_bioturbation.csv`, withProv(toCSV(rows)), 'text/csv');
 });
 
 $('expObjects').addEventListener('click', () => {
@@ -2296,7 +2303,7 @@ $('expObjects').addEventListener('click', () => {
         f.areaCm2, f.majorCm, f.minorCm, f.elong, f.vert, f.compact, f.meanL, f.contrast, eff[o.id] >= 0 ? 1 : 0]);
     }
   }
-  saveFile(`${safe(S.name)}_objects.csv`, toCSV(rows), 'text/csv');
+  saveFile(`${safe(S.name)}_objects.csv`, withProv(toCSV(rows)), 'text/csv');
 });
 
 $('expMask').addEventListener('click', () => {
@@ -2566,7 +2573,7 @@ function serSection(s) {
 function serialize() {
   const { cores: _c, ...geo } = S.geo;
   return {
-    app: APP, kind: 'project', version: 4, appVersion: VERSION, delivery: DELIVERY, saved: new Date().toISOString(),
+    app: APP, kind: 'project', version: FORMAT_VERSION, appVersion: VERSION, delivery: DELIVERY, saved: new Date().toISOString(),
     id: S.id, name: S.name, notes: S.notes, comments: S.comments || [], classes: S.classes, active: S.active, settings: S.settings, library: S.library,
     projectKind: S.kind || 'normal', multiSource: S.multiSource || null, models: projectModels(),
     geo, sheet: S.sheet, fig: S.fig, curCore: S.curCore, plots: S.plots || [], plotCur: S.plotCur || 0,
@@ -2588,6 +2595,8 @@ async function loadSection(q) {
     const tmp = mk(newSection({ name: q.name, file, w: 1, h: 1, orig: null, ds: q.ds || 1 }));
     const r = await decodeWorking(tmp, q.ds || 1); ({ w, h } = r); orig = r.rgba;
   }
+  // V0.36: a damaged mask stops the load instead of being saved over the good copy
+  for (const k of ['labels', 'exclude']) if (q[k] != null && !rleValid(q[k], w * h)) throw new Error(t('load.badMask', { s: q.name || '?', k }));
   const s = mk(newSection({ name: q.name, file, w, h, orig, ds: q.ds || 1, full: q.full || null, labels: { rle: q.labels }, exclude: { rle: q.exclude } }));
   if (q.stacks) { s.stacks = compactStacks(q.labels, q.stacks, 2); s._six = null; }   // V0.20: overlaps (RLE values renumbered before first unpack)
   const ppu = pxPerCm(s);
@@ -2605,6 +2614,9 @@ async function loadSection(q) {
 let loadMigrated = false;
 
 /** v1/v2 files → v3 structure: the images become one core; the geochemistry cores become further cores. */
+/* V0.36: version 5 = trace overlaps (stacks, V0.20), cell edits (V0.35). A newer file opens read-only. */
+const FORMAT_VERSION = 5;
+let readOnlyProject = false;
 function upgradeProject(p) {
   if (p.version >= 3) return p;
   const geo = p.geo || {}, old = geo.cores || [], main = old.find((c) => c.id === 'main');
@@ -2621,7 +2633,8 @@ function upgradeProject(p) {
 
 async function loadProject(p) {
   blankStart = false;
-  resetState(); loading = true; loadMigrated = false;
+  resetState(); loading = true; loadMigrated = false; clearTimeout(saveTimer);
+  readOnlyProject = (p?.version || 0) > FORMAT_VERSION;   // V0.36: written by a newer CorAnTool
   try {
     p = upgradeProject(p);
     S.id = p.id || uid(); S.name = p.name || APP; S.notes = p.notes || ''; S.comments = p.comments || [];
@@ -2643,7 +2656,14 @@ async function loadProject(p) {
       if (p.settings?.binCm == null) S.settings.binCm = s0 ? S.settings.binPx / pxPerCm(s0) : 1;
       delete S.settings.binPx;
     }
+  } catch (err) {
+    // V0.36: a failed load never leaves a half-built project that the autosave would write over the stored one
+    console.error(err); loading = false; clearTimeout(saveTimer);
+    resetState(); blankStart = true; dirty = false; readOnlyProject = false; setSaveState('off');
+    toast(t('load.failed', { e: err?.message || String(err) }), 9000);
+    return false;
   } finally { loading = false; }
+  if (readOnlyProject) setTimeout(() => { setSaveState('off'); toast(t('load.newer', { v: p.delivery || p.version }), 10000); }, 300);
   const cur = S.cores.find((c) => c.id === p.curCore) || S.cores[0];
   activateCore(cur.id, true);
   syncSettingsForm(); learnNow(); updateProjHeader(); refreshOtherExamples(); setTimeout(updateTip, 0);
@@ -2656,7 +2676,7 @@ async function loadProject(p) {
 }
 
 function resetState() {
-  blankStart = false;
+  blankStart = false; clearTimeout(saveTimer);   // V0.36: a pending save of the previous project must not run afterwards
   const maxMP = S.settings.maxMP || 8;
   S.id = uid(); S.name = t('proj.untitled'); S.notes = ''; S.comments = [];
   MEM.px.length = 0; MEM.mask.length = 0; pxWanted.clear();   // V0.1: pictures of the previous project can be freed
@@ -2679,7 +2699,7 @@ function markDirty() {
   if (loading || VIEW_ONLY) return;
   blankStart = false;   // V0.2: work started without creating a project is saved as a new project
   scheduleFloat();
-  dirty = true; setSaveState(storageOK ? 'dirty' : 'off');
+  dirty = true; setSaveState(storageOK && !readOnlyProject ? 'dirty' : 'off');
   clearTimeout(saveTimer); if (storageOK) saveTimer = setTimeout(saveToDB, 1500);
 }
 
@@ -2687,7 +2707,8 @@ let savePromise = null;
 /** Save the open project; saves never overlap (a new save waits for the one in progress). */
 let blankStart = true;   // V31: nothing is saved until the user creates or opens a project
 async function saveToDB() {
-  if (blankStart) return;
+  if (blankStart || loading || readOnlyProject) return;   // V0.36: never during a load nor over a file of a newer version
+  if (!S.id || !S.cores.length) return;   // V0.36: the initial state (before startup) is not a project
   if (!storageOK) return;
   clearTimeout(saveTimer);
   if (savePromise) { await savePromise.catch(() => {}); if (!dirty && !savePromise) return; }
@@ -2698,6 +2719,7 @@ async function saveToDB() {
       await putProject(projectMeta(), serialize());
       try { await putLite(S.id, liteSnapshot()); } catch { /* lite index is optional */ }
       broadcast({ type: 'saved', id: S.id });
+      if (saveCount++ % 10 === 0) checkQuota();   // V0.36
       try { localStorage.setItem('ichantool.last', S.id); } catch { /* storage blocked */ }
       setSaveState(dirty ? 'dirty' : 'saved'); scheduleBackup();
     } catch (e) {
@@ -2707,7 +2729,35 @@ async function saveToDB() {
   })();
   try { await savePromise; } finally { savePromise = null; }
 }
+/** V0.36: the daily copies are kept for 30 days; older ones only the first of each month, for 12 months. */
+async function rotateHistory(hist) {
+  const names = []; for await (const [name, h] of hist.entries()) if (h.kind === 'file' && /^\d{4}-\d{2}-\d{2}\.json$/.test(name)) names.push(name);
+  names.sort().reverse();   // newest first
+  const keep = new Set(names.slice(0, 30)), months = [];
+  for (const n of [...names.slice(30)].reverse()) { const mo = n.slice(0, 7); if (!months.some((x) => x.mo === mo)) months.push({ mo, n }); }   // first copy of each older month
+  for (const { n } of months.sort((a, b) => b.mo.localeCompare(a.mo)).slice(0, 12)) keep.add(n);
+  for (const n of names) if (!keep.has(n)) await hist.removeEntry(n);
+}
+/** V0.36: warn when the browser storage is almost full (once per session). */
+let quotaWarned = false;
+async function checkQuota() {
+  try {
+    const e = await navigator.storage?.estimate?.(); if (!e?.quota) return;
+    const f = e.usage / e.quota; $('saveState').title = t('quota.use', { u: (e.usage / 1e6).toFixed(0), q: (e.quota / 1e6).toFixed(0), p: (f * 100).toFixed(0) });
+    if (f > 0.8 && !quotaWarned) { quotaWarned = true; toast(t('quota.high', { p: (f * 100).toFixed(0) }), 10000); }
+  } catch { /* not available */ }
+}
+let saveCount = 0;
 async function flushSave() { if (dirty) await saveToDB(); if (backupPending) await backupNow(); }
+/* V0.36: do not lose the last changes when the page or the program is closed */
+let closeOK = false;
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && dirty) saveToDB(); });
+window.addEventListener('pagehide', () => { if (dirty) saveToDB(); });
+window.addEventListener('beforeunload', (e) => {
+  if (!dirty || closeOK || readOnlyProject || blankStart) return;
+  e.preventDefault(); e.returnValue = '';
+  if (window.corantoolDesktop) flushSave().finally(() => { closeOK = true; window.close(); });   // desktop: save, then close
+});
 
 function updateProjHeader() {
   $('projName').textContent = S.name;
@@ -2968,7 +3018,9 @@ async function writeProjectFolder(root, d) {
   }
   const text = JSON.stringify(e.json);
   await writeText(dir, 'project.json', text);
-  await writeText(await dir.getDirectoryHandle('historial', { create: true }), `${today()}.json`, text);
+  const hist = await dir.getDirectoryHandle('historial', { create: true });
+  await writeText(hist, `${today()}.json`, text);
+  await rotateHistory(hist).catch(() => { /* rotation is best effort */ });
 }
 /** Open a project folder written by writeProjectFolder (or its parent with several projects). */
 async function openProjectFolder() {
@@ -3055,14 +3107,21 @@ async function restoreFolders(list) {
   return restoreFiles(files);
 }
 async function restoreFiles(files) {
-  let nProj = 0, nPre = 0, lastLoaded = null;
+  let nProj = 0, nPre = 0, lastLoaded = null, rejected = 0;
   const existing = storageOK ? new Set((await listProjects()).map((m) => m.id)) : new Set();
   const addProject = async (p, getBlob = null) => {
+    for (const c of p.cores || [{ sections: p.sections }]) for (const q of c.sections || [])   // V0.36: a damaged file is not stored
+      for (const k of ['labels', 'exclude']) if (q.w && q.h && q[k] != null && !rleValid(q[k], q.w * q.h)) { rejected++; toast(t('load.failed', { e: t('load.badMask', { s: q.name || '?', k }) }), 9000); return; }
     if (p.id && existing.has(p.id)) {   // V0.8: the same project (work by turns): replace the local version or keep both
       const m = await getMeta(p.id).catch(() => null);
       if (confirm(t('bk.replaceAsk', { n: p.name || APP, a: m?.updated ? new Date(m.updated).toLocaleString() : '?', b: p.saved ? new Date(p.saved).toLocaleString() : '?' }))) {
         if (p.id === S.id) { clearTimeout(saveTimer); dirty = false; }
-        const mine = p.id === S.id ? S.comments : (await getProject(p.id).catch(() => null))?.comments;
+        const old = await getProject(p.id).catch(() => null);
+        if (old && storageOK) {   // V0.36: the local version is kept as a copy before it is replaced
+          const id2 = uid(), name2 = `${old.name || APP} (${t('bk.previous')} ${new Date(m?.updated || Date.now()).toLocaleDateString()})`;
+          await putProject({ ...(m || {}), id: id2, name: name2, updated: Date.now() }, { ...old, id: id2, name: name2 });
+        }
+        const mine = p.id === S.id ? S.comments : old?.comments;
         p.comments = mergeComments(mine || [], p.comments || []);   // comments of both versions are kept
       }
       else { p.id = uid(); p.name = `${p.name || APP} (${t('bk.restored')})`; }
@@ -3097,8 +3156,8 @@ async function restoreFiles(files) {
       else if (p.kind === 'settings') nPre += mergePresets(p.presets);
     } catch (e) { console.error(e); toast(t('err.import', { f: f.name, m: e?.message || e?.name || String(e) })); continue; }
   }
-  if (lastLoaded) { if (lastLoaded.id !== S.id) await flushSave(); await loadProject(lastLoaded); if (!storageOK) dirty = true; }
-  toast(t('bk.restoredN', { p: nProj, s: nPre }));
+  if (lastLoaded) { if (lastLoaded.id !== S.id) await flushSave(); if ((await loadProject(lastLoaded)) === false) return; if (!storageOK) dirty = true; }   // V0.36: keep the load error visible
+  if (nProj || nPre || !rejected) toast(t('bk.restoredN', { p: nProj, s: nPre }));
 }
 
 /* ───────────── composite log ───────────── */
@@ -3465,7 +3524,7 @@ $('logAll').addEventListener('click', () => { S.logView.from = S.logView.to = nu
 $('logSVGBtn').addEventListener('click', () => { if (lastLog) saveFile(`${safe(S.name)}_registro.svg`, lastLog.svg, 'image/svg+xml'); });
 $('logCSVBtn').addEventListener('click', () => {
   if (!lastLog) return;
-  saveFile(`${safe(S.name)}_registro.csv`, windowCSV({ rows: lastLog.rows, from: lastLog.from, to: lastLog.to, classes: lastLog.classes, records: lastLog.records, units: lastLog.base, ageUnits: S.age.units }), 'text/csv');
+  saveFile(`${safe(S.name)}_registro.csv`, withProv(windowCSV({ rows: lastLog.rows, from: lastLog.from, to: lastLog.to, classes: lastLog.classes, records: lastLog.records, units: lastLog.base, ageUnits: S.age.units })), 'text/csv');
 });
 
 /* external records (CSV, TXT, Excel) */
@@ -4531,7 +4590,7 @@ $('geoClearAuto').addEventListener('click', (e) => { if (!armed(e.currentTarget)
 $('geoIvCsv').addEventListener('click', () => {
   const g = S.geo, rows = [['core', 'layer', 'parent_layer', 'category', 'axis', 'from', 'to', 'automatic', 'outside_parent']];
   for (const q of g.intervals) { const L = geoLayer(q.layer); rows.push([geoCore(q.core)?.name, L?.name, geoLayer(L?.parent)?.name ?? '', geoCat(q.cat)?.name, q.axis, q.from, q.to, q.auto ? 1 : 0, geoRT.orphans.has(q.id) ? 1 : 0]); }
-  saveFile(`${safe(S.name)}_intervalos.csv`, toCSV(rows), 'text/csv');
+  saveFile(`${safe(S.name)}_intervalos.csv`, withProv(toCSV(rows)), 'text/csv');
 });
 
 const geoValAt = (ev) => {
@@ -5024,7 +5083,7 @@ $('gmCsv').addEventListener('click', () => {
   if (!geoLastMap) return;
   const rows = [['core', 'lat', 'lon', 'n_samples', 'dominant_class', 'fraction', 'value']];
   for (const p of geoLastMap.pts) rows.push([p.name, p.lat, p.lon, p.n, p.dominant ? geoCat(p.dominant)?.name : null, p.fraction, p.value]);
-  saveFile(`${safe(S.name)}_mapa_${S.geo.map.a0}-${S.geo.map.a1}.csv`, toCSV(rows), 'text/csv');
+  saveFile(`${safe(S.name)}_mapa_${S.geo.map.a0}-${S.geo.map.a1}.csv`, withProv(toCSV(rows)), 'text/csv');
 });
 
 function renderGeoModel() {
@@ -5066,7 +5125,7 @@ $('geoPredCsv').addEventListener('click', () => {
   if (!geoRT.samples.length) return;
   const st = S.geo.settings, rows = [['core', st.axis, 'depth', 'age', ...geoRT.featNames, 'label', 'label_source', 'predicted', 'probability']];
   geoRT.samples.forEach((s, i) => rows.push([geoCore(s.core)?.name, s.x, s.depth, s.age, ...s.raw, geoCat(geoRT.labels[i]?.label)?.name ?? '', geoRT.labels[i]?.source ?? '', geoCat(geoRT.preds[i]?.label)?.name ?? '', geoRT.preds[i]?.prob]));
-  saveFile(`${safe(S.name)}_clasificacion_intervalos.csv`, toCSV(rows), 'text/csv');
+  saveFile(`${safe(S.name)}_clasificacion_intervalos.csv`, withProv(toCSV(rows)), 'text/csv');
 });
 
 /** Interval layers and automatic classes of the image core, as bands of the composite log (overlay between tools). */
@@ -5657,7 +5716,7 @@ $('dBody').addEventListener('click', (e) => {
   else if (a === 'csv') {
     const rows = [['core', p.v, 'variable', 'value']];
     for (const c of S.cores.filter((q) => p.cores.includes(q.id))) for (const y of p.ys) { const X = plotCol(c, p.v), Y = plotCol(c, y.col); for (let i = 0; i < X.length; i++) if (X[i] != null && Y[i] != null) rows.push([c.name, X[i], y.col, Y[i]]); }
-    saveFile(`${safe(p.name)}.csv`, toCSV(rows), 'text/csv'); return;
+    saveFile(`${safe(p.name)}.csv`, withProv(toCSV(rows)), 'text/csv'); return;
   }
   markDirty(); renderDataPlot();
 });
@@ -5870,9 +5929,9 @@ $('dCsv').addEventListener('click', () => {
   const M = tableModel();
   const rows = [['core', 'depth', 'age', ...M.cols.map(([k]) => k), ...M.layers.map((L) => L.name)], ...M.rows.map((r) => [r.c.name, r.depth, r.age, ...r.vals, ...r.lay])];
   // V0.35: the cells edited by hand are listed in the header (lines starting with # are ignored when the file is read back)
-  const notes = [`# CorAnTool ${DELIVERY}, ${new Date().toISOString().slice(0, 10)}`];
+  const notes = [];
   for (const c of M.cores) for (const [col, E] of Object.entries(c.edits || {})) for (const [x, ed] of Object.entries(E)) notes.push(`# edited by hand: ${c.name}; ${col}; ${c.depth ? 'depth' : 'age'} ${x}; original ${ed.o ?? ''}; new ${ed.v ?? ''}; ${ed.at || ''}`);
-  saveFile(`${safe(S.name)}_datos.csv`, notes.join('\n') + '\n' + toCSV(rows), 'text/csv');
+  saveFile(`${safe(S.name)}_datos.csv`, notes.join('\n') + '\n' + withProv(toCSV(rows)), 'text/csv');
 });
 
 /* ───────────── windows and floating panel (work on a core while watching the map) ───────────── */
@@ -6517,13 +6576,36 @@ $('themeBtn').addEventListener('click', () => { const th = currentTheme() === 'd
 try { applyTheme(localStorage.getItem('ichantool.theme')); } catch { applyTheme(null); }
 
 let toastTimer = 0;
-function toast(msg) { const el = $('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), 3200); }
+/**
+ * V0.36: every exported CSV starts with lines (beginning with #, ignored when read back) that say which version and
+ * which settings produced it, so a table can be reproduced.
+ */
+function withProv(csv) {
+  const st = S.settings, m = S.age.model;
+  const det = [...new Set(S.cores.flatMap((c) => c.sections.map((x) => (x.detect || DEFAULT_DETECT).method || 'adaptive')))].join('/');
+  const age = m ? `${S.age.bacon ? `Bacon ${S.age.center || 'median'}` : 'table'}${m.min ? ' with range' : ''}, ${S.age.units || 'ka'}` : 'none';
+  return [`# CorAnTool ${DELIVERY} (format ${FORMAT_VERSION}); exported ${new Date().toISOString()}; project "${S.name}"`,
+    `# settings: binCm=${st.binCm}; minValid=${st.minValid}%; includePred=${!!st.includePred}; predThr=${st.predThr}; countCandidates=${!!st.countCandidates}; detection=${det}; age model=${age}`,
+    csv].join('\n');
+}
+function toast(msg, ms = 3200) { const el = $('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), ms); }
 
 async function busy(fn) {
   $('busy').hidden = false;
   await new Promise((r) => setTimeout(r, 30));
-  try { await fn(); } finally { $('busy').hidden = true; }
+  try { await fn(); }
+  catch (err) { console.error(err); toast(t('err.generic', { e: err?.message || String(err) }), 8000); }   // V0.36: errors are shown
+  finally { $('busy').hidden = true; }
 }
+/* V0.36: errors nobody caught are shown instead of being lost (once every 5 s at most) */
+let lastErrToast = 0;
+function showUncaught(err) {
+  console.error(err);
+  if (Date.now() - lastErrToast < 5000) return; lastErrToast = Date.now();
+  toast(t('err.generic', { e: err?.message || String(err) }), 8000);
+}
+window.addEventListener('unhandledrejection', (e) => showUncaught(e.reason));
+window.addEventListener('error', (e) => { if (e.error) showUncaught(e.error); });
 
 function syncSettingsForm() {
   const st = S.settings;

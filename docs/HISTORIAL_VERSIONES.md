@@ -69,6 +69,7 @@ La descripción detallada de los algoritmos está en
 | V0.33 | 06-11-2026 | Figuras | Orden de las columnas (arrastrar o flechas) y visibilidad en todos los gráficos; mostrar u ocultar familias de intervalos sin borrarlas |
 | V0.34 | 06-11-2026 | Multiproxy | Colorear registros por la familia elegida (o varias, mezcladas o en franjas); intervalos de una familia sin solape y unión de contiguos iguales |
 | V0.35 | 06-11-2026 | Datos | Hoja de datos tipo Excel: valores editables con aviso, celdas modificadas marcadas y reversibles, columnas calculadas con interpolación |
+| V0.36 | 06-11-2026 | Datos seguros | Auditoría §1: formato 5 y solo lectura, RLE comprobado, carga fallida sin guardar, guardado al cerrar, procedencia en CSV, copia previa al reemplazar, rotación del historial, cuota, avisos de error, deshacer agrupado |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -659,6 +660,32 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.36 — Datos seguros (auditoría, sección 1) (06-11-2026)
+
+- **Qué se hizo:**
+  - Formato de proyecto 5. Un archivo de una versión más nueva se abre en solo lectura (aviso, sin guardado).
+  - Las máscaras RLE se comprueban al importar y al abrir; un archivo dañado se rechaza sin tocar la copia guardada.
+  - Si una carga falla a mitad, no se guarda nada y se avisa. El guardado no corre durante una carga y abrir otro
+    proyecto cancela el pendiente.
+  - Corregido: en el primer arranque se guardaba un proyecto vacío sin id (`applyLanguage → setAge → markDirty`).
+  - Se guarda lo pendiente al ocultar o cerrar la página; en el escritorio, cerrar espera al guardado.
+  - Todos los CSV llevan cabecera `#` con entrega, fecha, proyecto y ajustes del análisis.
+  - «Reemplazar» al importar guarda antes la versión local como copia «(anterior <fecha>)».
+  - Historial de la copia automática: 30 diarias + 1 por mes durante 12 meses. Aviso de cuota > 80 %.
+  - Errores no capturados y de operaciones largas se muestran en un aviso.
+  - Deshacer tras asignar una clase que fusiona trazas es un solo paso.
+  - Textos que salían como clave: `fig.keepRatio`, `fig.ratioNote`, `geo.cancel`.
+- **Cambios:** `core.js::rleValid` (nuevo), `app.js` (`loadSection`, `loadProject`, `saveToDB`, `resetState`,
+  `restoreFiles`, `rotateHistory`, `checkQuota`, `withProv`, `busy`, `undo`, `assignClassMany`), `i18n.js`.
+  `DELIVERY` = V0.36.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 1 (puntos 1–6 y 9; el 8 ya en V0.35; SheetJS, punto 7, en
+  V0.38).
+- **Comprobación:** 74 pruebas JS (1 nueva). En Chrome sin pantalla: primer arranque sin proyecto fantasma; importar
+  U1385I con una máscara rota → rechazado y la copia guardada intacta; con `version: 9` → abre en solo lectura y
+  la versión local queda como «(anterior)».
+- **Pendiente / no probado:** el cierre en el escritorio (Electron) no se ha probado aquí; la carga no construye el
+  estado aparte (se vacía si falla).
 
 ## V0.35 — Datos como hoja de cálculo (06-11-2026)
 
