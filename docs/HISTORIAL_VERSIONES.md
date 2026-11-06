@@ -81,6 +81,7 @@ La descripción detallada de los algoritmos está en
 | V0.45 | 06-11-2026 | Dependencias y reproducibilidad | SheetJS 0.20.3 oficial incluida con licencia y SRI; DINOv2 fijado a un commit y SHA-256 comprobados |
 | V0.46 | 06-11-2026 | Integración Git | Merge de origin/master: setup-node v7 en CI y escritorio, conservando V0.45 y su historial |
 | V0.47 | 06-11-2026 | Escritorio | Electron 45.2.1 y electron-builder 26.18.0 integrados; macOS 13+ e instaladores para prueba previa mediante Desktop builds sobre master |
+| V0.48 | 07-11-2026 | Preparación de release | Prueba real de Electron con cierre/reapertura, inferencia DINOv2 y fondos Esri; borrador de release con instaladores, HTML sin conexión, manifiesto y SHA-256; Zenodo aplazado |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -671,6 +672,30 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.48 — Release preparada y verificaciones de escritorio (07-11-2026)
+
+- **Qué se hizo:** preparar la distribución de GitHub en un borrador con los instaladores y el HTML
+  sin conexión, y ejecutar las comprobaciones técnicas que no requieren datos ni hardware del autor.
+  Zenodo y el DOI quedan aplazados por petición de Santiago.
+- **Cambios:** `Desktop builds` añade prueba Electron antes de empaquetar y entrada opcional `draft_release`
+  para crear un borrador desde `master`. Nuevos `tests/e2e/desktop.mjs`, `desktop-bootstrap.cjs` y
+  `tools/prepare_release.py` (cinco instaladores, HTML, manifiesto de commit/tamaños/hashes y SHA256SUMS).
+  Notas de release, README, documentación técnica, métodos y coordinación actualizados.
+  `DELIVERY` = V0.48 y versiones sincronizadas a 0.48.0. Los módulos de análisis no cambian.
+- **Por qué:** reducir los pasos manuales, comprobar el cierre real de Electron y preparar descargas
+  completas, sin publicar la release ni crear etiquetas antes de la revisión final.
+- **Comprobación:** Electron local correcto: esquema `app://`, CSP presente, ORT incluido, IPC del
+  entrenador, detección y eliminación pendiente conservada tras reiniciar el proceso.
+  DINOv2 real con SHA-256 correcto: 384 valores finitos y norma ≈ 0,999998555 con imagen sintética.
+  Seis fondos Esri descargados y decodificados en 256 × 256 desde el escritorio. Preparador de release
+  rechaza instaladores ausentes y archivos extra; manifiesto y siete SHA-256 contrastados.
+  91 pruebas JS y 16 Python superadas, 2 omitidas por dependencias ONNX opcionales; versiones,
+  HTML sin conexión, ruff y ESLint sin errores (advertencias previas) comprobados. La compilación
+  de los tres sistemas y el borrador remoto se verifican después del push en GitHub Actions.
+- **Pendiente:** publicación final por Santiago; pruebas humanas de instalación y uso en macOS/Linux,
+  lector de pantalla y entrenamiento en su hardware. La precisión de DINOv2/U-Net con testigos reales,
+  la reserva de sondeos y la regresión web–V2 siguen fuera de esta comprobación técnica.
 
 ## V0.47 — Actualización conjunta del escritorio (06-11-2026)
 

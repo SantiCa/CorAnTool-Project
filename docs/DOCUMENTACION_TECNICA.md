@@ -781,6 +781,13 @@ Alternativa a los 12 descriptores (§9) como entrada del clasificador (`S.settin
 6. **Cálculo:** botón «Calcular rasgos» para todas las trazas pendientes; en modo visión, las trazas nuevas
    o editadas de la imagen abierta se calculan solas 0,7 s después del cambio.
 
+**Comprobación técnica V0.48:** modelo ONNX real fijado en V0.45, ejecutado con el ONNX Runtime Web
+incluido en Electron 45.2.1, desde `app://` y con la CSP del programa. Entrada sintética de 32 × 32 px,
+ventana `[3, 4, 25, 27]`, `traceInput` y `pickEmbedding` reales: 384 valores finitos y norma
+0,999998554998956 tras redondear. Prueba opcional `CORANTOOL_VISION_MODEL` en
+`tests/e2e/desktop.mjs`. Verifica que los pesos y la inferencia funcionan; no evalúa identificación
+de icnotaxones, entrenamiento ni precisión con testigos independientes.
+
 **Para el revisor.** El modelo de visión se entrenó con fotos generales, no con testigos: sus vectores
 describen forma y textura de forma genérica. Su ventaja frente a los 12 descriptores es una hipótesis que se
 mide con la evaluación de §10.6 ter y, para publicar, en testigos independientes (artículo 2). Los vectores
@@ -1857,6 +1864,22 @@ cambia lo que se ve en la imagen de trabajo.
   `tests/app/version.test.mjs`). El paquete de Python conserva el nombre `ichantool`.
 - **Publicación:** `tools/release.sh` comprueba (rama, árbol limpio, versiones, pruebas) y empuja la etiqueta; el
   flujo `desktop.yml` (solo con etiquetas o a mano) construye y publica. Permisos mínimos por trabajo.
+  Desde V0.48 la ejecución manual sobre `master` admite `draft_release` (desactivado por defecto):
+  crea un borrador sin publicar. `tools/prepare_release.py` exige los cinco instaladores de la entrega,
+  añade el HTML sin conexión y escribe `RELEASE_MANIFEST.json` (entrega, commit, tamaños, SHA-256)
+  y `SHA256SUMS.txt` (seis binarios/HTML y el manifiesto). Rechaza archivos faltantes, vacíos o extra.
+  Todo se adjunta al borrador y al artefacto `corantool-release-bundle`; no se sobrescriben adjuntos existentes.
+  El borrador fija `target_commitish` al commit compilado. No se crea etiqueta al preparar el borrador;
+  GitHub la crea al publicarlo. El modo manual rechaza una entrega que ya tenga etiqueta.
+  Zenodo queda aplazado por decisión de Santiago y no bloquea las descargas de GitHub.
+  Referencia: [borradores sin etiqueta hasta publicación](https://github.com/googleapis/release-please/blob/main/docs/cli.md).
+- **Comprobación del escritorio V0.48:** `tests/e2e/desktop.mjs` ejecuta el punto de entrada real de Electron
+  con un perfil temporal y ventanas ocultas. Comprueba `app://`, CSP presente, ORT local, IPC de estado del
+  entrenador, detección del ejemplo público y persistencia de una eliminación pendiente tras cerrar y
+  reiniciar el proceso. Se ejecuta antes de empaquetar en los tres sistemas (Xvfb en Linux).
+  Con `CORANTOOL_NETWORK_SMOKE=1` se verificaron seis fondos Esri (imágenes 256 × 256, extensión pública
+  fija 0°–5° E / 35°–40° N) desde la CSP del escritorio. No usa coordenadas ni datos privados.
+  Las pruebas de pantalla y de entrenamiento con hardware real siguen siendo independientes.
 - **CI** (`tests.yml`): Python 3.10/3.12/3.13 en Ubuntu y 3.12 en Windows y macOS, con cobertura (`pytest-cov`);
   pruebas web en los tres sistemas (cobertura en Ubuntu); comprobación de versión, `ruff`, ESLint
   (`eslint.config.js`, solo reglas de corrección) y construcción del archivo sin conexión. Dependabot semanal.

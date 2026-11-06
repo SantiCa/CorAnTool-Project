@@ -1,32 +1,46 @@
-## Candidato de prueba V0.47
+## CorAnTool V0.48
 
-- Electron 45.2.1 y electron-builder 26.18.0; macOS 13 o posterior.
-- Los instaladores de prueba se descargan desde los artefactos de **Actions → Desktop builds**,
-  ejecución manual sobre `master`. No se publica una release ni se crea una etiqueta en esta entrega.
-- Antes de publicar, Santiago debe comprobar arranque y ejemplos, importación/exportación, guardado
-  al cerrar y reabrir, figuras y ventanas auxiliares, CSP y el puente de entrenamiento. En Windows,
-  probar el instalador y el portable. Exportar una copia de los proyectos antes de probar la actualización.
+Aplicación para identificar y cuantificar trazas en imágenes de sondeos, integrar registros multiproxy
+y exportar figuras. Versión 0.x en desarrollo. Incluye ejemplos públicos; arranca sin proyectos privados.
 
-## Novedades de V0.1
+### Cambios recientes
 
-- **Proyectos grandes sin agotar la memoria.** Las imágenes originales se guardan una sola vez en el disco y solo se cargan en memoria las de la sección con la que trabajas. Los proyectos con muchas secciones abren mucho más rápido.
-- **Resolución completa siempre guardada.** Cada sección tiene un selector «Resolución de trabajo» (completa, 1/2, 1/3…, con px/cm y megapíxeles). Puedes cambiarla cuando quieras: la imagen se recalcula desde el original y las trazas, las exclusiones, la zona de análisis y las marcas se adaptan. Un botón iguala todas las secciones a los mismos px/cm.
-- **Recortar ya no reduce la imagen.** El recorte se guarda sobre el original a resolución completa.
-- **Intervalo de análisis en centímetros** (por defecto 1 cm), igual para todas las secciones, en lugar de píxeles. Los proyectos anteriores se convierten solos y conservan sus intervalos.
-- **Proyectos de versiones anteriores:** se abren y se convierten automáticamente. La primera apertura tarda algo más. Antes de actualizar, conviene exportar una copia de seguridad.
+- Guardado por secciones, edición con deshacer, mejoras de rendimiento y accesibilidad, e importación CSV robusta.
+- Figura de localización de sondeos con proyecciones geográficas, Web Mercator y UTM, retícula y fondos Esri.
+- SheetJS 0.20.3 y pesos DINOv2 fijados a un commit y SHA-256 verificable.
+- Electron 45.2.1 y electron-builder 26.18.0. Prueba automática de cierre y reapertura del escritorio
+  antes de construir los instaladores de cada sistema.
+- HTML sin conexión, manifiesto del commit y sumas SHA-256 incluidos con las descargas.
 
-Limitaciones conocidas: al subir la resolución, las trazas ya dibujadas conservan el escalonado de la resolución anterior; al bajarla pueden desaparecer trazas muy pequeñas. Las figuras de trazas y de secciones tardan más la primera vez, porque leen las imágenes del disco.
+### Descargas
 
-## Descargar CorAnTool
+| Sistema | Archivo |
+|---|---|
+| Windows 10/11, x64 | `CorAnTool-V0.48-windows-setup.exe` o `CorAnTool-V0.48-windows-portable.exe` |
+| macOS 13+, Intel y Apple Silicon | `CorAnTool-V0.48-mac-universal.dmg` |
+| Linux, x64 | `CorAnTool-V0.48-linux-x86_64.AppImage` o `CorAnTool-V0.48-linux-amd64.deb` |
+| Navegador, archivo único | `CorAnTool_V0.48.html` |
+| Verificación de las descargas | `SHA256SUMS.txt` y `RELEASE_MANIFEST.json` |
 
-| Sistema | Archivo | Cómo abrirlo |
-|---|---|---|
-| Windows 10/11 | `CorAnTool-V…-windows-setup.exe` (instalador) o `…-windows-portable.exe` (sin instalar) | Si Windows avisa «Windows protegió su PC», pulsa **Más información → Ejecutar de todas formas** (el programa no está firmado con un certificado de pago). |
-| macOS (Intel y Apple Silicon; 13+ desde V0.47) | `CorAnTool-V…-mac-universal.dmg` | Arrastra CorAnTool a Aplicaciones. La primera vez: clic derecho sobre la app → **Abrir** → Abrir (o Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente»). |
-| Linux | `CorAnTool-V…-linux-x86_64.AppImage` o `…-linux-amd64.deb` | AppImage: hazlo ejecutable (`chmod +x`) y ábrelo. Debian/Ubuntu: `sudo apt install ./CorAnTool-…deb`. |
+Windows: ejecutar el instalador o abrir el portable. macOS: arrastrar la aplicación a Aplicaciones.
+Linux: dar permiso de ejecución al AppImage o instalar el DEB. El HTML se abre con doble clic.
+Los ejecutables no están firmados: el sistema puede pedir confirmación de apertura.
 
-- El programa arranca vacío. Los ejemplos (proyecto de entrenamiento con recorrido guiado, sondeo IODP U1385I) están en «Ejemplos y aprendizaje».
-- Los proyectos se guardan en el disco de tu ordenador, dentro de la carpeta de datos del programa. Usa «Copias de seguridad» para tener una copia en una carpeta sincronizada (OneDrive, Google Drive…).
-- Proyectos de la versión web: expórtalos desde el navegador (`.corantool.json`) e impórtalos aquí con «Importar archivo…».
+Para verificar un archivo: `Get-FileHash archivo -Algorithm SHA256` en PowerShell,
+`shasum -a 256 archivo` en macOS o `sha256sum -c SHA256SUMS.txt` en Linux.
+El manifiesto identifica exactamente el commit fuente y los tamaños y hashes de los seis archivos de programa.
 
-Cambios de esta entrega: ver `docs/HISTORIAL_VERSIONES.md` y `CHANGELOG.md`.
+### Comprobaciones y límites
+
+Se comprobó en Electron el guardado de una edición pendiente al cerrar y reiniciar, la detección del
+ejemplo público, el puente de estado del entrenador y la carga local de ONNX Runtime Web.
+El DINOv2 real produjo un vector válido de 384 valores con una entrada sintética y los seis fondos Esri
+se descargaron correctamente. Estas pruebas técnicas no miden precisión con testigos reales.
+
+Antes de actualizar, exportar una copia de los proyectos. Quedan por comprobar el uso humano de los
+instaladores en cada equipo, el lector de pantalla y el entrenamiento con el hardware del usuario.
+Los modelos U-Net necesitan entrenamiento propio; la primera descarga de DINOv2 y los fondos de mapa
+requieren internet. El programa no se actualiza solo.
+
+Este borrador queda preparado para revisión antes de publicar. Zenodo y DOI están aplazados.
+Detalles y métodos: `CHANGELOG.md`, `docs/HISTORIAL_VERSIONES.md` y `docs/DOCUMENTACION_TECNICA.md`.

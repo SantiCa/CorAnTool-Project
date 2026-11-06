@@ -182,6 +182,9 @@ existen y producen máscaras en un formato abierto.
   Desde V0.45 la descarga predeterminada fija el commit de DINOv2 y el SHA-256 de sus pesos ONNX
   (documentación técnica §10.6 quater); esto identifica los pesos para reproducibilidad, sin aportar
   una evaluación de su precisión.
+  En V0.48 se comprobó la inferencia del modelo real con ONNX Runtime Web dentro de Electron y una entrada
+  sintética: 384 valores finitos, norma del vector redondeado ≈ 0,999998555, SHA-256 coincidente.
+  Es una comprobación técnica de ejecución, sin medida de precisión ni comparación con testigos reales.
 - Desde V0.17 la U-Net se puede entrenar desde el programa de escritorio. Es el mismo código que la línea de
   órdenes (mismas teselas, pérdida, aumentos y evaluación), así que los resultados son comparables; los
   modelos guardan sondeos de cada conjunto, semilla e historial.

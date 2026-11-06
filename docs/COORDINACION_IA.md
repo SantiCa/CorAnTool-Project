@@ -41,10 +41,21 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 - Estado: libre.
 - Editor: ninguno.
 - Objetivo: sin tarea de implementación activa.
-- Commit base y archivos: V0.47 sobre 22383a0 y commits de PR #21/#20; desktop/package*.json, versiones y documentación.
+- Commit base y archivos: V0.48 sobre 96bd486; workflow, preparador de release, e2e Electron, versiones y documentación.
 
 ### Último traspaso
 
+- **V0.48, 07-11-2026 (Codex):** preparación de release mediante `Desktop builds` manual en `master`
+  con `draft_release=true`: borrador con cinco instaladores, HTML sin conexión, manifiesto del commit y
+  sumas SHA-256. No publicar ni crear etiquetas durante esta preparación. **Zenodo/DOI aplazados**
+  por petición de Santiago; no son requisito para distribuir en GitHub.
+  Prueba real de Electron con perfil temporal: app://, CSP, ORT local, IPC del entrenador, detección y
+  edición pendiente conservada tras cerrar/reiniciar. DINOv2 real: SHA-256 correcto, 384 valores finitos;
+  seis fondos Esri descargados desde Electron con extensión pública fija. 91 pruebas JS, 16 Python
+  superadas y 2 omitidas por ONNX opcional; ruff/ESLint sin errores, HTML y versiones 0.48.0 comprobados.
+  Consultar compilación y borrador en Actions/Releases tras el push. Solo queda publicar el borrador
+  cuando Santiago lo decida; siguen fuera de lo verificado las pruebas humanas de instalación,
+  lector de pantalla, entrenamiento en su hardware y precisión científica con testigos reales.
 - **V0.47, 06-11-2026 (Codex):** PR #21 y #20 combinadas en un commit de merge, conservando
   ambas historias y V0.45/V0.46. Electron 45.2.1, electron-builder 26.18.0 y versiones 0.47.0.
   `npm ci` correcto; 91 pruebas JS, 16 Python superadas y 2 omitidas por ONNX opcional;

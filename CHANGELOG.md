@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.48 — 2026-11-07
+- Added isolated Electron restart/save smoke tests to desktop builds and optional real DINOv2/Esri checks. Manual builds can prepare an unpublished release draft containing five installers, offline HTML, a commit manifest and SHA-256 checksums. Zenodo is deferred.
+
 ## V0.47 — 2026-11-06
 - Updated desktop Electron to 45.2.1 and electron-builder to 26.18.0 together, preserving both Dependabot histories; macOS 13 or later is now required. Installers are built manually on master for testing before release.
 

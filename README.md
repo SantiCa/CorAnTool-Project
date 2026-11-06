@@ -40,6 +40,12 @@ The installers are not code-signed. On Windows, if SmartScreen appears, choose *
 open the program the first time with right-click → *Open*. The program does not update itself: download the new
 installer from Releases and install it over the old one (your projects are kept).
 
+From V0.48, releases also include `CorAnTool_V0.<n>.html` (the standalone web app),
+`SHA256SUMS.txt` and `RELEASE_MANIFEST.json` (source commit, file sizes and hashes).
+Maintainers can prepare an unpublished draft from **Actions → Desktop builds → Run workflow → master →
+draft_release**. Default manual builds still produce test artifacts only. Review the draft before publishing;
+Zenodo and a DOI are deferred and are not required to distribute the downloads on GitHub.
+
 ---
 
 ## How to use it
