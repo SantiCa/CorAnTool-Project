@@ -1,5 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
+import { withProvenance, ageModelText, bioturbationTable, objectsTable, recordSeries } from './exportio.js';
+import { LOCMAP_DEFAULTS, lmUtmZone, lmFitBBox, lmZoom, buildLocMapSVG } from './locmap.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
 import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, decodeText, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
@@ -7,6 +9,7 @@ import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSeg
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
 import { evalColumn, evalCells, cellName, FUNCTIONS, parseFormula, formulaRefs, fillLinear } from './sheet.js';
 import { Classifier, TaxonModel, evaluateModels, vec, FEATURES } from './learn.js';
+import { splitPieces, mergeKeeper, sameTaxonGroups, undoPixels, upgradeProject } from './edit.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
 import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } from './unet.js';
@@ -18,7 +21,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.40';
+const DELIVERY = 'V0.47';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -135,11 +138,14 @@ function maskTouch(s) {
 }
 function pxTouch(s) {
   lruPush(MEM.px, s);
-  const bytes = () => MEM.px.reduce((a, x) => a + 8 * x.w * x.h, 0);
+  // V0.41: besides original + enhanced (8 B/px) it counts the U-Net probabilities (4 B/px) and the cached pictures
+  const cv = (c) => (c ? 4 * c.width * c.height : 0);
+  const one = (x) => 8 * x.w * x.h + (x._unet?.prob?.byteLength || 0) + cv(x._lc?.canvas) + cv(x._lb?.canvas) + [...(x._fc?.values() || [])].reduce((a, r) => a + cv(r.canvas), 0);
+  const bytes = () => MEM.px.reduce((a, x) => a + one(x), 0);
   for (let i = 0; i < MEM.px.length && MEM.px.length > 1 && bytes() > MEM.pxBudget;) {
     const x = MEM.px[i];
     if (x === s || keepLoaded(x)) { i++; continue; }
-    x.orig = null; x.enh = null; MEM.px.splice(i, 1);
+    x.orig = null; x.enh = null; x._unet = null; x._fc = null; MEM.px.splice(i, 1);
   }
 }
 /** The original file of a section as a Blob (from memory if not yet stored, else from the image store on disk). */
@@ -163,7 +169,10 @@ function ensurePixels(s) {
   s._loading = (async () => {
     const r = await decodeWorking(s, s.ds);
     if (r.w !== s.w || r.h !== s.h) console.warn('image size differs from the stored masks', s.name, r.w, r.h, s.w, s.h);
-    s.orig = r.rgba; enhance(s);
+    // V0.44: the enhancement of a section being opened is computed in the worker; orig and enh are set together
+    const f = effectiveFilters({ filters: s.filters, orig: r.rgba, w: r.w, h: r.h, roi: s.roi });
+    const enh = await offload('filters', { rgba: r.rgba, w: r.w, h: r.h, f }, () => applyFilters(r.rgba, r.w, r.h, f));
+    s.orig = r.rgba; s.enh = enh;
     return s;
   })().catch((e) => { s._pxErr = e.message || String(e); toast(s._pxErr); throw e; }).finally(() => { s._loading = null; if (s.orig) pxTouch(s); });
   return s._loading;
@@ -228,6 +237,35 @@ function effectiveFilters(s) {
 }
 function enhance(s) { s.enh = s.orig ? applyFilters(s.orig, s.w, s.h, effectiveFilters(s)) : null; }
 
+/* V0.41: background worker for enhancement and detection; without it (offline single file, file://, old browser)
+ * the same functions run on the main thread. */
+let WK = null, wkSeq = 0; const wkWait = new Map();
+function worker() {
+  if (WK !== null) return WK || null;
+  try {
+    if (location.protocol === 'file:' || typeof Worker === 'undefined') throw new Error('no worker');
+    WK = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+    WK.onmessage = (e) => { const q = wkWait.get(e.data.id); if (!q) return; wkWait.delete(e.data.id); e.data.err ? q.rej(new Error(e.data.err)) : q.res(e.data.r); };
+    WK.onerror = (e) => { e.preventDefault?.(); for (const q of wkWait.values()) q.fallback(); wkWait.clear(); WK.terminate(); WK = false; };
+  } catch { WK = false; }
+  return WK || null;
+}
+/** Runs op in the worker (inputs are copied) or, if there is none or it fails to start, fallback() here. */
+function offload(op, a, fallback) {
+  const w = worker(); if (!w) return Promise.resolve().then(fallback);
+  return new Promise((res, rej) => {
+    const id = ++wkSeq;
+    wkWait.set(id, { res, rej, fallback: () => { try { res(fallback()); } catch (e) { rej(e); } } });
+    w.postMessage({ id, op, a });
+  });
+}
+/** Enhancement in the background; only the latest request of a section is applied. */
+function enhanceAsync(s) {
+  if (!s.orig) { s.enh = null; return Promise.resolve(); }
+  const f = effectiveFilters(s), gen = (s._eg = (s._eg || 0) + 1), orig = s.orig;
+  return offload('filters', { rgba: orig, w: s.w, h: s.h, f }, () => applyFilters(orig, s.w, s.h, f)).then((r) => { if (s._eg === gen && s.orig === orig) s.enh = r; return s._eg === gen; });
+}
+
 function pxPerCm(s) {
   const span = (s.bottom - s.top) * UNIT_TO_CM[s.units];
   return span > 0 ? (s.roi.y1 - s.roi.y0) / span : 1;
@@ -240,11 +278,11 @@ const rowAtDepth = (s, d) => s.roi.y0 + ((d - s.top) / (s.bottom - s.top)) * (s.
 /** V0.14: the libraries ship with the program (app/vendor); the internet copy is only a fallback (e.g. single offline file). */
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';   // V0.15: U-Net engine (desktop build copies it to vendor/ort)
 // V0.40: internet fallback pinned with Subresource Integrity (hashes of the npm files that jsDelivr serves; the
-// bundled copies in app/vendor are byte-identical). SheetJS 0.20.3 is not on npm: no hash until it is bundled.
+// bundled copies in app/vendor are byte-identical). V0.45: SheetJS is verified against its official CDN build.
 const VENDOR = {
   'pako.min.js': ['https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js', 'sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j'],
   'UTIF.js': ['https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'sha384-RyBmXHdfZ/Uon+ud+/AqSyWpUWnKYt2tkRG/P4gWoRUGDU+qIAV3tGBPNlYTBZEF'],
-  'xlsx.full.min.js': ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', null],
+  'xlsx.full.min.js': ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT'],
   'ort/ort.wasm.min.js': [ORT_CDN + 'ort.wasm.min.js', 'sha384-tNxIwEqSlcdvKtUte98AsccPbDKM958LBXB/+3BLS42TTihXHKTWgdqPqXI/lot8'],
 };
 /** Loads a library from app/vendor, else from the internet; resolves to 'local' or 'cdn'. */
@@ -358,7 +396,7 @@ async function loadExample() {
       s.detect = { ...DEFAULT_DETECT, method: 'global', polarity: 'dark', threshold: 6, minArea: 1, smooth: 0 };
       S.settings.binCm = 150 / pxPerCm(s);
       S.sections.push(s); syncSettingsForm(); selectSection(S.sections.length - 1, true);
-      detectSection(s); updateProjHeader(); renderRecList(); setAge(); await saveToDB();
+      await detectSection(s); updateProjHeader(); renderRecList(); setAge(); await saveToDB();
       return true;
     } catch { /* try next */ }
   }
@@ -419,24 +457,18 @@ const addPx = (op, i, id) => {
 };
 /** V0.30: after a class change, traces of the same ichnotaxon that overlap are merged into one. */
 function mergeSameTaxon(s, ids) {
-  const groups = [];
-  for (const id of ids) {
-    const o = s.objects.get(id); if (!o?.bbox) continue;
-    const c = o.cls ?? null, partners = new Set(), [x0, y0, x1, y1] = o.bbox;
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const v = s.labels[y * s.w + x]; if (v >= 0) continue;
-      const st = s.stacks[-v]; if (!st.includes(id)) continue;
-      for (const q of st) if (q !== id && clsKey(s, q) === c) partners.add(q);
-    }
-    if (partners.size) groups.push([id, ...partners]);
-  }
-  for (const g of groups) if (g.every((id) => s.objects.has(id))) mergeObjects(g);
+  for (const g of sameTaxonGroups(s.labels, s.w, s.stacks, s.objects, ids)) if (g.every((id) => s.objects.has(id))) mergeObjects(g);   // V0.42: edit.js
 }
 const subPx = (op, i, id) => setLabel(op, i, withoutId(op.s.labels[i], id, op.s.stacks, six(op.s)));
 /** Remove a set of ids from every pixel. */
 function dropIds(op, set) {
-  const s = op.s, L = s.labels, st = s.stacks;
-  for (let i = 0; i < L.length; i++) {
+  const s = op.s, L = s.labels, st = s.stacks, w = s.w;
+  // V0.44: only the union of the objects' rectangles is scanned (kept up to date by refreshObjects); a missing
+  // rectangle falls back to the whole image
+  let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+  for (const id of set) { const b = s.objects.get(id)?.bbox; if (!b) { x0 = 0; y0 = 0; x1 = w - 1; y1 = s.h - 1; break; } x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]); }
+  x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(w - 1, x1); y1 = Math.min(s.h - 1, y1);
+  for (let y = y0; y <= y1; y++) for (let i = y * w + x0, e = y * w + x1; i <= e; i++) {
     const v = L[i]; if (!v) continue;
     if (v > 0) { if (set.has(v)) setLabel(op, i, 0); }
     else if (st[-v].some((x) => set.has(x))) setLabel(op, i, codeFor(st[-v].filter((x) => !set.has(x)), st, six(s)));
@@ -463,6 +495,10 @@ function finishPixelOp(op, target = 0) {
 function commitOp(op, force = false) {
   if (!force && !op.lm.length && !op.ex.length) return;
   S.undo.push(op); if (S.undo.length > 30) S.undo.shift();
+  // V0.41: the undo history also has a memory budget (~200 MB of changed pixels); the oldest steps go first
+  const ub = (o) => 8 * ((o.lm?.length || 0) + (o.ex?.length || 0));
+  let tot = S.undo.reduce((a, o) => a + ub(o), 0);
+  while (S.undo.length > 1 && tot > 2e8) tot -= ub(S.undo.shift());
   $('undoBtn').disabled = false;
 }
 
@@ -474,8 +510,7 @@ function undo() {
 }
 function undoOne(op) {
   const s = op.s;
-  for (let k = op.lm.length - 2; k >= 0; k -= 2) s.labels[op.lm[k]] = op.lm[k + 1];
-  for (let k = op.ex.length - 2; k >= 0; k -= 2) s.exclude[op.ex[k]] = op.ex[k + 1];
+  undoPixels(s.labels, s.exclude, op.lm, op.ex);   // V0.42: edit.js
   s.objects = new Map(op.objs.map((o) => [o.id, o])); s.nextId = op.nextId; S.selected = op.sel;
   $('undoBtn').disabled = !S.undo.length;
   if (s !== sec()) selectSection(S.sections.indexOf(s));
@@ -556,26 +591,8 @@ function splitAlong(pts) {
   else for (const i of cut) { const v = topAt(L[i], st); if (v) { id = v; break; } }
   const o = id && s.objects.get(id);
   if (!o?.bbox) { toast(t('cut.none')); return; }
-  const [x0, y0, x1, y1] = o.bbox, bw = x1 - x0 + 1, bh = y1 - y0 + 1, comp = new Int32Array(bw * bh);   // −1 cut, 0 outside, k ≥ 1 piece
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * s.w + x; if (hasId(L[i], id, st)) comp[(y - y0) * bw + x - x0] = cut.has(i) ? -1 : -2; }
-  let n = 0; const size = [0];
-  for (let j = 0; j < comp.length; j++) {   // pieces: 4-connected, without the cut pixels
-    if (comp[j] !== -2) continue;
-    n++; size.push(0); const q = [j]; comp[j] = n;
-    while (q.length) {
-      const c = q.pop(), x = c % bw; size[n]++;
-      for (const d of [x > 0 ? c - 1 : -1, x < bw - 1 ? c + 1 : -1, c - bw, c + bw]) if (d >= 0 && d < comp.length && comp[d] === -2) { comp[d] = n; q.push(d); }
-    }
-  }
+  const [x0, y0] = o.bbox, { comp, bw, n, main } = splitPieces(L, s.w, st, o.bbox, id, cut);   // V0.42: edit.js
   if (n < 2) { toast(t('cut.noSplit')); return; }
-  for (let changed = true; changed;) {   // cut pixels go to the neighbouring piece
-    changed = false;
-    for (let j = 0; j < comp.length; j++) {
-      if (comp[j] !== -1) continue; const x = j % bw;
-      for (const d of [x > 0 ? j - 1 : -1, x < bw - 1 ? j + 1 : -1, j - bw, j + bw]) if (d >= 0 && d < comp.length && comp[d] > 0) { comp[j] = comp[d]; changed = true; break; }
-    }
-  }
-  const main = size.indexOf(Math.max(...size.slice(1)));   // the largest piece keeps the id
   const op = beginOp(s), ids = [0];
   for (let k = 1; k <= n; k++) ids.push(k === main ? id : newObject(s, o.cls, o.src).id);
   for (let k = 1; k <= n; k++) if (k !== main) { const c = s.objects.get(ids[k]); c.pred = o.pred; c.conf = o.conf; c.nt = o.nt; op.touched.add(ids[k]); }
@@ -591,7 +608,7 @@ function splitAlong(pts) {
 function mergeObjects(list) {
   const s = sec(); if (!s) return;
   const objs = list.map((id) => s.objects.get(id)).filter((o) => o?.bbox); if (objs.length < 2) return;
-  const keep = [...objs].sort((a, b) => (!!b.cls - !!a.cls) || b.area - a.area)[0], L = s.labels, st = s.stacks;
+  const keep = mergeKeeper(objs), L = s.labels, st = s.stacks;   // V0.42: edit.js
   const op = beginOp(s);
   for (const o of objs) {
     if (o === keep) continue;
@@ -609,7 +626,7 @@ function runDetection() {
   const s = sec(); if (!s) return;
   if (s.detect.method !== 'unet') { busy(() => withPixels(s, detectSection)); return; }
   if (!UNET) { $('detectStatus').textContent = t('u.noModel'); return; }
-  busy(() => withPixels(s, async (x) => { await unetProb(x); detectSection(x); }));
+  busy(() => withPixels(s, async (x) => { await unetProb(x); await detectSection(x); }));
 }
 
 /* ───────────── V0.15: U-Net (model trained with `ichantool unet train`, run with ONNX Runtime Web) ───────────── */
@@ -778,9 +795,15 @@ async function unetProb(s) {
   return s._unet;
 }
 
-function detectSection(s) {
+async function detectSection(s) {
   {
-    const op = beginOp(s), p = s.detect, L = s.labels;
+    const p = s.detect, prob = p.method === 'unet' && s._unet?.key === unetKey(s) ? s._unet.prob : null;
+    if (s._eg && !s.enh) enhance(s);
+    // V0.41: mask and components in the background worker (same functions), then applied here
+    const enh = s.enh, roi = { ...s.roi }, exclude = s.exclude;
+    const { labels: cl, count } = await offload('detect', { enh, w: s.w, h: s.h, roi, exclude, p: { ...p }, prob },
+      () => components(detectMask(enh, s.w, s.h, roi, exclude, p, prob), s.w, s.h, p.minArea));
+    const op = beginOp(s), L = s.labels;
     const cand = new Set();
     for (const o of s.objects.values()) if (!o.cls && o.src === 'auto') cand.add(o.id);
     if (cand.size) {
@@ -788,8 +811,6 @@ function detectSection(s) {
       for (const id of cand) s.objects.delete(id);
       if (cand.has(S.selected)) S.selected = 0;
     }
-    const m = detectMask(s.enh, s.w, s.h, s.roi, s.exclude, p, p.method === 'unet' && s._unet?.key === unetKey(s) ? s._unet.prob : null);
-    const { labels: cl, count } = components(m, s.w, s.h, p.minArea);
     const base = s.nextId;
     for (let i = 0; i < L.length; i++) { const k = cl[i]; if (k && !L[i]) { op.lm.push(i, 0); L[i] = base + k - 1; } }
     const ids = new Set();
@@ -1320,7 +1341,14 @@ function drawRulerAt(s, ch) {
 }
 
 /* V0.21: side column — adjustable width (drag its left edge), fixed scales on top, and records from Data as extra tracks. */
+const sideCache = new WeakMap();   // V0.41: side-column series cached per section until records, age model or units change
 function sideSeries(s) {
+  const wantL = S.settings.sideRecs || [], base0 = S.sections[0]?.units || s.units;
+  const key = `${wantL.join('\u0001')}|${S.age.text}|${s.units}|${base0}|` + (S.records || []).map((r) => `${r.id}:${r.axis}:` + r.series.filter((se) => wantL.includes(se.name)).map((se) => `${se.name}/${se.color}/${!!se.reverse}/${se.x.length}/${se.y[0]}/${se.y[se.y.length - 1]}`).join(',')).join(';');
+  const hit = sideCache.get(s); if (hit?.key === key) return hit.out;
+  const out = sideSeriesCalc(s); sideCache.set(s, { key, out }); return out;
+}
+function sideSeriesCalc(s) {
   const want = new Set(S.settings.sideRecs || []), out = [], base = S.sections[0]?.units || s.units, inv = S.age.model ? invertModel(S.age.model) : null;
   for (const r of S.records || []) for (const se of r.series) {
     if (!want.has(se.name)) continue;
@@ -2044,7 +2072,7 @@ let filterTimer = 0;
 function refilter() {
   const s = sec(); if (!s) return;
   clearTimeout(filterTimer);
-  filterTimer = setTimeout(() => { enhance(s); s.logVer++; markDirty(); scheduleLog(); requestRender(); }, 90);
+  filterTimer = setTimeout(() => enhanceAsync(s).then((last) => { if (!last) return; s.logVer++; markDirty(); scheduleLog(); requestRender(); }).catch((e) => toast(t('err.generic', { e: e.message || e }))), 90);   // V0.41: in the worker
 }
 $('filterCtl').addEventListener('input', (e) => {
   const s = sec(), k = e.target.dataset.k; if (!s || !k) return;
@@ -2305,28 +2333,20 @@ async function saveFile(name, data, type = 'application/octet-stream') {
 const safe = (s) => String(s).replace(/[^\w.-]+/g, '_').slice(0, 80) || 'section';
 
 $('expCSV').addEventListener('click', () => {
-  const counted = S.classes.map((c, k) => [c, k]).filter(([c]) => c.counts);
-  const rng = !!S.age.model?.min, head = ['section', 'depth_top', 'depth_bottom', 'depth', 'units', 'age', ...(rng ? ['age_min', 'age_max'] : []), 'age_units', 'valid_pixels', 'bioturbation_pct', ...counted.map(([c]) => c.name + '_pct'), 'BI', 'ii', 'BI_manual', 'ii_manual'];
-  const rows = [head];
-  for (const s of S.sections) {
-    analyze(s);
-    for (const b of s.bins) rows.push([s.name, b.dTop, b.dBottom, b.depth, s.units, b.age, ...(rng ? [b.ageMin, b.ageMax] : []), S.age.model ? S.age.units : null, b.valid, b.pct, ...counted.map(([, k]) => b.classPct[k]), b.BI, b.ii, b.BIm, b.iim]);
-  }
+  const counted = S.classes.map((c, k) => [c.name, k]).filter(([, k]) => S.classes[k].counts);
+  for (const s of S.sections) analyze(s);
+  const rows = bioturbationTable(S.sections, { counted, range: !!S.age.model?.min, ageUnits: S.age.model ? S.age.units : null });   // V0.44: exportio.js
   analyze(sec());
   saveFile(`${safe(S.name)}_bioturbation.csv`, withProv(toCSV(rows)), 'text/csv');
 });
 
 $('expObjects').addEventListener('click', () => {
-  const rows = [['section', 'object_id', 'class', 'status', 'suggested_class', 'confidence', 'depth_top', 'depth_bottom', 'depth_center', 'units', 'area_cm2', 'length_cm', 'width_cm', 'elongation', 'verticality', 'compactness', 'mean_luminance', 'contrast', 'counted']];
+  const items = [];
   for (const s of S.sections) {
     const eff = effClassArray(s);
-    for (const o of s.objects.values()) {
-      if (!o.bbox) continue; const f = o.feat || {};
-      rows.push([s.name, o.id, clsById(o.cls)?.name ?? '', status(o), clsById(o.pred)?.name ?? '', o.cls ? 1 : o.conf, depthAtRow(s, o.bbox[1]), depthAtRow(s, o.bbox[3] + 1), depthAtRow(s, f.cy + 0.5), s.units,
-        f.areaCm2, f.majorCm, f.minorCm, f.elong, f.vert, f.compact, f.meanL, f.contrast, eff[o.id] >= 0 ? 1 : 0]);
-    }
+    for (const o of s.objects.values()) items.push({ section: s.name, units: s.units, o, cls: clsById(o.cls)?.name, status: status(o), pred: clsById(o.pred)?.name, counted: eff[o.id] >= 0, depth: (row) => depthAtRow(s, row) });
   }
-  saveFile(`${safe(S.name)}_objects.csv`, withProv(toCSV(rows)), 'text/csv');
+  saveFile(`${safe(S.name)}_objects.csv`, withProv(toCSV(objectsTable(items))), 'text/csv');   // V0.44: exportio.js
 });
 
 $('expMask').addEventListener('click', () => {
@@ -2583,12 +2603,15 @@ $('cdDel').addEventListener('click', () => {
  */
 function serSection(s) {
   const o2 = (o) => ({ id: o.id, cls: o.cls, src: o.src, ...(o.nt ? { nt: 1 } : {}), ...(o.stats ? { st: o.stats } : {}), ...(o.cls && o._thumb ? { th: o._thumb } : {}), ...(o.emb ? { em: o.emb } : {}) });
+  // V0.41: the file keeps only the overlap stacks still in use (renumbered on a copy; memory and undo keep theirs)
+  let lab = s._mk.labels.rle(), stacks;
+  if (s.stacks.length > 1) { lab = Array.from(lab); stacks = compactStacks(lab, s.stacks, 2); if (stacks.length < 2) stacks = undefined; }
   return {
     id: s.id, name: s.name, ds: s.ds, rot: s.rot, w: s.w, h: s.h, crop: s.crop || null, full: s.full || null,
     file: s.file.key ? { name: s.file.name, type: s.file.type, key: s.file.key, size: s.file.size } : { name: s.file.name, type: s.file.type, blob: s.file.blob },
     top: s.top, bottom: s.bottom, units: s.units, roi: s.roi, filters: s.filters, preset: s.preset, detect: s.detect, manual: s.manual,
     nextId: s.nextId, objects: [...s.objects.values()].map(o2),
-    labels: s._mk.labels.rle(), stacks: s.stacks.length > 1 ? s.stacks : undefined, exclude: s._mk.exclude.rle(), marks: s.marks || [],
+    labels: lab, stacks, exclude: s._mk.exclude.rle(), marks: s.marks || [],
   };
 }
 
@@ -2618,6 +2641,7 @@ async function loadSection(q) {
     const tmp = mk(newSection({ name: q.name, file, w: 1, h: 1, orig: null, ds: q.ds || 1 }));
     const r = await decodeWorking(tmp, q.ds || 1); ({ w, h } = r); orig = r.rgba;
   }
+  if (q.$missing) throw new Error(t('load.badMask', { s: q.name || '?', k: 'section' }));   // V0.44: section record missing in the library
   // V0.36: a damaged mask stops the load instead of being saved over the good copy
   for (const k of ['labels', 'exclude']) if (q[k] != null && !rleValid(q[k], w * h)) throw new Error(t('load.badMask', { s: q.name || '?', k }));
   const s = mk(newSection({ name: q.name, file, w, h, orig, ds: q.ds || 1, full: q.full || null, labels: { rle: q.labels }, exclude: { rle: q.exclude } }));
@@ -2636,23 +2660,9 @@ async function loadSection(q) {
 }
 let loadMigrated = false;
 
-/** v1/v2 files → v3 structure: the images become one core; the geochemistry cores become further cores. */
 /* V0.36: version 5 = trace overlaps (stacks, V0.20), cell edits (V0.35). A newer file opens read-only. */
 const FORMAT_VERSION = 5;
 let readOnlyProject = false;
-function upgradeProject(p) {
-  if (p.version >= 3) return p;
-  const geo = p.geo || {}, old = geo.cores || [], main = old.find((c) => c.id === 'main');
-  const cores = [];
-  if ((p.sections || []).length || (p.records || []).length || !old.length) {
-    cores.push({ id: 'main', name: main?.name?.split(' · ')[0] || p.name || 'Sondeo', lat: main?.lat ?? null, lon: main?.lon ?? null, units: p.sections?.[0]?.units || 'm',
-      imp: null, records: p.records || [], logView: p.logView, age: p.age || { text: '', units: 'ka' }, sections: p.sections || [] });
-  }
-  for (const c of old) if (c.id !== 'main') cores.push({ id: c.id, name: c.name, lat: c.lat, lon: c.lon, waterDepth: c.waterDepth, units: c.units || 'm', source: c.source,
-    imp: { depth: c.depth, age: c.age, proxies: c.proxies }, records: [], age: { text: c.ageText || '', units: 'ka' }, sections: [] });
-  const { cores: _o, ...g } = geo;
-  return { ...p, version: 3, geo: g, cores, curCore: cores[0]?.id };
-}
 
 async function loadProject(p) {
   blankStart = false;
@@ -3240,6 +3250,25 @@ function compositeData(axisPref = S.logView.axis) {   // V0.32: a figure may ask
 }
 
 /**
+ * V0.41: box-filter reduction of a w × h layer to sw × sh without a full-size canvas: pix(i) returns [r, g, b, a] for
+ * source pixel i (or null = transparent); colours are averaged with premultiplied alpha, as a canvas downscale does.
+ */
+function reduceRGBA(w, h, sw, sh, pix) {
+  const n = sw * sh, acc = new Float32Array(n * 4), cnt = new Uint32Array(n), cx = new Int32Array(w);
+  for (let x = 0; x < w; x++) cx[x] = Math.min(sw - 1, Math.floor((x * sw) / w));
+  for (let y = 0; y < h; y++) {
+    const oy = Math.min(sh - 1, Math.floor((y * sh) / h)) * sw, row = y * w;
+    for (let x = 0; x < w; x++) {
+      const o = oy + cx[x]; cnt[o]++; const p = pix(row + x); if (!p) continue;
+      const a = p[3], j = o * 4; acc[j] += p[0] * a; acc[j + 1] += p[1] * a; acc[j + 2] += p[2] * a; acc[j + 3] += a;
+    }
+  }
+  const im = new ImageData(sw, sh), d = im.data;
+  for (let o = 0; o < n; o++) { const j = o * 4, A = acc[j + 3]; if (!A) continue; d[j] = acc[j] / A; d[j + 1] = acc[j + 1] / A; d[j + 2] = acc[j + 2] / A; d[j + 3] = A / cnt[o]; }
+  return im;
+}
+
+/**
  * Column strip of a section (≤ 512 px wide). V0.1: the reduced picture (original or treated) is cached apart from the
  * coloured traces, so changing overlay settings only needs the masks, not the picture on disk.
  */
@@ -3253,26 +3282,23 @@ function sectionCanvas(s) {
       needPixels(s); const p = document.createElement('canvas'); p.width = sw; p.height = sh;
       const g = p.getContext('2d'); g.fillStyle = '#cfd4d2'; g.fillRect(0, 0, sw, sh); s._lc = { key: 'pending', canvas: p, k: sw / s.w }; return p;
     }
-    const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
-    const src = lv.imgMode === 'orig' ? s.orig : s.enh;
-    c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(src.buffer, src.byteOffset, src.length), s.w, s.h), 0, 0);
+    const src = lv.imgMode === 'orig' ? s.orig : s.enh, px = [0, 0, 0, 255];
     const b = document.createElement('canvas'); b.width = sw; b.height = sh;
-    const bc = b.getContext('2d'); bc.imageSmoothingQuality = 'high'; bc.drawImage(c, 0, 0, sw, sh); c.width = c.height = 0;
+    b.getContext('2d').putImageData(reduceRGBA(s.w, s.h, sw, sh, (i) => { const j = i * 4; px[0] = src[j]; px[1] = src[j + 1]; px[2] = src[j + 2]; return px; }), 0, 0);   // V0.41
     s._lb = { key: bkey, canvas: b };
   }
   const out = document.createElement('canvas'); out.width = sw; out.height = sh;
   const oc = out.getContext('2d'); oc.drawImage(s._lb.canvas, 0, 0);
-  if (lv.overlay || lv.hideExcl) {   // traces (alpha a) and blank excluded zones, drawn at full resolution then reduced
-    const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
-    const ctx = c.getContext('2d'), im = ctx.createImageData(s.w, s.h), d = im.data, L = s.labels, ex = s.exclude;
-    const eff = lv.overlay ? effClassArray(s) : null, cols = S.classes.map((q) => hex(q.color)), a = Math.round(255 * Math.max(0.35, S.ovAlpha));
-    for (let i = 0; i < L.length; i++) {
-      const j = i * 4;
-      if (ex[i]) { if (lv.hideExcl) { d[j] = d[j + 1] = d[j + 2] = d[j + 3] = 255; } continue; }   // V31: excluded zones left blank
-      if (!eff) continue; const id = topAt(L[i], s.stacks); if (!id) continue; const q = eff[id]; if (q < 0) continue;
-      const col = cols[q]; d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; d[j + 3] = a;
-    }
-    ctx.putImageData(im, 0, 0); oc.imageSmoothingQuality = 'high'; oc.drawImage(c, 0, 0, sw, sh); c.width = c.height = 0;
+  if (lv.overlay || lv.hideExcl) {   // traces (alpha a) and blank excluded zones, averaged straight into the strip (V0.41)
+    const L = s.labels, ex = s.exclude, eff = lv.overlay ? effClassArray(s) : null, cols = S.classes.map((q) => hex(q.color)), a = Math.round(255 * Math.max(0.35, S.ovAlpha));
+    const W = 255, px = [0, 0, 0, 0];
+    const im = reduceRGBA(s.w, s.h, sw, sh, (i) => {
+      if (ex[i]) { if (!lv.hideExcl) return null; px[0] = px[1] = px[2] = px[3] = W; return px; }   // V31: excluded zones left blank
+      if (!eff) return null; const id = topAt(L[i], s.stacks); if (!id) return null; const q = eff[id]; if (q < 0) return null;
+      const col = cols[q]; px[0] = col[0]; px[1] = col[1]; px[2] = col[2]; px[3] = a; return px;
+    });
+    const t2 = document.createElement('canvas'); t2.width = sw; t2.height = sh; t2.getContext('2d').putImageData(im, 0, 0);
+    oc.drawImage(t2, 0, 0); t2.width = t2.height = 0;
   }
   s._lc = { key, canvas: out, k: sw / s.w };
   return out;
@@ -3573,10 +3599,7 @@ let pendingTable = null;
 
 function addRecordFromTable(name, tab, xCol, axis, yCols) {
   const n0 = S.records.reduce((k, r) => k + r.series.length, 0);
-  const series = yCols.map((c, k) => {
-    const pts = tab.rows.map((r) => [r[xCol], r[c]]).filter((p) => p[0] != null && p[1] != null).sort((a, b) => a[0] - b[0]);
-    return { name: tab.headers[c], x: pts.map((p) => p[0]), y: pts.map((p) => p[1]), color: REC_COLORS[(n0 + k) % REC_COLORS.length], show: true, reverse: false };
-  }).filter((s) => s.x.length);
+  const series = recordSeries(tab, xCol, yCols, REC_COLORS, n0);   // V0.44: exportio.js
   if (!series.length) return false;
   S.records.push({ id: uid(), name, axis, series });
   renderRecList(); markDirty(); scheduleLog();
@@ -5325,7 +5348,7 @@ async function buildTutorialProject() {
   s.top = truth.top_cm; s.bottom = truth.bottom_cm; s.units = 'cm';
   s.detect = { ...DEFAULT_DETECT, method: 'global', polarity: 'dark', threshold: 105, minArea: 12, smooth: 1 };
   S.sections.push(s); syncSettingsForm(); selectSection(S.sections.length - 1, true);
-  detectSection(s);
+  await detectSection(s);
   truth.traces.forEach((q, i) => {
     if (i % 2) return; // the other half stays for the suggestions
     const cls = S.classes.find((c) => c.name === q.taxon); if (!cls) return;
@@ -6187,22 +6210,23 @@ function sectionModeCanvas(s, mode, hx = S.fig.hideExcl) {   // V0.25: hx = pain
   const F = S.fig, key = `${s.logVer}|${mode}|${F.alpha}|${!!hx}|${S.settings.predThr}|${S.settings.includePred}`, mk = mode + (hx ? '|x' : '');
   s._fc ||= new Map(); if (s._fc.get(mk)?.key === key) return s._fc.get(mk);
   if (!s.orig && !['mask', 'bw'].includes(mode)) { needPixels(s); const p = document.createElement('canvas'); p.width = 1; p.height = Math.max(1, Math.round(s.h / s.w)); const g = p.getContext('2d'); g.fillStyle = '#e4e7e6'; g.fillRect(0, 0, 1, p.height); return { key: 'pending', canvas: p, k: 1 / s.w }; }
-  const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
-  const ctx = c.getContext('2d'), im = ctx.createImageData(s.w, s.h), d = im.data, lab = s.labels, ex = s.exclude, W = s.w;
-  const eff = effClassArray(s), cols = S.classes.map((k) => hex(k.color)), photo = !['mask', 'bw'].includes(mode);
-  if (photo) d.set(mode === 'orig' ? s.orig : s.enh); else d.fill(255);
-  for (let i = 0; i < lab.length; i++) {
-    const j = i * 4;
-    if (ex[i] && (hx || !photo)) { const v = photo ? 255 : 236; d[j] = d[j + 1] = d[j + 2] = v; continue; }
-    const id = topAt(lab[i], s.stacks); if (!id) continue; const k = eff[id]; if (k < 0) continue; const col = cols[k];
-    if (mode === 'fill' || mode === 'mask') { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; }
-    else if (mode === 'bw') { d[j] = d[j + 1] = d[j + 2] = 20; }
-    else if (mode === 'alpha') { const a = F.alpha; d[j] += (col[0] - d[j]) * a; d[j + 1] += (col[1] - d[j + 1]) * a; d[j + 2] += (col[2] - d[j + 2]) * a; }
-    else if (mode === 'outline') { const x = i % W; if (x === 0 || x === W - 1 || !hasId(lab[i - 1], id, s.stacks) || !hasId(lab[i + 1], id, s.stacks) || !hasId(lab[i - W], id, s.stacks) || !hasId(lab[i + W], id, s.stacks)) { d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; } }
-  }
-  ctx.putImageData(im, 0, 0);
+  // V0.41: each pixel's colour is computed and averaged straight into the ≤ 900 px picture (no full-size canvas)
+  const lab = s.labels, ex = s.exclude, W = s.w;
+  const eff = effClassArray(s), cols = S.classes.map((k) => hex(k.color)), photo = !['mask', 'bw'].includes(mode), src = mode === 'orig' ? s.orig : s.enh;
   const k = Math.min(1, 900 / s.w), out = document.createElement('canvas'); out.width = Math.max(1, Math.round(s.w * k)); out.height = Math.max(1, Math.round(s.h * k));
-  const o2 = out.getContext('2d'); o2.imageSmoothingQuality = 'high'; o2.drawImage(c, 0, 0, out.width, out.height); c.width = c.height = 0;
+  const px = [0, 0, 0, 255];
+  const im = reduceRGBA(s.w, s.h, out.width, out.height, (i) => {
+    const j = i * 4;
+    if (photo) { px[0] = src[j]; px[1] = src[j + 1]; px[2] = src[j + 2]; } else px[0] = px[1] = px[2] = 255;
+    if (ex[i] && (hx || !photo)) { px[0] = px[1] = px[2] = photo ? 255 : 236; return px; }
+    const id = topAt(lab[i], s.stacks); if (!id) return px; const q = eff[id]; if (q < 0) return px; const col = cols[q];
+    if (mode === 'fill' || mode === 'mask') { px[0] = col[0]; px[1] = col[1]; px[2] = col[2]; }
+    else if (mode === 'bw') { px[0] = px[1] = px[2] = 20; }
+    else if (mode === 'alpha') { const a = F.alpha; px[0] += (col[0] - px[0]) * a; px[1] += (col[1] - px[1]) * a; px[2] += (col[2] - px[2]) * a; }
+    else if (mode === 'outline') { const x = i % W; if (x === 0 || x === W - 1 || !hasId(lab[i - 1], id, s.stacks) || !hasId(lab[i + 1], id, s.stacks) || !hasId(lab[i - W], id, s.stacks) || !hasId(lab[i + W], id, s.stacks)) { px[0] = col[0]; px[1] = col[1]; px[2] = col[2]; } }
+    return px;
+  });
+  out.getContext('2d').putImageData(im, 0, 0);
   const r = { key, canvas: out, k: out.width / s.w }; s._fc.set(mk, r); return r;
 }
 /** One panel image for depths [from, to) (base units), H × W px. */
@@ -6495,7 +6519,8 @@ function renderFigPanel() {
     syncCoreFigSize();
   } else if (F.type === 'geolog') {
     box.innerHTML = `<label class="f"><span>${t('geo.core')}</span><select id="figGeoCore">${S.cores.map((c) => `<option value="${c.id}" ${c.id === S.geo.view.core ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label><p class="note">${t('fig.geoNote')}</p>`;
-  } else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
+  } else if (F.type === 'locmap') box.innerHTML = locmapPanelHTML();
+  else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
   if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? colOrderHTML('range') + speciesFormHTML(S.logView.style || {}) + axesFormHTML(['total', 'species']) : '')}</details>`);
 }
 
@@ -6541,6 +6566,120 @@ function editSVGLabels(box, edits, save) {
   save(svg.outerHTML);
 }
 
+/* ───────────── V0.43: core location map (figure) ───────────── */
+const LM_BASES = {
+  blank: null, vector: null,
+  satellite: { svc: 'World_Imagery', attr: 'Esri, Maxar, Earthstar Geographics, GIS User Community' },
+  topo: { svc: 'World_Topo_Map', attr: 'Esri and contributors (World Topographic Map)' },
+  relief: { svc: 'World_Shaded_Relief', attr: 'Esri (World Shaded Relief)' },
+  physical: { svc: 'World_Physical_Map', attr: 'Esri, U.S. National Park Service (World Physical Map)' },
+  streets: { svc: 'World_Street_Map', attr: 'Esri, HERE, Garmin, OpenStreetMap contributors (World Street Map)' },
+  ocean: { svc: 'Ocean/World_Ocean_Base', attr: 'Esri, Garmin, GEBCO, NOAA NGDC (World Ocean Base)' },
+};
+const lmSet = () => { const F = S.fig; F.loc = { ...LOCMAP_DEFAULTS, ...(F.loc || {}), labels: { ...LOCMAP_DEFAULTS.labels, ...(F.loc?.labels || {}) } }; return F.loc; };
+const lmPoints = () => S.cores.filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lon)).map((c) => ({ name: c.name, lat: c.lat, lon: c.lon }));
+const lmBgCache = new Map();
+/** Raster base of exactly the frame, asked to Esri in the map CRS (EPSG:4326, 3857 or 326xx/327xx), as a data URL. */
+function locmapBackground(st, r) {
+  const def = LM_BASES[st.base]; if (!def) return null;
+  const fr = r.frame, k = Math.min(2, 4096 / Math.max(fr.W, fr.H)), w = Math.round(fr.W * k), h = Math.round(fr.H * k);
+  const url = `https://server.arcgisonline.com/ArcGIS/rest/services/${def.svc}/MapServer/export?bbox=${[fr.X0, fr.Y0, fr.X1, fr.Y1].map((v) => v.toFixed(r.crs.geographic ? 6 : 1)).join(',')}&bboxSR=${r.crs.epsg}&imageSR=${r.crs.epsg}&size=${w},${h}&format=jpg&f=image`;
+  const hit = lmBgCache.get(url);
+  if (hit && hit !== 'pending') return hit === 'fail' ? null : hit;
+  if (!hit && mapNetConsent()) {
+    lmBgCache.set(url, 'pending');
+    fetchImage(url).then((href) => { lmBgCache.set(url, { href, attribution: def.attr }); scheduleFigure(); })
+      .catch(() => { lmBgCache.set(url, 'fail'); toast(t('ms.bgFail')); scheduleFigure(); });
+  }
+  return null;
+}
+function locmapSVG() {
+  const st = lmSet(), pts = lmPoints();
+  const o = { settings: st, points: pts, land: geoLand, labelsText: { crs: t('lm.crs') } };
+  let r = buildLocMapSVG(o);
+  if (LM_BASES[st.base]) { const bg = locmapBackground(st, r); if (bg) r = buildLocMapSVG({ ...o, bg }); }
+  lastLocmap = r;
+  if (!pts.length) $('lmNote') && ($('lmNote').textContent = t('lm.noCores'));
+  return r.svg;
+}
+let lastLocmap = null;
+function locmapPanelHTML() {
+  const st = lmSet(), b = st.bbox || lmFitBBox(lmPoints(), st.margin), auto = lmUtmZone((b[0] + b[2]) / 2);
+  const opt = (k, vals, lab) => `<select data-lm="${k}">${vals.map((v) => `<option value="${v}" ${String(st[k]) === String(v) ? 'selected' : ''}>${lab(v)}</option>`).join('')}</select>`;
+  const chk = (k, path = k) => `<label class="chk"><input type="checkbox" data-lm="${path}" ${(path.startsWith('labels.') ? st.labels[path.slice(7)] : st[k]) ? 'checked' : ''}><span>${t('lm.' + k)}</span></label>`;
+  const num = (k, min, max, stp) => `<label class="f"><span>${t('lm.' + k)}</span><input type="number" data-lm="${k}" min="${min}" max="${max}" step="${stp}" value="${st[k] ?? ''}" placeholder="${t('fig.auto2')}"></label>`;
+  const pos = (k) => opt(k, ['tl', 'tr', 'bl', 'br'], (v) => t('lm.pos.' + v));
+  return `<p class="note" id="lmNote">${t('lm.intro', { n: lmPoints().length })}</p>
+    <details class="mini" open><summary>${t('lm.view')}</summary>
+      <label class="f"><span>${t('lm.base')}</span>${opt('base', Object.keys(LM_BASES), (v) => t('lm.b.' + v))}</label>
+      <label class="f"><span>${t('lm.baseOpacity')}</span><input type="range" data-lm="baseOpacity" min="0.2" max="1" step="0.05" value="${st.baseOpacity}"></label>
+      <div class="grid2">${['W', 'S', 'E', 'N'].map((q, i) => `<label class="f"><span>${t('lm.bb.' + q)}</span><input type="number" data-lm="bbox.${i}" step="any" value="${+b[i].toFixed(4)}"></label>`).join('')}</div>
+      <div class="row" style="gap:4px;flex-wrap:wrap">${[['in', '＋'], ['out', '－'], ['w', '◀'], ['n', '▲'], ['s', '▼'], ['e', '▶']].map(([k, ic]) => `<button class="btn small" type="button" data-lmz="${k}" title="${t('lm.z.' + k)}" aria-label="${t('lm.z.' + k)}">${ic}</button>`).join('')}<button class="btn small" type="button" data-lmz="fit">${t('lm.z.fit')}</button></div>
+      <div class="grid2"><label class="f"><span>${t('lm.width')}</span><input type="number" data-lm="width" min="300" max="3000" step="50" value="${st.width}"></label>
+      <label class="f"><span>${t('lm.aspect')}</span>${opt('aspect', ['auto', '1:1', '4:3', '3:2', '16:9', 'A4', 'A4v'], (v) => (v === 'auto' ? t('lm.aspectAuto') : v === 'A4' ? 'A4 ↔' : v === 'A4v' ? 'A4 ↕' : v))}</label></div>
+    </details>
+    <details class="mini" open><summary>${t('lm.crsT')}</summary>
+      <label class="f"><span>${t('lm.crs')}</span>${opt('crs', ['EPSG:4326', 'EPSG:3857', 'UTM'], (v) => t('lm.c.' + v.replace(':', '')))}</label>
+      ${st.crs === 'UTM' ? `<div class="grid2"><label class="f"><span>${t('lm.zone')}</span><select data-lm="utmZone"><option value="">${t('lm.zoneAuto', { z: auto })}</option>${Array.from({ length: 60 }, (_, i) => `<option value="${i + 1}" ${st.utmZone === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
+      <label class="f"><span>${t('lm.hemi')}</span><select data-lm="utmSouth"><option value="">${t('lm.hemiAuto')}</option><option value="0" ${st.utmSouth === false ? 'selected' : ''}>${t('lm.hN')}</option><option value="1" ${st.utmSouth === true ? 'selected' : ''}>${t('lm.hS')}</option></select></label></div>` : ''}
+    </details>
+    <details class="mini" open><summary>${t('lm.gridT')}</summary>
+      ${chk('grid')}
+      <div class="grid2"><label class="f"><span>${t('lm.gridType')}</span>${opt('gridType', st.crs === 'EPSG:4326' ? ['auto'] : ['auto', 'geo'], (v) => t('lm.g.' + v))}</label>
+      <label class="f"><span>${t(st.crs === 'EPSG:4326' || st.gridType === 'geo' ? 'lm.stepDeg' : 'lm.stepM')}</span><input type="number" data-lm="gridStep" min="0" step="any" value="${st.gridStep ?? ''}" placeholder="${t('fig.auto2')}"></label></div>
+      <div class="f"><span>${t('lm.sides')}</span><div class="chk2">${['top', 'bottom', 'left', 'right'].map((q) => `<label class="chk"><input type="checkbox" data-lm="labels.${q}" ${st.labels[q] ? 'checked' : ''}><span>${t('lm.side.' + q)}</span></label>`).join('')}</div>
+      <div class="row" style="gap:4px"><button class="btn small" type="button" data-lmz="allSides">${t('mp.all')}</button><button class="btn small" type="button" data-lmz="noSides">${t('mp.none')}</button></div></div>
+      ${st.crs === 'EPSG:4326' || st.gridType === 'geo' ? `<label class="f"><span>${t('lm.fmt')}</span>${opt('coordFmt', ['dd', 'dms'], (v) => t('lm.f.' + v))}</label>` : `<label class="f"><span>${t('lm.unit')}</span>${opt('metricUnit', ['m', 'km'], (v) => v)}</label><p class="note">${t('lm.metricNote')}</p>`}
+      <div class="grid2">${num('labelSize', 6, 24, 1)}<label class="f"><span>${t('lm.gridColor')}</span><input type="color" data-lm="gridColor" value="${st.gridColor}"></label></div>
+      ${chk('ticks')}${chk('rotateSide')}${chk('gridDash')}
+    </details>
+    <details class="mini"><summary>${t('lm.elemT')}</summary>
+      <div class="grid2">${chk('scaleBar')}<label class="f"><span>${t('lm.pos')}</span>${pos('scalePos')}</label>${chk('north')}<label class="f"><span>${t('lm.pos')}</span>${pos('northPos')}</label></div>
+      ${num('northSize', 0.5, 3, 0.1)}
+    </details>
+    <details class="mini"><summary>${t('lm.coresT')}</summary>
+      <div class="grid2"><label class="f"><span>${t('lm.symbol')}</span>${opt('symbol', ['circle', 'square', 'triangle', 'diamond', 'star'], (v) => t('lm.s.' + v))}</label>${num('pointSize', 2, 20, 1)}
+      <label class="f"><span>${t('lm.pointColor')}</span><input type="color" data-lm="pointColor" value="${st.pointColor}"></label><label class="f"><span>${t('lm.land')}</span><input type="color" data-lm="land" value="${st.land}"></label>
+      <label class="f"><span>${t('lm.sea')}</span><input type="color" data-lm="sea" value="${st.sea}"></label>${num('coreLabelSize', 6, 24, 1)}</div>
+      ${chk('coreLabels')}${chk('coast')}
+    </details>
+    <details class="mini" open><summary>${t('lm.outT')}</summary>
+      <div class="grid2"><label class="f"><span>${t('lm.fmtOut')}</span>${opt('fmt', ['svg', 'png', 'jpg'], (v) => v.toUpperCase())}</label>
+      <label class="f"><span>${t('lm.scale')}</span>${opt('scale', [1, 2, 3, 4, 6], (v) => `×${v} (≈${Math.round(96 * v)} ppp)`)}</label></div>
+      <button class="btn primary small" type="button" data-lmz="export">${t('lm.export')}</button>
+    </details>`;
+}
+function onLocmapInput(el) {
+  const st = lmSet(), k = el.dataset.lm, v = el.type === 'checkbox' ? el.checked : el.type === 'number' || el.type === 'range' ? (el.value === '' ? null : +el.value) : el.value;
+  if (k.startsWith('labels.')) st.labels[k.slice(7)] = v;
+  else if (k.startsWith('bbox.')) { const b = [...(st.bbox || lastLocmap?.bbox || lmFitBBox(lmPoints(), st.margin))]; if (v != null) b[+k.slice(5)] = v; if (b[2] > b[0] && b[3] > b[1]) st.bbox = b; }
+  else if (k === 'utmZone') st.utmZone = v ? +v : null;
+  else if (k === 'utmSouth') st.utmSouth = v === '' ? null : v === '1';
+  else if (k === 'scale') st.scale = +v;
+  else st[k] = v;
+  if (k === 'crs' && v === 'EPSG:4326') st.gridType = 'auto';
+  markDirty(); if (['crs', 'gridType', 'base'].includes(k)) renderFigPanel(); scheduleFigure();
+}
+async function exportLocmap() {
+  const st = lmSet(); if (!figSvgCache) return;
+  const name = `${safe(S.name)}_mapa_localizacion`;
+  if (st.fmt === 'svg') { await saveFile(name + '.svg', figSvgCache, 'image/svg+xml'); return; }
+  const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(figSvgCache); await img.decode();
+  const k = st.scale || 3, c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+  const type = st.fmt === 'jpg' ? 'image/jpeg' : 'image/png', blob = await new Promise((r) => c.toBlob(r, type, st.quality));
+  if (blob) await saveFile(name + (st.fmt === 'jpg' ? '.jpg' : '.png'), blob, type);
+}
+$('figPanel').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-lmz]'); if (!b) return;
+  const st = lmSet(), z = b.dataset.lmz, cur = st.bbox || lastLocmap?.bbox || lmFitBBox(lmPoints(), st.margin);
+  if (z === 'export') { busy(exportLocmap); return; }
+  if (z === 'fit') st.bbox = null;
+  else if (z === 'allSides' || z === 'noSides') for (const q of ['top', 'bottom', 'left', 'right']) st.labels[q] = z === 'allSides';
+  else st.bbox = lmZoom(cur, z === 'in' ? 1.5 : z === 'out' ? 1 / 1.5 : 1, z === 'e' ? 0.25 : z === 'w' ? -0.25 : 0, z === 'n' ? 0.25 : z === 's' ? -0.25 : 0);
+  markDirty(); renderFigPanel(); scheduleFigure();
+});
+
 /** V0.13: message for a drawing error (translated when it is an invalid axis, the real message otherwise). */
 const axisErr = (e) => (/^Invalid horizontal axis/.test(e?.message || '') ? t('edit.invalidAxis') : e?.message || String(e));
 function renderFigure() {
@@ -6554,6 +6693,7 @@ function renderFigure() {
     else if (F.type === 'range') svg = rangeSVG();
     else if (F.type === 'log') { renderLog(); svg = lastLog?.svg || null; }
     else if (F.type === 'geolog') { if (geoRT.dirty) geoComputeSamples(); renderGeoLogs(); svg = $('geoLogSvg').querySelector('svg')?.outerHTML || null; }
+    else if (F.type === 'locmap') svg = locmapSVG();
     else { if (geoRT.dirty) geoComputeSamples(); svg = renderGeoMap() || null; }
   } catch (e) { console.error(e); $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(axisErr(e))}</p>`; return; }
   figSvgCache = svg ? wrapFigure(svg, F.title, F.caption) : '';
@@ -6566,6 +6706,7 @@ function renderFigure() {
 let figTimer = 0;
 const scheduleFigure = () => { clearTimeout(figTimer); figTimer = setTimeout(renderFigure, 150); };
 $('figPanel').addEventListener('change', (e) => {
+  if (e.target.dataset.lm != null) { onLocmapInput(e.target); return; }   // V0.43
   if (e.target.dataset.st || e.target.dataset.sph != null || e.target.dataset.ax != null || e.target.dataset.axw != null) { onStyleInput(e); return; }   // V0.5–V0.6: column style
   const F = S.fig, el = e.target;
   if (el.id === 'figType') { F.type = el.value; renderFigPanel(); }
@@ -6640,12 +6781,8 @@ let toastTimer = 0;
  * which settings produced it, so a table can be reproduced.
  */
 function withProv(csv) {
-  const st = S.settings, m = S.age.model;
   const det = [...new Set(S.cores.flatMap((c) => c.sections.map((x) => (x.detect || DEFAULT_DETECT).method || 'adaptive')))].join('/');
-  const age = m ? `${S.age.bacon ? `Bacon ${S.age.center || 'median'}` : 'table'}${m.min ? ' with range' : ''}, ${S.age.units || 'ka'}` : 'none';
-  return [`# CorAnTool ${DELIVERY} (format ${FORMAT_VERSION}); exported ${new Date().toISOString()}; project "${S.name}"`,
-    `# settings: binCm=${st.binCm}; minValid=${st.minValid}%; includePred=${!!st.includePred}; predThr=${st.predThr}; countCandidates=${!!st.countCandidates}; detection=${det}; age model=${age}`,
-    csv].join('\n');
+  return withProvenance(csv, { delivery: DELIVERY, format: FORMAT_VERSION, date: new Date().toISOString(), project: S.name, settings: S.settings, detection: det, age: ageModelText(S.age.model, S.age) });   // V0.44: exportio.js
 }
 function toast(msg, ms = 3200) { const el = $('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), ms); }
 

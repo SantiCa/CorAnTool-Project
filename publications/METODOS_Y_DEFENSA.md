@@ -179,6 +179,9 @@ existen y producen máscaras en un formato abierto.
 - Desde V0.17 el clasificador de icnotaxones puede usar, en vez de los 12 descriptores, el vector de 384
   valores de un modelo de visión preentrenado (DINOv2). Se puede afirmar que la opción existe y cómo se
   calcula; **no** que mejore la identificación hasta compararla en testigos independientes.
+  Desde V0.45 la descarga predeterminada fija el commit de DINOv2 y el SHA-256 de sus pesos ONNX
+  (documentación técnica §10.6 quater); esto identifica los pesos para reproducibilidad, sin aportar
+  una evaluación de su precisión.
 - Desde V0.17 la U-Net se puede entrenar desde el programa de escritorio. Es el mismo código que la línea de
   órdenes (mismas teselas, pérdida, aumentos y evaluación), así que los resultados son comparables; los
   modelos guardan sondeos de cada conjunto, semilla e historial.

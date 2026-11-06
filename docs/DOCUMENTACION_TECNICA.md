@@ -759,9 +759,12 @@ Alternativa a los 12 descriptores (§9) como entrada del clasificador (`S.settin
    convierte cada imagen en un vector. Se descarga una vez y se guarda en la caché del navegador o del programa
    (`caches`, clave = URL); también se puede cargar un `.onnx` propio con la misma interfaz. Desde V0.38 se calcula
    el SHA-256 del archivo usado, se guarda en el proyecto (`settings.ml.visionSha`) y se avisa si después se carga
-   otro distinto (sus vectores no son comparables). `VISION_MODEL.rev` (revisión de Hugging Face) sigue en `main`:
-   para fijar el archivo, poner el commit y el `sha256` esperado en `vision.js` (Hugging Face no era accesible desde
-   el entorno de esta entrega).
+   otro distinto (sus vectores no son comparables). Desde V0.45, `VISION_MODEL.rev` fija el commit
+   `8b1f705a3a7f6f062f6bdd21986c1583d3ef105d` de Hugging Face. El SHA-256 esperado de `onnx/model.onnx`
+   (88 532 934 bytes) es `f22797eabf810a75e41de68d378541ebea372122b25c4ce3ef25ff618250c20a`,
+   comprobado sobre el archivo descargado y los metadatos LFS del repositorio. La URL con commit tiene su propia
+   entrada de caché; el programa avisa si el hash descargado no coincide, sin bloquear la carga. Los archivos
+   locales siguen admitidos y se registra su hash; fijar los pesos no valida su precisión con testigos reales.
 2. **Ventana:** cuadrado centrado en el rectángulo de la traza `[x₀, y₀, x₁, y₁]`, de lado
    `L = max(16, round(max(ancho, alto)·(1 + 2·0,25)))`; centro `((x₀ + x₁ + 1)/2, (y₀ + y₁ + 1)/2)`. Incluye
    un 25 % de sedimento alrededor por cada lado (contexto). Fuera de la imagen se repite el borde.
@@ -857,6 +860,10 @@ ni en la copia automática). Al importar y al abrir se comprueba que cada RLE de
 par, repeticiones enteras no negativas y sume exactamente `w × h` (`core.js::rleValid`); si no, el archivo se rechaza
 y la copia guardada no se toca.
 
+**Módulo de tablas (V0.44, `exportio.js`, sin DOM y probado):** `bioturbationTable`, `objectsTable`,
+`provenanceLines`/`withProvenance`, `ageModelText` y `recordSeries` (series de un registro importado: filas sin x o y
+fuera, ordenadas por x). `app.js` solo reúne los datos y guarda.
+
 **Procedencia de los CSV (V0.36).** Todos los CSV exportados (bioturbación, objetos, registro, intervalos, mapa,
 clasificación, figuras, datos) empiezan con líneas `#`:
 `# CorAnTool <entrega> (format 5) · <fecha ISO> · <proyecto>` y
@@ -868,18 +875,24 @@ Los lectores de CorAnTool y del paquete Python ya ignoran las líneas que empiez
 ## 13. Validación realizada
 
 ### 13.1 Pruebas automáticas
-Recuento en V0.37: **18 de Python** (16 se ejecutan; 2 se omiten si faltan `onnx`/`torch`) y **77 de la web**.
+Recuento en V0.42: **18 de Python** (16 se ejecutan; 2 se omiten si faltan `onnx`/`torch`), **84 de la web** y una
+prueba de extremo a extremo.
 - **Python (`tests/test_core.py`, `tests/test_unet.py`):** tramos de índices, porcentajes e intervalos en
   casos calculados a mano, último intervalo incompleto, multiclase por colores, gris y RGB,
   profundidad y edad, imagen de ejemplo, línea de comandos, U-Net y **regresión frente al CSV publicado
   de la V2** (coincidencia exacta en profundidad, porcentaje, BI e ii). Esta regresión automática solo existe en
   Python; la comparación de la web con la V2 (§13.2) se hizo una vez a mano.
-- **Web (`tests/app/*.test.mjs`, 77 pruebas):** `core` 13 (mismos casos de índices e intervalos que en Python,
+- **Web (`tests/app/*.test.mjs`):** `core` 13 (mismos casos de índices e intervalos que en Python,
   exclusiones, modelo de edad con coma decimal y columnas por cabecera, RLE y su validación, CSV), `log` 15
   (lectura de tablas, ejes, SVG y CSV del registro), `geo` 15 (multiproxy: catálogos, remuestreo, reglas,
   clasificadores, validación dejando un sondeo fuera y por bloques con margen y escalado por pliegue, k-medias,
   mapa), `enhance` 9 (realce), `unet` 6, `learn` 4 (icnotaxones, pliegues agrupados y esquema de validación),
-  `vision` 4, `overlap` 3 (trazas solapadas), `sheet` 3, `interp` 2, `plot` 2, `zip` 1.
+  `vision` 4, `overlap` 3 (trazas solapadas), `sheet` 3, `interp` 3, `plot` 2, `zip` 1, y desde V0.40–V0.42 `version`
+  1 (versión única) y `edit` 4 (tijeras, fusión del mismo icnotaxón, deshacer y migración v2→v3 con máscaras
+  sintéticas solapadas; `app/js/edit.js`). Total en V0.42: 84.
+- **Extremo a extremo (V0.42, `tests/e2e/smoke.mjs`, `npm run e2e`):** en Chrome sin pantalla abre el sondeo de
+  prueba, repite la detección (mismo número de trazas), borra y deshace una traza, guarda, recarga y compara trazas y
+  píxeles por sección; falla con cualquier error de la página. Se ejecuta en el CI.
 - Se ejecutan automáticamente en GitHub en cada cambio (`.github/workflows/tests.yml`).
 
 ### 13.2 Comparación de la aplicación web con la V2 publicada
@@ -1012,6 +1025,16 @@ Implementación: `storage.js` y `app.js` (bloque *projects*).
 - **Imágenes en disco (V0.1, formato de proyecto v4):** cada archivo original se escribe **una sola
   vez** en `images` y la sección guarda solo la referencia (`file.key`). El guardado automático ya no
   reescribe las imágenes. Los proyectos anteriores se migran solos al abrirlos y guardarse.
+- **Rendimiento (V0.41):** el realce interactivo (deslizadores) y la detección (máscara + componentes) se calculan en un
+  *Web Worker* (`app/js/worker.js`, mismas funciones puras: resultados idénticos); sin él (archivo sin conexión,
+  `file://`) se calculan en el hilo principal. Solo se aplica la última petición de realce de cada sección. La
+  columna lateral y las figuras de sección se reducen directamente a su tamaño de salida (`reduceRGBA`: filtro de caja
+  con alfa premultiplicado, como el escalado del lienzo) sin lienzos a resolución completa. La morfología de la
+  detección reutiliza tres búferes. Al guardar, las pilas de solapes se compactan en una copia (la memoria y el
+  deshacer conservan las suyas). El presupuesto de píxeles (~0,9 GB) cuenta también las probabilidades U-Net y los
+  lienzos en caché; el deshacer tiene su propio límite (~200 MB de píxeles cambiados, como mucho 30 pasos). Las series
+  de la columna lateral se guardan en caché por sección. Kriging: un solo sistema `A·u = [v; 0]` y
+  `ẑ(c) = u₀ + Σ uᵢ γ(dᵢ)` por celda (antes, la inversa completa y O(n²) por celda).
 - **Memoria (V0.1):** al abrir un proyecto no se decodifica ninguna imagen. Los píxeles (original y
   realzada, 8 bytes/px) se leen del disco al trabajar con una sección y se liberan las menos recientes
   por encima de ~0,9 GB (siempre se conserva la sección activa). Las máscaras (5 bytes/px) se
@@ -1025,6 +1048,17 @@ Implementación: `storage.js` y `app.js` (bloque *projects*).
 - **Guardado automático** 1,5 s después de cualquier cambio. El estado se muestra junto al nombre
   del proyecto. Al abrir la aplicación se abre el último proyecto usado.
 - **Desde V0.8** exportar crea un paquete `.corantool` (ZIP sin compresión: `project.json` con `file.path = images/<id de sección><ext>` y las imágenes originales). La copia automática escribe una carpeta por proyecto (`project.json`, `images/`, `historial/`). Los archivos JSON antiguos (imágenes en base64) se siguen importando.
+- **Guardado por secciones (V0.44, IndexedDB versión 5):** el registro del proyecto (`data`) guarda de cada sección
+  solo `{$sec, id, name, file}` y la sección completa va al almacén `secs` con la clave `<proyecto>|<sección>`. Una
+  sección se escribe solo si cambió desde la última vez que se escribió o leyó en la sesión (mismas máscaras RLE y
+  mismo resto de campos) o si falta su registro; las que ya no existen se borran. `getProject` recompone el proyecto
+  completo, así que exportar, copiar y restaurar no cambian. Los registros anteriores (secciones dentro del proyecto)
+  se leen igual. Una sección sin registro impide abrir el proyecto (no se guarda vacía). Con el sondeo de prueba,
+  cambiar una traza reescribe 1 de las 6 secciones.
+- **Realce al abrir (V0.44):** al leer los píxeles de una sección, el realce se calcula en el worker y la imagen
+  original y la realzada se asignan a la vez.
+- **Borrar trazas (V0.44):** `dropIds` recorre solo la unión de los rectángulos de las trazas (que `refreshObjects`
+  mantiene al día con la zona editada ∪ el rectángulo anterior); si alguna no tiene rectángulo, toda la imagen.
 - Exportar e importar usaba antes el mismo contenido en JSON, con las imágenes originales en base64 (§12).
   Al importar se asigna un identificador nuevo para no sobrescribir otro proyecto y las imágenes
   pasan al almacén `images`.
@@ -1105,9 +1139,12 @@ o mayor que la de los intervalos.
 Implementación: `log.js::parseTable, guessAxisColumn` y `app.js` (diálogo de registros).
 
 - **Formatos:** CSV, TXT, TSV o DAT, y Excel (`.xlsx`, `.xls`, `.ods`, primera hoja, leída con la
-  librería SheetJS; la incluida es la 0.18.5, con vulnerabilidades conocidas al abrir archivos ajenos
-  (CVE-2023-30533, CVE-2024-22363): `tools/update_vendor.sh` la sustituye por la 0.20.3 oficial, que no se pudo
-  descargar desde aquí; el respaldo por internet ya apunta a `cdn.sheetjs.com/xlsx-0.20.3`).
+  librería SheetJS). Desde V0.45 se incluye la 0.20.3 oficial, descargada de `cdn.sheetjs.com/xlsx-0.20.3`,
+  con su licencia Apache-2.0. Sustituye la 0.18.5 afectada por CVE-2023-30533 y CVE-2024-22363.
+  SHA-256 del archivo incluido: `cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41`.
+  `.gitattributes` conserva los bytes de este archivo sin convertir los finales de línea en Windows.
+  El respaldo por internet usa la misma versión y comprueba SRI SHA-384. `tools/update_vendor.sh` descarga
+  la biblioteca y su licencia; al actualizarla también deben revisarse los hashes y esta documentación.
 - **Texto** (V0.38, `log.js::decodeText`): UTF-8 y, si no es UTF-8 válido (CSV de Excel en Windows), Windows-1252.
 - **Lectura** (`parseTable`):
   - separador detectado entre tabulador, punto y coma, coma o barra vertical: el primero que divide la primera
@@ -1465,8 +1502,9 @@ interpolado en su centro.
   Surfer, resuelto de forma exacta en lugar de iterativa); «suavizado» λ se suma a la diagonal.
 - **Funciones de base radial:** multicuádrica `√(r² + c²)`, gaussiana `exp(−(r/c)²)` o placa delgada; `c` = forma
   (1 por defecto); mismo sistema `[Φ + λI, P; Pᵀ, 0]`.
-- **Kriging ordinario:** sistema `[Γ, 1; 1ᵀ, 0]` con `Γᵢⱼ = γ(dᵢⱼ)`; su inversa se calcula una vez y los pesos
-  de cada celda son `A⁻¹·[γ(dᵢ), 1]`. Variogramas esférico, exponencial (`1 − e^(−3h/a)`), gaussiano
+- **Kriging ordinario:** sistema `[Γ, 1; 1ᵀ, 0]` con `Γᵢⱼ = γ(dᵢⱼ)`; los pesos de cada celda son `λ = A⁻¹·[γ(dᵢ), 1]`
+  y la estimación `λᵀv`; como A es simétrica, desde V0.41 se resuelve una vez `A·u = [v; 0]` y `ẑ = Σ uᵢγ(dᵢ) + uₙ`
+  (mismo valor, O(n) por celda). Variogramas esférico, exponencial (`1 − e^(−3h/a)`), gaussiano
   (`1 − e^(−3(h/a)²)`) y lineal con pepita y meseta. Ajuste automático: semivariograma empírico en 8 clases de
   distancia hasta la mitad de la distancia máxima; meseta = varianza de los valores; alcance (30 valores hasta la
   distancia máxima) y pepita (0–50 % de la meseta) por mínimos cuadrados ponderados por `n_h / h²` (el `fit.method = 7` de gstat, Pebesma, 2004; Cressie, 1985, propuso `n_h / γ(h)²`; desde V22, antes `n_h`). Con menos de 15 sondeos se avisa de que el
@@ -1723,7 +1761,7 @@ lista de gráficos (`plots`, `plotCur`).
 - **Arranque limpio:** ningún proyecto precargado; nada se guarda hasta crear, importar o abrir un proyecto. El proyecto de
   los datos privados solo se abre con su botón y solo donde existen sus datos privados; el archivo sin conexión ya no los incluye
   salvo con una opción retirada.
-- **Programa de escritorio** (`desktop/`, Electron 33): sirve `app/` y los ejemplos públicos por el esquema `app://`
+- **Programa de escritorio** (`desktop/`, Electron 45.2.1 y electron-builder 26.18.0 desde V0.47): sirve `app/` y los ejemplos públicos por el esquema `app://`
   (sin datos privados (retirados)); límite de memoria de JavaScript = 75 % de la RAM entre 2 y 32 GB
   (`--max-old-space-size`), aunque Electron limita cada ventana a unos 4 GB de objetos JavaScript (compresión de punteros);
   las imágenes (ArrayBuffer) quedan fuera de ese límite y, por encima de la RAM, el sistema pagina a disco. Los proyectos se
@@ -1731,6 +1769,14 @@ lista de gráficos (`plots`, `plotCur`).
   número de entrega (V31 → 31.0.0); archivos `CorAnTool-V31-<sistema>-<arquitectura>`. GitHub Actions
   (`.github/workflows/desktop.yml`) compila Windows (instalador NSIS y portable), macOS (dmg universal) y Linux
   (AppImage y deb) al subir una etiqueta `V*` y los publica en Releases. Sin firma de código.
+  Desde V0.47 se requiere macOS 13 o posterior (Electron retiró macOS 12 en la versión 44);
+  los destinos Windows/Linux de este proyecto siguen siendo x64 y macOS universal (Intel y Apple Silicon).
+  Para construir se necesita Node ≥22.12 por `@electron/rebuild` y `node-abi`; CI usa Node 22 actualizado.
+  Para pruebas previas, ejecutar `Desktop builds` mediante `workflow_dispatch` sobre `master`: genera
+  artefactos `corantool-windows-latest`, `corantool-macos-latest` y `corantool-ubuntu-latest`,
+  y omite el trabajo `release` porque la referencia es una rama, no una etiqueta.
+  No cambia el formato de proyecto, la ruta de datos del usuario ni los algoritmos de análisis.
+  Referencia de compatibilidad: [cambios de Electron](https://www.electronjs.org/docs/latest/breaking-changes).
 
 ### 22.9 Modo identificación, leyendas y nuevas figuras (desde V32)
 
@@ -1816,9 +1862,36 @@ cambia lo que se ve en la imagen de trabajo.
   (`eslint.config.js`, solo reglas de corrección) y construcción del archivo sin conexión. Dependabot semanal.
 - **Seguridad del navegador:** `Content-Security-Policy` en `index.html` (scripts propios y de jsDelivr/SheetJS,
   WebAssembly, imágenes y conexiones solo a Esri, GEBCO, Hugging Face y jsDelivr; el archivo sin conexión permite
-  scripts en línea). Las librerías de respaldo por internet llevan SRI (`sha384`) salvo SheetJS 0.20.3.
+  scripts en línea). Las librerías de respaldo por internet llevan SRI (`sha384`), incluida SheetJS desde V0.45.
 - Comunidad: `SECURITY.md`, `CODE_OF_CONDUCT.md`, plantillas de incidencias y de PR, `CONTRIBUTING.md`,
   `THIRD_PARTY_NOTICES.md`.
+
+### 22.z Mapa de localización de sondeos (figura, desde V0.43)
+Módulo `locmap.js` (sin DOM); ajustes en `S.fig.loc` (valores por defecto `LOCMAP_DEFAULTS`). Puntos: los sondeos del
+proyecto con latitud y longitud.
+- **Sistemas de referencia** (`lmCRS`): EPSG:4326 (X = lon, Y = lat, en grados, sin escalar); EPSG:3857
+  (`X = a·λ`, `Y = a·ln tan(π/4 + φ/2)`, a = 6 378 137 m, φ limitada a ±85,0511°); UTM WGS 84 (EPSG 326zz norte,
+  327zz sur): Mercator transversa con la serie de Krüger hasta n⁴ (k₀ = 0,9996, E₀ = 500 000 m, N₀ = 0 o 10⁷ m,
+  λ₀ = 6·huso − 183°; error submilimétrico dentro del huso). Huso y hemisferio automáticos (centro del encuadre) o
+  elegidos. Prueba: N(45°, meridiano central) = 4 982 950,4 m y ida y vuelta < 10⁻⁹°.
+- **Encuadre** (`lmFrame`): `bbox = [O, S, E, N]` en grados (por defecto, los sondeos ± 25 % y al menos 0,2°); se
+  proyectan 33 puntos por lado y se toma la envolvente; con una proporción fija (4:3 por defecto, 1:1, 3:2, 16:9,
+  A4) la envolvente se ensancha. Acercar/alejar ×1,5 y desplazar un 25 %.
+- **Cuadrícula:** en geográficas, o si se pide «lat/lon», meridianos y paralelos (curvos en UTM) con paso de
+  1, 2, 5 × 10ᵏ grados en DD o sexagesimal (1″…45°) en DMS; en proyectadas, malla métrica de 1, 2, 5 × 10ᵏ m.
+  Paso automático (~5 líneas) o fijado.
+- **Etiquetas** en los lados elegidos (arriba, abajo, izquierda, derecha, combinables): los meridianos o X arriba y
+  abajo, los paralelos o Y a los lados, donde cada línea corta el marco (240 muestras por lado e interpolación).
+  Formatos: DD (`37.5°N`, decimales según el paso), DMS (`37°30′N`, segundos solo si el paso los tiene) o metros con
+  espacio fino de millares (o km).
+- **Escala:** metros por píxel en el centro del mapa por distancia de círculo máximo (R = 6 371 008,8 m) entre ±10 px;
+  longitud 1, 2, 5 × 10ᵏ m que quepa en `min(220, 0,28·ancho)` px; 4 tramos alternos.
+- **Norte:** apunta al norte geográfico; en UTM gira el ángulo de convergencia (ángulo entre el píxel y el mismo punto
+  0,01° más al norte).
+- **Fondos:** en blanco, vectorial (Natural Earth, sin internet) o imagen de Esri (satélite, topográfico, relieve,
+  físico, callejero, océano) pedida con `bbox`, `bboxSR` e `imageSR` iguales al CRS del mapa, del mismo tamaño que el
+  marco (×2, máx. 4096 px), así que coincide sin deformar en los tres sistemas; requiere el permiso de §21.6 bis.
+- **Salida:** SVG, PNG o JPEG a ×1–×6 (≈ 96–576 ppp).
 
 ## 23. Referencias
 

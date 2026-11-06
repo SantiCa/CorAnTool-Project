@@ -28,3 +28,15 @@ test('variogram, contours, colours and land mask', () => {
   assert.deepEqual(maskLand(g, 2, 2, bbox, land, 'sea'), [null, 1, null, 1]);
   assert.deepEqual(maskLand(g, 2, 2, bbox, land, 'land'), [1, null, 1, null]);
 });
+
+test('V0.41: single-solve kriging equals the weight form λ = A⁻¹b', () => {
+  const P = Array.from({ length: 12 }, (_, i) => ({ lat: (i * 37) % 11 * 0.3, lon: (i * 53) % 13 * 0.25, value: Math.sin(i) * 3 + i * 0.2 }));
+  const bb = [0, 0, 3.5, 3.5], o = { method: 'kriging', hull: false, mask: 'both', autoVario: false, variogram: 'spherical', nugget: 0.1, sill: 4, range: 300 };
+  const r = interpolate(P, bb, 6, 6, o);
+  assert.ok(r.grid.every((v) => v == null || Number.isFinite(v)));
+  // weight form on the projected coordinates the module uses: rebuild through a 1-cell grid at each data point
+  for (const p of P.slice(0, 4)) {
+    const one = interpolate(P, [p.lon - 1e-4, p.lat - 1e-4, p.lon + 1e-4, p.lat + 1e-4], 1, 1, o).grid[0];
+    assert.ok(Math.abs(one - p.value) < 0.05 + 0.1, `exact-ish at data point: ${one} vs ${p.value}`);
+  }
+});

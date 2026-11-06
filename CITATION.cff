@@ -4,7 +4,7 @@ title: "CorAnTool"
 authors:
   - family-names: Casanova-Arenillas
     given-names: Santiago
-version: 0.40.0
+version: 0.47.0
 repository-code: "https://github.com/SantiCa/CorAnTool-Project"
 license: GPL-3.0-or-later
 preferred-citation:

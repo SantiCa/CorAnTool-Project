@@ -2,6 +2,27 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.47 — 2026-11-06
+- Updated desktop Electron to 45.2.1 and electron-builder to 26.18.0 together, preserving both Dependabot histories; macOS 13 or later is now required. Installers are built manually on master for testing before release.
+
+## V0.46 — 2026-11-06
+- Merged the remaining setup-node v7 workflow update from origin/master while preserving V0.45 and its commit history; synchronized component versions.
+
+## V0.45 — 2026-11-06
+- Replaced bundled SheetJS 0.18.5 with the official 0.20.3 build and licence, added SRI to its CDN fallback, and pinned DINOv2 to a verified Hugging Face commit and ONNX SHA-256.
+
+## V0.44 — 2026-11-06
+- Saving by sections (only changed sections are rewritten; IndexedDB v5), trace deletion limited to the traces' rectangles, enhancement on opening a section in the worker, exports and record import moved to the tested module `exportio.js`, and no inline styles left in `index.html`.
+
+## V0.43 — 2026-11-06
+- New figure: core location map with base layers (blank, vector, Esri satellite/topographic/relief/physical/streets/ocean), editable extent with zoom and pan, WGS 84 / Web Mercator / UTM (zone and hemisphere) projections, graticule or metric grid, coordinates on any chosen sides in DD, DMS or metres, positionable scale bar and north arrow (UTM convergence), and SVG/PNG/JPEG output.
+
+## V0.42 — 2026-11-06
+- Tests (audit §3): editing algorithms (scissors, merge, same-ichnotaxon grouping, undo, project migration) moved to the pure module `edit.js` and tested with synthetic overlapping masks; end-to-end headless-Chrome test (open, detect, delete/undo, save, reload, compare) in CI (`npm run e2e`).
+
+## V0.41 — 2026-11-06
+- Performance (audit §4): enhancement and detection run in a Web Worker; side column and figure pictures are reduced straight to output size (no full-resolution canvases per stroke); reused morphology buffers; overlap stacks compacted on save; memory budget counts U-Net maps and cached canvases, undo has its own budget; cached side-column series; kriging solves one system (O(n) per cell).
+
 ## V0.40 — 2026-11-06
 - Engineering (audit §7): single version source (0.40.0 everywhere, checked by a test), desktop licence GPL-3.0-or-later, `tools/release.sh`, CI on Windows/macOS/Linux with coverage, linters (ruff, ESLint) and the offline build, Dependabot, Content-Security-Policy and SRI for CDN fallbacks, SECURITY, code of conduct, issue/PR templates and third-party notices.
 

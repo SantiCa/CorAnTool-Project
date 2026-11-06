@@ -19,8 +19,8 @@ jobs:
           - { os: windows-latest, python-version: "3.12" }
           - { os: macos-latest, python-version: "3.12" }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
@@ -33,8 +33,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - run: node --test --experimental-test-coverage 'tests/app/*.test.mjs'
@@ -45,14 +45,27 @@ jobs:
   checks:   # V0.40: version consistency, linters and the offline single-file build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - run: python tools/sync_version.py --check
       - run: pip install ruff && ruff check src tests tools
       - run: npx --yes eslint@9 app/js tests/app
       - run: python tools/build_standalone.py && ls -l dist/CorAnTool_V*.html
+
+  e2e:   # V0.42: open the test core in headless Chrome, detect, delete/undo, save, reload and compare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - run: npm i --no-save puppeteer-core@23
+      - run: |
+          python3 -m http.server 8765 >/dev/null 2>&1 &
+          sleep 2
+          CHROME=$(command -v google-chrome || command -v chromium) node tests/e2e/smoke.mjs

@@ -1882,3 +1882,46 @@ Object.assign(D.es, { 'bk.old': 'La copia automática en carpeta no se hace desd
 Object.assign(D.en, { 'bk.old': 'The automatic folder copy has not run for {d} days and there are changes: reactivate it in Backups.' });
 Object.assign(D.es, { 'a11y.core': 'Sondeo', 'a11y.color': 'Color', 'a11y.name': 'Nombre', 'a11y.delete': 'Borrar', 'brand.tip': 'CorAnTool (antes IchAnTool)', 'a11y.keys': 'Atajos de una tecla', 'a11y.keysOn': 'Activados', 'a11y.keysOff': 'Desactivados (solo con Ctrl/⌘ o desde los botones)', 'a11y.keysNote': 'Los atajos de una sola tecla (B, E, S…) pueden interferir con lectores de pantalla o control por voz (WCAG 2.1.4).' });
 Object.assign(D.en, { 'a11y.core': 'Core', 'a11y.color': 'Colour', 'a11y.name': 'Name', 'a11y.delete': 'Delete', 'brand.tip': 'CorAnTool (formerly IchAnTool)', 'a11y.keys': 'Single-key shortcuts', 'a11y.keysOn': 'On', 'a11y.keysOff': 'Off (only with Ctrl/⌘ or from the buttons)', 'a11y.keysNote': 'Single-key shortcuts (B, E, S…) may interfere with screen readers or voice control (WCAG 2.1.4).' });
+// V0.43: core location map
+Object.assign(D.es, {
+  'fig.t.locmap': 'Mapa de localización de sondeos',
+  'lm.intro': 'Sondeos del proyecto con coordenadas: {n} (lat/lon en la ficha de cada sondeo).', 'lm.noCores': 'Ningún sondeo tiene coordenadas: añádelas en la ficha del sondeo (✎).',
+  'lm.view': 'Vista y capas', 'lm.base': 'Mapa base', 'lm.baseOpacity': 'Opacidad del fondo',
+  'lm.b.blank': 'En blanco', 'lm.b.vector': 'Vectorial (tierra y mar, sin internet)', 'lm.b.satellite': 'Satélite (Esri)', 'lm.b.topo': 'Topográfico (Esri)', 'lm.b.relief': 'Relieve sombreado (Esri)', 'lm.b.physical': 'Físico (Esri)', 'lm.b.streets': 'Callejero (Esri)', 'lm.b.ocean': 'Océano y batimetría (Esri)',
+  'lm.bb.W': 'Oeste (lon)', 'lm.bb.S': 'Sur (lat)', 'lm.bb.E': 'Este (lon)', 'lm.bb.N': 'Norte (lat)',
+  'lm.z.in': 'Acercar', 'lm.z.out': 'Alejar', 'lm.z.w': 'Mover al oeste', 'lm.z.n': 'Mover al norte', 'lm.z.s': 'Mover al sur', 'lm.z.e': 'Mover al este', 'lm.z.fit': 'Ajustar a los sondeos',
+  'lm.width': 'Ancho (px)', 'lm.aspect': 'Proporción', 'lm.aspectAuto': 'La del encuadre',
+  'lm.crsT': 'Sistema de referencia', 'lm.crs': 'Proyección', 'lm.c.EPSG4326': 'WGS 84 geográficas (EPSG:4326)', 'lm.c.EPSG3857': 'Web Mercator (EPSG:3857)', 'lm.c.UTM': 'UTM WGS 84 (EPSG:326xx/327xx)',
+  'lm.zone': 'Huso UTM', 'lm.zoneAuto': 'Automático ({z})', 'lm.hemi': 'Hemisferio', 'lm.hemiAuto': 'Automático', 'lm.hN': 'Norte', 'lm.hS': 'Sur',
+  'lm.gridT': 'Cuadrícula y coordenadas', 'lm.grid': 'Mostrar cuadrícula', 'lm.gridType': 'Cuadrícula', 'lm.g.auto': 'Automática (lat/lon en geográficas, métrica en proyectadas)', 'lm.g.geo': 'Lat/lon (curvas en UTM)',
+  'lm.stepDeg': 'Intervalo (°)', 'lm.stepM': 'Intervalo (m)', 'lm.sides': 'Coordenadas en los lados',
+  'lm.side.top': 'Arriba', 'lm.side.bottom': 'Abajo', 'lm.side.left': 'Izquierda', 'lm.side.right': 'Derecha',
+  'lm.fmt': 'Formato', 'lm.f.dd': 'Grados decimales (DD)', 'lm.f.dms': 'Grados, minutos y segundos (DMS)', 'lm.unit': 'Unidad', 'lm.metricNote': 'Proyección métrica: las etiquetas son X (arriba/abajo) e Y (izquierda/derecha) en metros.',
+  'lm.labelSize': 'Tamaño de las etiquetas', 'lm.gridColor': 'Color de la cuadrícula', 'lm.ticks': 'Marcas en el marco', 'lm.rotateSide': 'Etiquetas laterales en vertical', 'lm.gridDash': 'Cuadrícula discontinua',
+  'lm.elemT': 'Escala y norte', 'lm.scaleBar': 'Barra de escala', 'lm.north': 'Flecha de norte', 'lm.northSize': 'Tamaño del norte', 'lm.pos': 'Posición',
+  'lm.pos.tl': 'Arriba izquierda', 'lm.pos.tr': 'Arriba derecha', 'lm.pos.bl': 'Abajo izquierda', 'lm.pos.br': 'Abajo derecha',
+  'lm.coresT': 'Sondeos y colores', 'lm.symbol': 'Símbolo', 'lm.s.circle': 'Círculo', 'lm.s.square': 'Cuadrado', 'lm.s.triangle': 'Triángulo', 'lm.s.diamond': 'Rombo', 'lm.s.star': 'Estrella',
+  'lm.pointSize': 'Tamaño del símbolo', 'lm.pointColor': 'Color del símbolo', 'lm.land': 'Tierra', 'lm.sea': 'Mar', 'lm.coreLabelSize': 'Tamaño de los nombres', 'lm.coreLabels': 'Nombres de los sondeos', 'lm.coast': 'Línea de costa sobre el fondo',
+  'lm.outT': 'Salida', 'lm.fmtOut': 'Formato', 'lm.scale': 'Resolución (PNG/JPEG)', 'lm.export': 'Exportar mapa',
+});
+Object.assign(D.en, {
+  'fig.t.locmap': 'Core location map',
+  'lm.intro': 'Project cores with coordinates: {n} (lat/lon in each core card).', 'lm.noCores': 'No core has coordinates: add them in the core card (✎).',
+  'lm.view': 'View and layers', 'lm.base': 'Base map', 'lm.baseOpacity': 'Background opacity',
+  'lm.b.blank': 'Blank', 'lm.b.vector': 'Vector (land and sea, offline)', 'lm.b.satellite': 'Satellite (Esri)', 'lm.b.topo': 'Topographic (Esri)', 'lm.b.relief': 'Shaded relief (Esri)', 'lm.b.physical': 'Physical (Esri)', 'lm.b.streets': 'Streets (Esri)', 'lm.b.ocean': 'Ocean and bathymetry (Esri)',
+  'lm.bb.W': 'West (lon)', 'lm.bb.S': 'South (lat)', 'lm.bb.E': 'East (lon)', 'lm.bb.N': 'North (lat)',
+  'lm.z.in': 'Zoom in', 'lm.z.out': 'Zoom out', 'lm.z.w': 'Move west', 'lm.z.n': 'Move north', 'lm.z.s': 'Move south', 'lm.z.e': 'Move east', 'lm.z.fit': 'Fit to cores',
+  'lm.width': 'Width (px)', 'lm.aspect': 'Aspect ratio', 'lm.aspectAuto': 'From the extent',
+  'lm.crsT': 'Reference system', 'lm.crs': 'Projection', 'lm.c.EPSG4326': 'WGS 84 geographic (EPSG:4326)', 'lm.c.EPSG3857': 'Web Mercator (EPSG:3857)', 'lm.c.UTM': 'UTM WGS 84 (EPSG:326xx/327xx)',
+  'lm.zone': 'UTM zone', 'lm.zoneAuto': 'Automatic ({z})', 'lm.hemi': 'Hemisphere', 'lm.hemiAuto': 'Automatic', 'lm.hN': 'North', 'lm.hS': 'South',
+  'lm.gridT': 'Grid and coordinates', 'lm.grid': 'Show grid', 'lm.gridType': 'Grid', 'lm.g.auto': 'Automatic (lat/lon in geographic, metric in projected)', 'lm.g.geo': 'Lat/lon (curved in UTM)',
+  'lm.stepDeg': 'Interval (°)', 'lm.stepM': 'Interval (m)', 'lm.sides': 'Coordinates on the sides',
+  'lm.side.top': 'Top', 'lm.side.bottom': 'Bottom', 'lm.side.left': 'Left', 'lm.side.right': 'Right',
+  'lm.fmt': 'Format', 'lm.f.dd': 'Decimal degrees (DD)', 'lm.f.dms': 'Degrees, minutes, seconds (DMS)', 'lm.unit': 'Unit', 'lm.metricNote': 'Metric projection: labels are X (top/bottom) and Y (left/right) in metres.',
+  'lm.labelSize': 'Label size', 'lm.gridColor': 'Grid colour', 'lm.ticks': 'Ticks on the frame', 'lm.rotateSide': 'Vertical side labels', 'lm.gridDash': 'Dashed grid',
+  'lm.elemT': 'Scale and north', 'lm.scaleBar': 'Scale bar', 'lm.north': 'North arrow', 'lm.northSize': 'North arrow size', 'lm.pos': 'Position',
+  'lm.pos.tl': 'Top left', 'lm.pos.tr': 'Top right', 'lm.pos.bl': 'Bottom left', 'lm.pos.br': 'Bottom right',
+  'lm.coresT': 'Cores and colours', 'lm.symbol': 'Symbol', 'lm.s.circle': 'Circle', 'lm.s.square': 'Square', 'lm.s.triangle': 'Triangle', 'lm.s.diamond': 'Diamond', 'lm.s.star': 'Star',
+  'lm.pointSize': 'Symbol size', 'lm.pointColor': 'Symbol colour', 'lm.land': 'Land', 'lm.sea': 'Sea', 'lm.coreLabelSize': 'Name size', 'lm.coreLabels': 'Core names', 'lm.coast': 'Coastline over the background',
+  'lm.outT': 'Output', 'lm.fmtOut': 'Format', 'lm.scale': 'Resolution (PNG/JPEG)', 'lm.export': 'Export map',
+});

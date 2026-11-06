@@ -33,7 +33,7 @@ Installers for the latest version are on the [Releases page](../../releases/late
 | System | File |
 |---|---|
 | Windows | `…-windows-setup.exe` (installer) or `…-windows-portable.exe` (no installation) |
-| macOS (Intel and Apple Silicon) | `…-mac-universal.dmg` |
+| macOS (Intel and Apple Silicon; 13+ for V0.47+) | `…-mac-universal.dmg` |
 | Linux | `…-linux-x86_64.AppImage` or `…-linux-amd64.deb` |
 
 The installers are not code-signed. On Windows, if SmartScreen appears, choose *More info → Run anyway*. On macOS,

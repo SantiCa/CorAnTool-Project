@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Keep the official SheetJS bytes stable for SHA-256 and CDN SRI verification.
+app/vendor/xlsx.full.min.js -text

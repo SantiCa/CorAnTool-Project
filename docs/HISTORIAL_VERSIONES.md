@@ -74,6 +74,13 @@ La descripción detallada de los algoritmos está en
 | V0.38 | 06-11-2026 | Datos | Auditoría §6: lector CSV robusto (comillas, miles, Latin-1, aviso de celdas perdidas), permiso antes de enviar la zona a Esri/GEBCO, SHA-256 del modelo de visión, copia automática de todos los proyectos con reintento y aviso, script para SheetJS 0.20.3 |
 | V0.39 | 06-11-2026 | Interfaz | Auditoría §5: nombres accesibles, patrón ARIA de pestañas, avisos anunciados, atajos desactivables, contrastes AA, CSS duplicado unido, objetivos táctiles |
 | V0.40 | 06-11-2026 | Ingeniería | Auditoría §7: versión única 0.40.0, licencia GPL en escritorio, script de release, CI en 3 sistemas con cobertura y linters, Dependabot, CSP y SRI, archivos de comunidad |
+| V0.41 | 06-11-2026 | Rendimiento | Auditoría §4: realce y detección en un Web Worker, lienzos reducidos sin copia a tamaño completo, búferes reutilizados, solapes compactados al guardar, presupuesto de memoria completo, kriging O(n) por celda |
+| V0.42 | 06-11-2026 | Pruebas | Auditoría §3: `edit.js` (tijeras, fusión, deshacer, migración) probado con máscaras solapadas; prueba de extremo a extremo en Chrome dentro del CI |
+| V0.43 | 06-11-2026 | Figuras | Mapa de localización de sondeos: capas base, encuadre y zoom, proyecciones WGS 84/Web Mercator/UTM con huso, cuadrícula, coordenadas por lado en DD/DMS o metros, escala y norte con posición, salida SVG/PNG/JPEG |
+| V0.44 | 06-11-2026 | Ingeniería | Restos de la auditoría: guardado por secciones, borrado de trazas por rectángulo, realce al abrir en el worker, exportaciones e importación de registros en módulo probado, sin estilos en línea en el HTML |
+| V0.45 | 06-11-2026 | Dependencias y reproducibilidad | SheetJS 0.20.3 oficial incluida con licencia y SRI; DINOv2 fijado a un commit y SHA-256 comprobados |
+| V0.46 | 06-11-2026 | Integración Git | Merge de origin/master: setup-node v7 en CI y escritorio, conservando V0.45 y su historial |
+| V0.47 | 06-11-2026 | Escritorio | Electron 45.2.1 y electron-builder 26.18.0 integrados; macOS 13+ e instaladores para prueba previa mediante Desktop builds sobre master |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -664,6 +671,136 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.47 — Actualización conjunta del escritorio (06-11-2026)
+
+- **Qué se hizo:** integrar PR #21 (electron-builder 26.18.0) y #20 (Electron 45.2.1) sobre V0.46,
+  conservando los commits de ambas y los cambios de V0.45, para preparar instaladores de prueba.
+- **Cambios:** dependencias y lockfile de `desktop/` combinados; conflicto en las líneas de versiones
+  resuelto conservando ambas actualizaciones. `DELIVERY` = V0.47, versiones sincronizadas a 0.47.0;
+  documentación técnica, requisitos macOS 13+, notas de prueba, changelog y coordinación actualizados.
+- **Por qué:** validar juntos el entorno Electron y el empaquetador antes de publicar instaladores.
+  Las pruebas generales de las PR no construían el escritorio. La compilación manual sobre `master`
+  genera artefactos para los tres sistemas y omite la publicación de release.
+- **Comprobación:** `npm ci` en `desktop/` correcto con las dos actualizaciones y lockfile coherente;
+  91 pruebas JS (`npm test`), 16 Python superadas y 2 omitidas por ONNX opcional.
+  E2E con Chrome y servidor en 8765 correcto: 356 trazas, detección repetible, borrado/deshacer y
+  recarga idéntica sin errores de página. Versión 0.47.0 comprobada, HTML sin conexión generado y
+  `git diff --check` correcto. Empaquetado local Windows con electron-builder 26.18.0 comprobado.
+  `Desktop builds` se lanza después del push sobre `master`; su resultado y artefactos se consultan
+  en [GitHub Actions](https://github.com/SantiCa/CorAnTool-Project/actions/workflows/desktop.yml).
+- **Pendiente:** Santiago debe probar los instaladores y la persistencia al cerrar antes de autorizar
+  una release; inferencia DINOv2 interactiva y Zenodo siguen pendientes. Esta entrega no crea etiquetas
+  ni publica releases. No cambia los métodos científicos ni las afirmaciones publicables.
+
+## V0.46 — Integración de origin/master conservando V0.45 (06-11-2026)
+
+- **Qué se hizo:** integración mediante merge de `origin/master` (`02747f0`) en el estado local
+  `74fcdaf`, conservando los commits de V0.45 y la integración anterior de GitHub Actions.
+- **Cambios:** `actions/setup-node` v4 → v7 en `.github/workflows/tests.yml` y
+  `.github/workflows/desktop.yml` (PR #17). `DELIVERY` = V0.46 y versiones sincronizadas a 0.46.0;
+  historial, changelog y traspaso actualizados.
+- **Por qué:** las dos ramas habían avanzado por separado; el merge conserva ambos historiales
+  sin reescribir commits y permite un push normal.
+- **Comprobación:** merge sin conflictos; 91 pruebas JS superadas con `node --test tests/app/*.test.mjs`
+  (equivalente a `npm test`); Python: 16 superadas y 2 omitidas por dependencias ONNX opcionales.
+  E2E `tests/e2e/smoke.mjs` con Chrome y servidor en el puerto 8765: 356 trazas en la primera sección,
+  detección repetible, borrado/deshacer y recarga idéntica, sin errores de página. Versión 0.46.0 coherente,
+  HTML sin conexión generado y `git diff --check` correcto. Se verificó que los archivos SheetJS,
+  licencia y fijación de DINOv2 son idénticos a V0.45. Sin cambios de algoritmos ni afirmaciones científicas.
+- **Pendiente:** comprobar los instaladores del escritorio en una entrega específica para las PR #20/#21;
+  inferencia DINOv2 interactiva y configuración de Zenodo antes de publicar una release.
+
+## V0.45 — SheetJS y pesos de visión reproducibles (06-11-2026)
+
+- **Qué se hizo:** sustitución de SheetJS 0.18.5 por la 0.20.3 oficial con su licencia Apache-2.0;
+  SHA-384 SRI para el respaldo por internet; revisión de DINOv2 fijada a un commit y SHA-256 de ONNX verificado.
+- **Cambios:** `app/vendor/xlsx.full.min.js`, licencia SheetJS, `.gitattributes` (preserva los bytes oficiales
+  sin conversión de finales de línea), `app/js/vision.js`, `app/js/app.js`, versiones sincronizadas,
+  `THIRD_PARTY_NOTICES.md` y documentación. `DELIVERY` = V0.45, versión interna 0.45.0.
+- **Por qué:** completar los dos pendientes de V0.38 que requerían acceso a SheetJS y Hugging Face,
+  partiendo de V0.44 de Claude sin modificar sus entregas anteriores.
+- **Comprobación:** 91 pruebas JS superadas; Python: 16 superadas y 2 omitidas por dependencias ONNX
+  opcionales no instaladas. Escritura y lectura sintéticas en XLSX, XLS y ODS, incluidos decimales, cero y
+  Unicode; comprobación del flujo SheetJS → tabla → registros. Descarga del modelo de 88 532 934 bytes con
+  SHA-256 igual al de sus metadatos LFS; versión 0.45.0 coherente, construcción del HTML sin conexión y
+  `git diff --check`. SheetJS SHA-256: `cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41`.
+- **Pendiente:** prueba interactiva de inferencia DINOv2 en navegador/escritorio; no se ha medido su precisión
+  en testigos reales. Nombre de distribución en PyPI y ramas/PR siguen pendientes de decisión de Santiago.
+  Conexión de Zenodo y publicación de release se realizan después, sin crear etiqueta en esta entrega.
+
+## V0.44 — Restos de la auditoría (06-11-2026)
+
+- **Qué se hizo:**
+  - Guardado por secciones: cada sección es un registro propio y solo se reescriben las que cambian (antes, todo el
+    proyecto 1,5 s después de cada cambio).
+  - `dropIds` limitado a los rectángulos de las trazas (antes recorría la imagen entera).
+  - Realce de la sección al abrirla, también en segundo plano.
+  - Exportaciones (bioturbación, objetos, procedencia) e importación de registros en `exportio.js`, con pruebas.
+  - Los 50 estilos en línea de `index.html` pasan a 29 clases de utilidad (6 capturas idénticas píxel a píxel).
+- **Cambios:** `storage.js` (versión 5, almacén `secs`, `getProject`, `putProject`, `deleteProject`), `app.js`
+  (`ensurePixels`, `dropIds`, `loadSection`, exportaciones, `addRecordFromTable`, `withProv`), `exportio.js` (nuevo,
+  en `ORDER`), `index.html`, `tests/app/exportio.test.mjs`. `DELIVERY` = V0.44.
+- **Por qué:** petición de Santiago (pendientes de V0.41–V0.42).
+- **Comprobación:** 91 pruebas JS (3 nuevas) y e2e correcto (guardar, recargar y comparar). En Chrome: guardar sin
+  cambios reescribe 0 secciones y tras cambiar una traza 1 de 6; el proyecto se recompone completo; CSV de
+  bioturbación y objetos iguales que antes, con su cabecera.
+- **Pendiente:** `objectStats` sigue recorriendo la imagen al detectar (necesario: todas las trazas son nuevas); los
+  estilos en línea generados desde JavaScript siguen (por eso la CSP mantiene `'unsafe-inline'` en estilos).
+
+## V0.43 — Mapa de localización de sondeos (06-11-2026)
+
+- **Qué se hizo:** nueva figura «Mapa de localización de sondeos» (Figuras → Tipo):
+  - Vista y capas: fondo en blanco, vectorial, satélite, topográfico, relieve, físico, callejero u océano (Esri);
+    opacidad; encuadre editable (O, S, E, N), acercar, alejar, desplazar y ajustar a los sondeos; ancho y proporción.
+  - Proyección: WGS 84 geográficas (EPSG:4326), Web Mercator (EPSG:3857) o UTM con huso y hemisferio (automáticos o
+    elegidos).
+  - Cuadrícula visible u oculta (lat/lon, o métrica en las proyectadas), paso automático o fijado, color y trazo.
+  - Coordenadas en los lados que se elijan (todos, ninguno o cualquier combinación), con marcas; DD o DMS en
+    geográficas y X/Y en metros (o km) en proyectadas; etiquetas laterales en vertical u horizontal.
+  - Barra de escala y flecha de norte (con la convergencia en UTM), cada una mostrable y en una de las cuatro esquinas.
+  - Símbolo, tamaño y color de los sondeos, nombres, colores de tierra y mar.
+  - Salida SVG, PNG o JPEG con resolución elegible.
+- **Cambios:** `app/js/locmap.js` (nuevo, en `ORDER`), `app.js` (panel, dibujo, fondos, exportación), `index.html`,
+  `i18n.js`, `tests/app/locmap.test.mjs`. `DELIVERY` = V0.43.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 88 pruebas JS (4 nuevas: UTM frente a valores de referencia e ida y vuelta, Web Mercator,
+  formatos DD/DMS/métrico, escala, convergencia del norte y SVG). En Chrome: mapas en EPSG:4326, UTM 29N con etiquetas
+  en los cuatro lados y EPSG:3857 con cuadrícula lat/lon en DMS; sin errores.
+- **Pendiente:** los fondos de Esri no se pudieron descargar desde el entorno de prueba (red bloqueada): comprobar en
+  un equipo con internet; incluir sondeos de otros proyectos; mapa de situación (recuadro).
+
+## V0.42 — Pruebas de edición y de extremo a extremo (auditoría, sección 3) (06-11-2026)
+
+- **Qué se hizo:** los algoritmos de edición salen de `app.js` a `app/js/edit.js` (puro, sin DOM): piezas de las
+  tijeras (`splitPieces`), qué traza conserva el id al unir (`mergeKeeper`), grupos del mismo icnotaxón solapados
+  (`sameTaxonGroups`), deshacer píxeles (`undoPixels`) y migración v1/v2 → v3 (`upgradeProject`). Cuatro pruebas con
+  máscaras sintéticas solapadas. Prueba de extremo a extremo (`tests/e2e/smoke.mjs`) en el CI.
+- **Cambios:** `app/js/edit.js` (nuevo, en `ORDER` del archivo sin conexión), `app.js` (usa edit.js),
+  `tests/app/edit.test.mjs`, `tests/e2e/smoke.mjs`, `.github/workflows/tests.yml` (trabajo `e2e`), `package.json`
+  (`npm run e2e`). `DELIVERY` = V0.42.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 3.
+- **Comprobación:** 84 pruebas JS y 16 de Python; e2e local correcto (356 trazas; tras guardar y recargar, trazas y
+  píxeles idénticos en las 6 secciones).
+- **Pendiente:** extraer también exportaciones e importación de registros a módulos probados.
+
+## V0.41 — Rendimiento y memoria (auditoría, sección 4) (06-11-2026)
+
+- **Qué se hizo:** realce interactivo y detección en segundo plano (Web Worker; el archivo sin conexión sigue en el
+  hilo principal); columna lateral y figuras de sección reducidas directamente a su tamaño (sin lienzos de ~80 MB a
+  20 MP por pincelada); morfología con búferes reutilizados; pilas de solapes compactadas al guardar; presupuesto de
+  memoria con U-Net y lienzos, y límite de memoria del deshacer; caché de las series laterales; kriging con un solo
+  sistema lineal.
+- **Cambios:** `app/js/worker.js` (nuevo; no entra en el archivo sin conexión), `app.js` (`offload`, `enhanceAsync`,
+  `detectSection` asíncrona, `reduceRGBA`, `sectionCanvas`, `sectionModeCanvas`, serialización, `pxTouch`,
+  `commitOp`, `sideSeries`), `imageproc.js` (`morph`, `postMask`), `interp.js` (kriging). `DELIVERY` = V0.41.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 4.
+- **Comprobación:** 80 pruebas JS (1 nueva: kriging) y 16 de Python. En Chrome: detección de U1385I con el worker
+  (356 candidatos, igual que antes) y en el archivo sin conexión sin worker (356); capturas de la columna y figuras
+  sin diferencias visibles.
+- **Pendiente:** guardar por secciones (solo las cambiadas); `dropIds`/`objectStats` limitados al rectángulo de los
+  objetos (requiere garantizar que el rectángulo siempre está al día); realce de la sección al abrirla también en el
+  worker.
 
 ## V0.40 — Ingeniería y GitHub (auditoría, sección 7) (06-11-2026)
 

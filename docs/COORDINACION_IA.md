@@ -41,10 +41,32 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 - Estado: libre.
 - Editor: ninguno.
 - Objetivo: sin tarea de implementación activa.
-- Commit base y archivos: se anotarán al tomar el turno.
+- Commit base y archivos: V0.47 sobre 22383a0 y commits de PR #21/#20; desktop/package*.json, versiones y documentación.
 
 ### Último traspaso
 
+- **V0.47, 06-11-2026 (Codex):** PR #21 y #20 combinadas en un commit de merge, conservando
+  ambas historias y V0.45/V0.46. Electron 45.2.1, electron-builder 26.18.0 y versiones 0.47.0.
+  `npm ci` correcto; 91 pruebas JS, 16 Python superadas y 2 omitidas por ONNX opcional;
+  e2e Chrome correcto (356 trazas, recarga idéntica), HTML sin conexión y empaquetado Windows comprobados.
+  Tras el push normal se ejecuta `Desktop builds` sobre `master` para descargar artefactos de prueba;
+  consultar la ejecución en Actions. No crear etiqueta ni publicar release hasta las pruebas de Santiago.
+  Requisito nuevo: macOS 13+. Pendientes: prueba de instaladores (guardado al cerrar, CSP, entrenamiento),
+  inferencia DINOv2 interactiva y Zenodo. Guion de prueba en `desktop/RELEASE_NOTES.md`.
+- **V0.46, 06-11-2026 (Codex):** merge de `origin/master` (`02747f0`, PR #17 de setup-node v7)
+  conservando los commits de V0.45, SheetJS y DINOv2. Versiones sincronizadas a 0.46.0;
+  91 pruebas JS, 16 Python superadas y 2 omitidas por ONNX opcional; e2e con Chrome correcto
+  (356 trazas, recarga idéntica), HTML sin conexión generado y diff comprobado.
+  Integración mediante commit de merge y push normal, sin reescribir el historial ni crear etiqueta de release.
+  Siguen pendientes escritorio #20/#21 con prueba de instaladores, inferencia interactiva y Zenodo.
+- **V0.45, 06-11-2026 (Codex):** SheetJS 0.20.3 incluida con licencia, SHA-256 y SRI verificados;
+  DINOv2 fijado a commit y SHA-256 comprobados sobre la descarga. 91 pruebas JS, 16 Python superadas
+  y 2 omitidas (dependencias ONNX opcionales); HTML sin conexión generado. Sincronización incorporada
+  en V0.46; pendientes inferencia interactiva y configurar Zenodo antes de publicar la release.
+- **V0.44, 06-11-2026 (Claude):** restos de la auditoría (guardado por secciones, dropIds, realce al abrir, exportio.js, estilos en línea).
+- **V0.43, 06-11-2026 (Claude):** mapa de localización de sondeos.
+- **V0.42, 06-11-2026 (Claude):** pruebas de edición y e2e (auditoría §3). Auditoría V0.31 completada salvo lo anotado como pendiente.
+- **V0.41, 06-11-2026 (Claude):** rendimiento y memoria (auditoría §4).
 - **V0.40, 06-11-2026 (Claude):** ingeniería y GitHub (auditoría §7).
 - **V0.39, 06-11-2026 (Claude):** accesibilidad y CSS (auditoría §5).
 - **V0.38, 06-11-2026 (Claude):** importación, copias y privacidad (auditoría §6). Pendiente que Santiago ejecute `tools/update_vendor.sh`.

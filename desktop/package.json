@@ -1,7 +1,7 @@
 {
   "name": "corantool",
   "productName": "CorAnTool",
-  "version": "0.40.0",
+  "version": "0.47.0",
   "description": "CorAnTool — core analysis: ichnology on core images and multiproxy records",
   "author": {
     "name": "Santiago Casanova-Arenillas",
@@ -16,7 +16,7 @@
     "dist": "node scripts/build.js"
   },
   "devDependencies": {
-    "electron": "42.11.16",
+    "electron": "45.2.1",
     "electron-builder": "26.18.0",
     "onnxruntime-web": "1.31.1"
   },
