@@ -9,7 +9,7 @@ with user-defined machine-learning classifiers [TODO]
 
 ## Provisional abstract
 Interval interpretation in cores (e.g. low-oxygen events, detrital pulses, climate stages) is done by experts core by
-core and is hard to reproduce across many cores and laboratories. We present a workflow in CorAnTool in which experts
+core and is hard to reproduce across many cores and laboratories. We present a workflow in SedCoreTool in which experts
 define families of intervals and their classes, label some cores, and train classifiers (random forest, multilayer
 perceptron, k-nearest neighbours, naive Bayes) on resampled multiproxy records (XRF, foraminifera, TOC, colour,
 bioturbation). Models are validated leaving whole cores out and tested on [N] cores withheld from model selection.
@@ -22,7 +22,7 @@ bioturbation). Models are validated leaving whole cores out and tested on [N] co
    leaving one core out (§21.5); held-out cores for the final test; permutation importance [TODO implement].
 4. Results — comparison of models and inputs; maps by age window (§21.6) as illustration only.
 5. Discussion — transfer between cores with different scanners; leakage between families; limits.
-6. Software and data availability — CorAnTool release (DOI), project files as supplementary material.
+6. Software and data availability — SedCoreTool release (DOI), project files as supplementary material.
 
 ## Needs
 - [ ] Cores with independently described events (published sapropels/ORL, turbidites) not used to define rules.

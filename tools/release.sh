@@ -17,6 +17,6 @@ python3 tools/sync_version.py --check
 npm test >/dev/null
 PYTHONPATH=src python3 -m pytest -q >/dev/null
 NOTES=$(awk -v v="## $V " 'index($0, v) == 1 {on = 1; next} /^## / {on = 0} on' CHANGELOG.md)
-git tag -a "$V" -m "CorAnTool $V" -m "${NOTES:-See CHANGELOG.md}"
+git tag -a "$V" -m "SedCoreTool $V" -m "${NOTES:-See CHANGELOG.md}"
 git push origin "$V"
 echo "Tag $V pushed: the 'Desktop builds' workflow will create the Release."

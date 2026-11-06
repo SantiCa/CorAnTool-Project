@@ -1,6 +1,6 @@
 """Export the publications dossier (index, methods and defence, drafts, journals) to Word and LaTeX.
 
-Usage:  python tools/export_publications.py  ->  publications/export/Publicaciones_CorAnTool.{docx,tex}
+Usage:  python tools/export_publications.py  ->  publications/export/Publicaciones_SedCoreTool.{docx,tex}
 Needs pandoc on the PATH. Citations of the JOSS draft are resolved with its paper.bib.
 """
 from __future__ import annotations
@@ -43,22 +43,22 @@ def section(rel: str, title: str | None) -> str:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    head = (f"---\ntitle: 'Publicaciones previstas — CorAnTool'\nsubtitle: 'Cartera, métodos, defensa ante revisores y borradores'\n"
+    head = (f"---\ntitle: 'Publicaciones previstas — SedCoreTool'\nsubtitle: 'Cartera, métodos, defensa ante revisores y borradores'\n"
             f"author: 'Santiago Casanova-Arenillas'\ndate: '{date.today():%d-%m-%Y} · software {delivery()}'\nlang: es\n---\n\n")
     body = head + "\n\\newpage\n\n".join(section(r, t) for r, t in PARTS)
-    md = OUT / "Publicaciones_CorAnTool.md"
+    md = OUT / "Publicaciones_SedCoreTool.md"
     md.write_text(body, encoding="utf-8")
     common = ["pandoc", str(md), "--citeproc", "--bibliography", str(PUB / "01_software_JOSS" / "paper.bib"), "--toc", "--toc-depth=2"]
-    subprocess.run(common + ["-o", str(OUT / "Publicaciones_CorAnTool.docx")], check=True)
+    subprocess.run(common + ["-o", str(OUT / "Publicaciones_SedCoreTool.docx")], check=True)
     subprocess.run(common + ["-s", "-V", "geometry:margin=2.3cm", "-V", "fontsize=10pt", "-V", "colorlinks=true",
-                             "-V", "documentclass=article", "-o", str(OUT / "Publicaciones_CorAnTool.tex")], check=True)
-    tex = OUT / "Publicaciones_CorAnTool.tex"   # symbols outside Latin-1 → LaTeX commands, so pdflatex also works
+                             "-V", "documentclass=article", "-o", str(OUT / "Publicaciones_SedCoreTool.tex")], check=True)
+    tex = OUT / "Publicaciones_SedCoreTool.tex"   # symbols outside Latin-1 → LaTeX commands, so pdflatex also works
     t = tex.read_text(encoding="utf-8")
     for a, b in {"→": r"$\rightarrow$", "≈": r"$\approx$", "≤": r"$\leq$", "≥": r"$\geq$", "±": r"$\pm$", "✓": r"$\checkmark$"}.items():
         t = t.replace(a, b)
     tex.write_text(t, encoding="utf-8")
     md.unlink()
-    print(f"{OUT / 'Publicaciones_CorAnTool.docx'}\n{OUT / 'Publicaciones_CorAnTool.tex'}")
+    print(f"{OUT / 'Publicaciones_SedCoreTool.docx'}\n{OUT / 'Publicaciones_SedCoreTool.tex'}")
 
 
 if __name__ == "__main__":

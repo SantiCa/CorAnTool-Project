@@ -1,9 +1,9 @@
 cff-version: 1.2.0
-message: "If you use CorAnTool (formerly IchAnTool), please cite the software as below."
-title: "CorAnTool"
+message: "If you use SedCoreTool (formerly CorAnTool and IchAnTool), please cite the software as below."
+title: "SedCoreTool"
 authors:
   - family-names: Casanova-Arenillas
     given-names: Santiago
-version: 0.51.0
-repository-code: "https://github.com/SantiCa/CorAnTool-Project"
+version: 0.52.0
+repository-code: "https://github.com/SantiCa/SedCoreTool-Project"
 license: GPL-3.0-or-later

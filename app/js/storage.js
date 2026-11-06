@@ -1,4 +1,4 @@
-// CorAnTool web — project library in the browser (IndexedDB). Each project is a "folder" holding its
+// SedCoreTool web — project library in the browser (IndexedDB). Each project is a "folder" holding its
 // images, depths, age model, labels and external records. Data stay on this computer and browser.
 
 const DB_NAME = 'ichantool', DB_VERSION = 5;   // V0.44: store 'secs' (one record per section)

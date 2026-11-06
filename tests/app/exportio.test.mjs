@@ -5,7 +5,7 @@ import { parseTable } from '../../app/js/log.js';
 
 test('V0.44: provenance header and age-model text', () => {
   const l = provenanceLines({ delivery: 'V0.44', format: 5, date: 'D', project: 'a"b', settings: { binCm: 1, minValid: 20, includePred: true, predThr: 0.7, countCandidates: false }, detection: 'adaptive', age: 'none' });
-  assert.equal(l[0], `# CorAnTool V0.44 (format 5); exported D; project "a'b"`);
+  assert.equal(l[0], `# SedCoreTool V0.44 (format 5); exported D; project "a'b"`);
   assert.match(l[1], /binCm=1; minValid=20%; includePred=true; predThr=0.7; countCandidates=false; detection=adaptive; age model=none/);
   assert.equal(withProvenance('x\n', { delivery: 'V', format: 5, date: 'D', project: 'p' }).split('\n')[2], 'x');
   assert.equal(ageModelText({ min: [1] }, { bacon: 'x', units: 'ka' }), 'Bacon median with range, ka');

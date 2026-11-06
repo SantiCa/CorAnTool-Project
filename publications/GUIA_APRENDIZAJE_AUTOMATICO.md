@@ -1,4 +1,4 @@
-# Guía: qué hace el aprendizaje automático en CorAnTool (V0.17)
+# Guía: qué hace el aprendizaje automático en SedCoreTool (V0.17)
 
 Explicación en lenguaje sencillo, para el autor y para quien lea los artículos. Los detalles con fórmulas
 están en `docs/DOCUMENTACION_TECNICA.md` (§7.5, §10 y §10.6 quater). Qué se puede afirmar en cada artículo
@@ -22,7 +22,7 @@ Hasta la V0.14 solo la segunda tarea aprendía de ejemplos. La primera usaba reg
 píxel da una probabilidad de ser traza, entre 0 y 1.
 
 **Cómo aprende (entrenamiento).**
-1. Le damos ejemplos: la foto y la máscara que pinta el experto en CorAnTool.
+1. Le damos ejemplos: la foto y la máscara que pinta el experto en SedCoreTool.
 2. Las fotos se pasan a la misma escala (píxeles por centímetro) y se cortan en cuadrados de 512 px.
 3. La red dibuja su máscara, se compara con la del experto y se corrige un poco. Cada vuelta completa a
    todos los cuadrados es una *época*.
@@ -41,7 +41,7 @@ no ha revisado no se usan ni como traza ni como matriz. Una traza sin revisar no
 - *Programa de escritorio (V0.17):* botón «Entrenar en este ordenador…» en Detección → U-Net. Usa la
   tarjeta gráfica del ordenador (NVIDIA o Apple; si no hay, el procesador, mucho más despacio). La primera
   vez instala un módulo de 2–3 GB. Se puede detener y reanudar.
-- *Fuera del programa:* exportar «Datos para entrenar U-Net (ZIP)» y usar `ichantool unet train`.
+- *Fuera del programa:* exportar «Datos para entrenar U-Net (ZIP)» y usar `sedcoretool unet train`.
 
 **Cómo se usa.** Detección → método «U-Net» → la red propone; el experto corrige lo que falle. Las zonas
 dudosas (probabilidad entre 0,3 y 0,7) se pueden ver en magenta para revisar solo eso.
@@ -57,7 +57,7 @@ parece a nada conocido, no sugiere nada (filtro de novedad).
   contraste. Rápido y fácil de explicar, pero no ve la textura interna ni el borde.
 - **Modelo de visión (DINOv2):** una red ya entrenada con 142 millones de imágenes mira el recorte de cada
   traza (con un poco de sedimento alrededor) y lo resume en 384 números. El k-NN aprende de esos números.
-  **Esta red no se entrena en CorAnTool**: solo se usa como «ojo» que describe la imagen; lo que aprende
+  **Esta red no se entrena en SedCoreTool**: solo se usa como «ojo» que describe la imagen; lo que aprende
   de tus ejemplos sigue siendo el k-NN. Por eso funciona con pocos ejemplos y sin tarjeta gráfica.
 
 Las dos opciones no se mezclan: un modelo hecho con un tipo de rasgos no se aplica al otro.

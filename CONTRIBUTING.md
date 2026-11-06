@@ -9,9 +9,9 @@ Open an issue describing the bug or feature (sample images help a lot). Never at
 ## Set-up
 - **Web app** (`app/`, ES modules, no build step): serve the repository (`python3 -m http.server`) and open
   `http://localhost:8000/app/`. Tests: `npm test` (Node ≥ 22). Lint: `npx eslint@9 app/js tests/app`.
-- **Python package** (`src/ichantool/`): `pip install -e ".[dev]"`, tests `pytest`, lint `ruff check src tests tools`.
+- **Python package** (`src/sedcoretool/`): `pip install -e ".[dev]"`, tests `pytest`, lint `ruff check src tests tools`.
 - **Desktop** (`desktop/`, Electron): `npm ci && npm start`; `npm run dist` builds for the current system.
-- **Offline single file**: `python3 tools/build_standalone.py` → `dist/CorAnTool_V0.<n>.html`.
+- **Offline single file**: `python3 tools/build_standalone.py` → `dist/SedCoreTool_V0.<n>.html`.
 
 ## Rules
 1. Work on a branch and open a pull request; the CI (`tests`) must pass.

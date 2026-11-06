@@ -1,4 +1,4 @@
-# Builds the CorAnTool desktop program for Windows, macOS and Linux and publishes it as a GitHub Release.
+# Builds the SedCoreTool desktop program for Windows, macOS and Linux and publishes it as a GitHub Release.
 # Runs when a delivery tag (V0.1, V0.2…) is pushed (tools/release.sh does it), or by hand from the Actions tab
 # (artifacts by default, or an unpublished draft when draft_release is checked). V0.40: no `release` trigger (a release made on the web also pushes its tag,
 # which ran the build twice).
@@ -64,7 +64,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # unsigned builds (no paid certificates)
       - uses: actions/upload-artifact@v7
         with:
-          name: corantool-${{ matrix.os }}
+          name: sedcoretool-${{ matrix.os }}
           if-no-files-found: error
           path: |
             desktop/dist/*.exe
@@ -102,16 +102,16 @@ jobs:
             exit 1
           fi
       - uses: actions/download-artifact@v8
-        with: { path: out, pattern: 'corantool-*-latest', merge-multiple: true }
+        with: { path: out, pattern: 'sedcoretool-*-latest', merge-multiple: true }
       - run: python tools/prepare_release.py out
       - uses: actions/upload-artifact@v7
         with:
-          name: corantool-release-bundle
+          name: sedcoretool-release-bundle
           path: out/*
           if-no-files-found: error
       - uses: softprops/action-gh-release@v2
         with:
-          name: CorAnTool ${{ steps.version.outputs.delivery }}
+          name: SedCoreTool ${{ steps.version.outputs.delivery }}
           tag_name: ${{ steps.version.outputs.delivery }}
           target_commitish: ${{ github.sha }}
           draft: ${{ github.event_name == 'workflow_dispatch' }}

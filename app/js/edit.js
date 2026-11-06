@@ -1,4 +1,4 @@
-// CorAnTool web — V0.42: pure editing algorithms (no DOM, no global state), taken out of app.js so they can be tested
+// SedCoreTool web — V0.42: pure editing algorithms (no DOM, no global state), taken out of app.js so they can be tested
 // with synthetic masks. Labels: Int32Array, > 0 one object id, 0 matrix, < 0 stack −v in `stacks` (core.js).
 import { hasId, idsAt } from './core.js';
 

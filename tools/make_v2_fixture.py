@@ -15,7 +15,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from ichantool.io import load_image, to_gray  # noqa: E402
+from sedcoretool.io import load_image, to_gray  # noqa: E402
 
 
 def rle(mask: np.ndarray) -> list[int]:

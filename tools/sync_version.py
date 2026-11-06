@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """V0.40: single version source. Reads DELIVERY from app/js/app.js (V0.<n>) and writes version 0.<n>.0 to
-pyproject.toml, src/ichantool/__init__.py, CITATION.cff and desktop/package.json. `--check` only reports mismatches
+pyproject.toml, src/sedcoretool/__init__.py, CITATION.cff and desktop/package.json. `--check` only reports mismatches
 (exit 1), as the test suite does. Run after changing DELIVERY."""
 import json
 import re
@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REPO = "https://github.com/SantiCa/CorAnTool-Project"
+REPO = "https://github.com/SantiCa/SedCoreTool-Project"
 
 
 def delivery() -> str:
@@ -21,7 +21,7 @@ def delivery() -> str:
 
 def targets(v: str):
     yield "pyproject.toml", r'(?m)^version = "[^"]*"', f'version = "{v}"'
-    yield "src/ichantool/__init__.py", r'(?m)^__version__ = "[^"]*"', f'__version__ = "{v}"'
+    yield "src/sedcoretool/__init__.py", r'(?m)^__version__ = "[^"]*"', f'__version__ = "{v}"'
     yield "CITATION.cff", r"(?m)^version: .*$", f"version: {v}"
 
 

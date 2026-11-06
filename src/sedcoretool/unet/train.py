@@ -1,6 +1,6 @@
 """Training a U-Net on a prepared dataset and exporting it for the app (V0.15).
 
-Requires the optional dependencies (``pip install 'ichantool[unet]'``): PyTorch, segmentation-models-pytorch,
+Requires the optional dependencies (``pip install 'sedcoretool[unet]'``): PyTorch, segmentation-models-pytorch,
 onnx. A consumer GPU (e.g. 8–12 GB) is enough; CPU works for tests and very small sets.
 
 Choices (documented in docs/DOCUMENTACION_TECNICA.md):
@@ -29,7 +29,7 @@ def _torch():
         import segmentation_models_pytorch as smp
         import torch
     except ImportError as e:  # pragma: no cover - optional dependency
-        raise ImportError("install the optional dependencies: pip install 'ichantool[unet]'") from e
+        raise ImportError("install the optional dependencies: pip install 'sedcoretool[unet]'") from e
     return torch, smp
 
 

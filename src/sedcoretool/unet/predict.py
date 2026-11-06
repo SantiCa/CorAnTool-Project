@@ -17,7 +17,7 @@ class OnnxUnet:
         try:
             import onnxruntime as ort
         except ImportError as e:  # pragma: no cover - optional dependency
-            raise ImportError("install the optional dependencies: pip install 'ichantool[unet]'") from e
+            raise ImportError("install the optional dependencies: pip install 'sedcoretool[unet]'") from e
         path = Path(path)
         js = path.with_suffix(".json")
         self.config = config or (UnetConfig.from_json(json.loads(js.read_text(encoding="utf-8"))) if js.exists() else UnetConfig())

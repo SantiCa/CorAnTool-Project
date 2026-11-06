@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ichantool"
-version = "0.51.0"
-description = "CorAnTool (formerly IchAnTool): quantitative ichnofabric analysis of sediment core images"
+name = "sedcoretool"
+version = "0.52.0"
+description = "SedCoreTool (formerly CorAnTool and IchAnTool): quantitative ichnofabric analysis of sediment core images"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Santiago Casanova-Arenillas" }]
@@ -26,10 +26,11 @@ unet = ["onnxruntime>=1.17", "torch>=2.1", "segmentation-models-pytorch>=0.3", "
 dev = ["pytest>=7", "pytest-cov>=5", "openpyxl>=3.1", "matplotlib>=3.7"]
 
 [project.scripts]
-ichantool = "ichantool.cli:main"
+sedcoretool = "sedcoretool.cli:main"
+ichantool = "sedcoretool.cli:main"   # old command name, kept for compatibility
 
 [project.urls]
-Homepage = "https://github.com/SantiCa/CorAnTool-Project"
+Homepage = "https://github.com/SantiCa/SedCoreTool-Project"
 
 [tool.setuptools.packages.find]
 where = ["src"]

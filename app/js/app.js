@@ -1,4 +1,4 @@
-// CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
+// SedCoreTool web (antes CorAnTool e IchAnTool) — application (UI, state, tools, rendering, files).
 import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { withProvenance, ageModelText, bioturbationTable, objectsTable, recordSeries } from './exportio.js';
 import { LOCMAP_DEFAULTS, lmUtmZone, lmFitBBox, lmZoom, buildLocMapSVG } from './locmap.js';
@@ -16,12 +16,13 @@ import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } 
 import { VISION_MODEL, visionFeatureId, traceWindow, traceInput, pickEmbedding } from './vision.js';
 import { tidyIntervals, coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, colStats, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidate, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
 
-/** App name (V16: IchAnTool → CorAnTool). Files written by IchAnTool are still accepted; browser storage keys keep the old name. */
-const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
+/** App name (V16: IchAnTool → CorAnTool; V0.52: → SedCoreTool). Files written with the old names are still accepted;
+ *  browser storage keys, the IndexedDB name and the desktop origin keep the old names so saved data stays. */
+const APP = 'SedCoreTool', APP_NAMES = ['SedCoreTool', 'CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.51';
+const DELIVERY = 'V0.52';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -642,7 +643,7 @@ function runDetection() {
   busy(() => withPixels(s, async (x) => { await unetProb(x); await detectSection(x); }));
 }
 
-/* ───────────── V0.15: U-Net (model trained with `ichantool unet train`, run with ONNX Runtime Web) ───────────── */
+/* ───────────── V0.15: U-Net (model trained with `sedcoretool unet train`, run with ONNX Runtime Web) ───────────── */
 let UNET = null;   // { session, cfg, name, id }
 const unetKey = (s) => UNET ? `${UNET.id}|${s.roi.x0},${s.roi.y0},${s.roi.x1},${s.roi.y1}|${s.w}x${s.h}|${pxPerCm(s).toFixed(4)}` : '';
 async function loadOrt() {
@@ -2477,7 +2478,7 @@ function modelExamples() {
 $('exportModel').addEventListener('click', () => {
   const used = new Set(modelExamples().map((e) => e.name));
   const model = { app: APP, kind: 'model', version: 1, features: featNames(), classes: S.classes.filter((c) => used.has(c.name)).map(({ name, color, counts }) => ({ name, color, counts })), examples: modelExamples() };
-  saveFile('corantool_model.json', JSON.stringify(model), 'application/json');
+  saveFile('sedcoretool_model.json', JSON.stringify(model), 'application/json');
 });
 $('importModel').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -2734,7 +2735,7 @@ let readOnlyProject = false;
 async function loadProject(p) {
   blankStart = false;
   resetState(); loading = true; loadMigrated = false; clearTimeout(saveTimer);
-  readOnlyProject = (p?.version || 0) > FORMAT_VERSION;   // V0.36: written by a newer CorAnTool
+  readOnlyProject = (p?.version || 0) > FORMAT_VERSION;   // V0.36: written by a newer SedCoreTool
   try {
     p = upgradeProject(p);
     S.id = p.id || uid(); S.name = p.name || APP; S.notes = p.notes || ''; S.comments = p.comments || [];
@@ -2974,7 +2975,7 @@ $('newProjBtn').addEventListener('click', async () => {
 });
 $('openTest').addEventListener('click', async () => { hideHome(); await openTestProject(); });
 $('openIdeal').addEventListener('click', async () => { hideHome(); await busy(loadExample); });
-$('expProj').addEventListener('click', () => busy(async () => { await flushSave(); await saveFile(`${safe(S.name)}.corantool`, await packageProjects([serialize()]), 'application/zip'); }));   // V0.8: package with full-resolution images
+$('expProj').addEventListener('click', () => busy(async () => { await flushSave(); await saveFile(`${safe(S.name)}.sedcoretool`, await packageProjects([serialize()]), 'application/zip'); }));   // V0.8: package with full-resolution images
 $('cmtBtn').addEventListener('click', openComments);
 $('cmtAdd').addEventListener('click', addComment);
 $('cmtFilter').addEventListener('change', renderComments);
@@ -3157,7 +3158,7 @@ async function backupNow() {
       if (m.id === S.id || !(m.updated > since)) continue;
       const d = await getProject(m.id).catch(() => null); if (d) await writeProjectFolder(backupDir, d);
     }
-    await writeText(backupDir, 'corantool_ajustes.json', JSON.stringify(settingsBundle(), null, 1));
+    await writeText(backupDir, 'sedcoretool_ajustes.json', JSON.stringify(settingsBundle(), null, 1));
     lastBackup = Date.now(); backupPending = false; backupRetries = 0; backupState = 'ok'; setPref('lastBackup', lastBackup).catch(() => {});
   } catch (e) {
     backupState = 'error'; console.error(e);
@@ -3187,7 +3188,7 @@ for (const id of ['bkReactivate', 'bkReactivateTop']) $(id).addEventListener('cl
   if (backupState === 'ok') await backupNow(); else renderBackupState();
 });
 
-/* ── V0.8: shareable package (.corantool = ZIP with project.json and the original images at full resolution) ── */
+/* ── V0.8: shareable package (.sedcoretool, before V0.52 .corantool = ZIP with project.json and the original images at full resolution) ── */
 const imgExt = (f) => (/\.[a-z0-9]{2,5}$/i.exec(f.name || '')?.[0] || (/png/.test(f.type) ? '.png' : /tif/.test(f.type) ? '.tif' : '.jpg'));
 /** Project data → { json, images:[{path, get()}] } with every image referenced as images/<section id><ext>. */
 function projectForExport(d, prefix = '') {
@@ -3214,7 +3215,7 @@ $('bkFull').addEventListener('click', () => busy(async () => {
   const projects = [];
   if (storageOK) for (const m of await listProjects()) { const d = await getProject(m.id); if (d) projects.push(d); }
   else projects.push(serialize());
-  await saveFile(`corantool_copia_${today()}.corantool`, await packageProjects(projects), 'application/zip');   // V0.8: one package, images included
+  await saveFile(`sedcoretool_copia_${today()}.sedcoretool`, await packageProjects(projects), 'application/zip');   // V0.8: one package, images included
 }));
 
 /** Restore project files, full backups or settings files (several at once). */
@@ -3251,7 +3252,7 @@ async function restoreFiles(files) {
   for (const f of files) {
     let p;
     const head = new Uint8Array(await f.slice(0, 2).arrayBuffer());
-    if (head[0] === 0x50 && head[1] === 0x4b) {   // V0.8: ZIP package (.corantool)
+    if (head[0] === 0x50 && head[1] === 0x4b) {   // V0.8: ZIP package (.sedcoretool or .corantool)
       try {
         const z = await unzipBlob(f), get = (base) => async (path) => { const e = z.get(base + path); return e ? e.get() : null; };
         for (const [name, e] of z) {
@@ -3984,7 +3985,7 @@ async function geoTrain(silent = false, only = null) {
 document.addEventListener('click', (e) => { if (e.target.closest('[data-tcancel]') && geoTraining) geoTraining.cancel = true; });
 // version tag everywhere it can be read (V27)
 for (const el of document.querySelectorAll('[data-version]')) el.textContent = DELIVERY;
-document.title = `CorAnTool ${DELIVERY}`;
+document.title = `SedCoreTool ${DELIVERY}`;
 
 /* ── left panel ── */
 function geoCoreNote(c) {
@@ -5371,8 +5372,8 @@ function buildAllMap(mode) {
 }
 $('allCtl').addEventListener('change', () => renderAllProjects());
 for (const [id, dir] of [['amPrev', -1], ['amNext', 1]]) $(id).addEventListener('click', () => { const a = +$('amA0').value, b = +$('amA1').value, w = b - a; $('amA0').value = a + dir * w; $('amA1').value = b + dir * w; renderAllProjects(); });
-$('amPng').addEventListener('click', () => busy(() => exportMapPNG(() => buildAllMap($('amMode').value), 'corantool_mapa_proyectos.png', +$('amPngW').value)));
-$('amSvg').addEventListener('click', () => { if (allMapSvg.startsWith('<svg')) saveFile('corantool_mapa_proyectos.svg', allMapSvg, 'image/svg+xml'); });
+$('amPng').addEventListener('click', () => busy(() => exportMapPNG(() => buildAllMap($('amMode').value), 'sedcoretool_mapa_proyectos.png', +$('amPngW').value)));
+$('amSvg').addEventListener('click', () => { if (allMapSvg.startsWith('<svg')) saveFile('sedcoretool_mapa_proyectos.svg', allMapSvg, 'image/svg+xml'); });
 $('allTable').addEventListener('click', async (e) => {
   const tr = e.target.closest('tr[data-p]'); if (!tr) return;
   const { p, c } = tr.dataset;

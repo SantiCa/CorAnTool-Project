@@ -6,7 +6,7 @@ Intelligence in Geosciences (method focus). Decide once the dataset size and mod
 **Plain-language guide (Spanish):** `publications/GUIA_APRENDIZAJE_AUTOMATICO.md`.
 
 **Status (V0.17, 05-11-2026; training plan in §3.5; training inside the desktop program and vision-model
-descriptors for ichnotaxa in §3.6):** the full workflow is implemented in CorAnTool and tested on synthetic
+descriptors for ichnotaxa in §3.6):** the full workflow is implemented in SedCoreTool and tested on synthetic
 data (export → tiles split by core → training → evaluation on whole images of independent cores →
 use in the app). **No model has been trained on real cores yet; every number below is a placeholder.**
 Methods text describes the code exactly; keep it in sync with `docs/DOCUMENTACION_TECNICA.md` §7.5.
@@ -19,13 +19,13 @@ segmentation of bioturbation [TODO: "and ichnotaxa" if multi-class results are g
 Quantifying bioturbation in cores still depends on manual selection of trace fossils on images,
 the main bottleneck of image-based ichnofabric analysis. We release [N] images from [M] cores
 ([sites/expeditions]) with expert masks of bioturbation [and ichnotaxa], annotated in the open
-program CorAnTool, together with an annotation protocol and inter-annotator agreement on a subset.
+program SedCoreTool, together with an annotation protocol and inter-annotator agreement on a subset.
 We train a U-Net on cores split into training, validation and test sets, so that all scores are
 measured on cores never seen during training, and compare it with classical thresholding
 workflows used in ichnology. On the test cores the U-Net reaches [Dice] (pixel) and an error of
 [x] percentage points in bioturbation per [b]-cm interval, with BI agreement [y] %, against
 [Dice_base] and [x_base] for the best classical workflow and [Dice_human] between experts.
-Data, code and the trained model are openly released; the model runs inside CorAnTool without a GPU.
+Data, code and the trained model are openly released; the model runs inside SedCoreTool without a GPU.
 
 ## 1. Introduction
 - Image-based ichnofabric analysis: enhancement + manual selection (Dorador et al., 2014;
@@ -49,11 +49,11 @@ Data, code and the trained model are openly released; the model runs inside CorA
 - Annotation protocol [TODO: write `publications/02_dataset_segmentation/protocol.md`]: what counts as
   a trace, artefacts (cracks, voids, sampling holes, drilling disturbance) excluded with the exclusion
   layer, ichnotaxa criteria, minimum size.
-- Annotation tool: CorAnTool (wand, brush, lasso, polygon, exclusion; candidates from classical
+- Annotation tool: SedCoreTool (wand, brush, lasso, polygon, exclusion; candidates from classical
   detection reviewed one by one). Only traces with a class confirmed by the annotator are used.
 - Inter-annotator agreement: ≥ 2 experts on [n] images; IoU, Dice and difference in % per interval.
 
-### Exported format (CorAnTool *Results → U-Net training data*)
+### Exported format (SedCoreTool *Results → U-Net training data*)
 One ZIP per project: `images/<core>__<section>.png` (original analysis area, no enhancement),
 `masks/<core>__<section>.png` (8-bit: 0 = matrix or reviewed artefact, k = class k,
 255 = ignore: excluded zones and traces without a confirmed class) and `manifest.json`
@@ -62,7 +62,7 @@ unreviewed objects). Unreviewed traces are ignored rather than counted as matrix
 unconfirmed trace is not a reliable negative.
 
 ## 3. Methods
-### 3.1 Data preparation (`ichantool unet prepare`)
+### 3.1 Data preparation (`sedcoretool unet prepare`)
 - All images resampled to a common resolution ρ (default: median px/cm of the dataset); images
   bilinear, masks nearest neighbour.
 - Tiles of T = 512 px with 64-px overlap; tiles with < 50 % valid (non-ignored) pixels discarded;
@@ -71,7 +71,7 @@ unconfirmed trace is not a reliable negative.
   with seed 42]; never used for training, early stopping or threshold choice.
 - Binary target (bioturbation vs matrix) [and multi-class variant].
 
-### 3.2 Model and training (`ichantool unet train`)
+### 3.2 Model and training (`sedcoretool unet train`)
 - U-Net with ResNet-34 encoder pre-trained on ImageNet (segmentation-models-pytorch).
 - Loss: binary cross-entropy with logits + soft Dice, ignoring 255 pixels (multi-class: cross-entropy
   + mean Dice of classes ≥ 1).
@@ -89,12 +89,12 @@ unconfirmed trace is not a reliable negative.
 - In the program, users can show "doubtful" pixels (|P − 0.5| < 0.2) and correct the result with
   the editing tools; corrected images can be exported again to enlarge the dataset.
 
-### 3.4 Evaluation (`ichantool unet evaluate`)
+### 3.4 Evaluation (`sedcoretool unet evaluate`)
 - On **whole images** of the test cores, not tiles.
 - Pixel: IoU, Dice, precision, recall (ignored pixels excluded); pooled over images (TP, FP, FN summed).
 - Per interval of b cm [1 cm and …]: absolute error and bias of bioturbation %, agreement of BI
   (Taylor and Goldring, 1993) and ii (Droser and Bottjer, 1986) classes.
-- Baselines on the same test images: adaptive threshold (CorAnTool default); CLAHE + threshold or
+- Baselines on the same test images: adaptive threshold (SedCoreTool default); CLAHE + threshold or
   K-means + hole filling (Miguez-Salas et al., 2019); Dorador et al. (2014) enhancement + threshold.
   [TODO: implement the classical detections in the Python package, or export their masks from the
   app, so that baselines are scored with the same code.]
@@ -102,7 +102,7 @@ unconfirmed trace is not a reliable negative.
 - [Optional] Cross-source test: train on one source (e.g. IODP scans), test on another.
 
 ### 3.5 Training protocol and experiments (plan, V0.16)
-Run in this order; each step uses only commands that exist in CorAnTool V0.15.
+Run in this order; each step uses only commands that exist in SedCoreTool V0.15.
 
 1. **Pilot (3–5 cores).** Annotate, export, prepare, train for a few epochs and evaluate, to check the
    whole chain on real images and measure annotation time per metre of core. Pilot cores can be
@@ -128,7 +128,7 @@ Run in this order; each step uses only commands that exist in CorAnTool V0.15.
 10. **Release:** model `.onnx` + `.json` (with split, seed and history), dataset and protocol with DOIs.
 
 ### 3.6 Software used for the experiments (V0.17)
-- **Training inside CorAnTool (desktop).** The same Python code as the command line, run from the program on
+- **Training inside SedCoreTool (desktop).** The same Python code as the command line, run from the program on
   the annotator's computer (NVIDIA CUDA, Apple MPS or CPU). The user marks each core as validation, test or
   automatic; the program exports the training data, prepares tiles, trains, evaluates on the test cores and
   loads the model. Training can be stopped and resumed from a per-epoch checkpoint (models reported in the
@@ -171,10 +171,10 @@ contrast class / lithology.
 - Limits: 2-D surfaces; annotation subjectivity; class imbalance for rare ichnotaxa.
 
 ## 6. Code and data availability
-- Code: CorAnTool (GPL-3.0) [repository URL and Zenodo DOI of the version used].
+- Code: SedCoreTool (GPL-3.0) [repository URL and Zenodo DOI of the version used].
 - Dataset: [Zenodo/PANGAEA DOI], licence [CC BY 4.0?], including masks, manifest and protocol.
-- Trained model: `.onnx` + `.json` [DOI]; runs in CorAnTool (desktop, browser) and with
-  `ichantool unet predict`.
+- Trained model: `.onnx` + `.json` [DOI]; runs in SedCoreTool (desktop, browser) and with
+  `sedcoretool unet predict`.
 
 ## Needs
 - [x] Annotation, export, training, evaluation and in-app inference implemented (V0.15).

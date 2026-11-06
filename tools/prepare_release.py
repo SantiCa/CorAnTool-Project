@@ -17,14 +17,14 @@ def prepare(folder: Path) -> None:
     folder = folder.resolve()
     folder.mkdir(parents=True, exist_ok=True)
     ver = delivery()
-    names = [f"CorAnTool-{ver}-{suffix}" for suffix in (
+    names = [f"SedCoreTool-{ver}-{suffix}" for suffix in (
         "windows-setup.exe", "windows-portable.exe", "mac-universal.dmg",
         "linux-x86_64.AppImage", "linux-amd64.deb",
     )]
     missing = [name for name in names if not (folder / name).is_file()]
     if missing:
         raise ValueError("Missing installers: " + ", ".join(missing))
-    html = build(folder / f"CorAnTool_{ver}.html")
+    html = build(folder / f"SedCoreTool_{ver}.html")
     names.append(html.name)
     allowed = set(names) | {"SHA256SUMS.txt", "RELEASE_MANIFEST.json"}
     extra = [p.name for p in folder.iterdir() if p.name not in allowed or not p.is_file()]

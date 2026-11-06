@@ -1,4 +1,4 @@
-// V0.15: U-Net tiling, blending, resampling and training masks; parity with src/ichantool/unet/tiling.py
+// V0.15: U-Net tiling, blending, resampling and training masks; parity with src/sedcoretool/unet/tiling.py
 // through tests/fixtures/unet_parity.json (written by tests/fixtures/make_unet_parity.py).
 import test from 'node:test';
 import assert from 'node:assert/strict';

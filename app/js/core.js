@@ -1,4 +1,4 @@
-// CorAnTool web — analysis core (no DOM). Mirrors src/ichantool/pipeline.py and indices.py.
+// SedCoreTool web — analysis core (no DOM). Mirrors src/sedcoretool/pipeline.py and indices.py.
 
 export const BI = {
   name: 'BI',

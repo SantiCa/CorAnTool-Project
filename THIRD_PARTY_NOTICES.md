@@ -1,6 +1,6 @@
 # Third-party notices
 
-CorAnTool is GPL-3.0-or-later (see [LICENSE](LICENSE)). It bundles or downloads the following components; their
+SedCoreTool is GPL-3.0-or-later (see [LICENSE](LICENSE)). It bundles or downloads the following components; their
 licences are in `app/vendor/` where bundled.
 
 | Component | Version | Use | Licence |

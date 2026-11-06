@@ -1,5 +1,5 @@
-// CorAnTool — minimal ZIP writer and reader (V0.8), no external libraries.
-// Used for the shareable project package (.corantool): project.json + images/… at full resolution.
+// SedCoreTool — minimal ZIP writer and reader (V0.8), no external libraries.
+// Used for the shareable project package (.sedcoretool; before V0.52 .corantool): project.json + images/… at full resolution.
 // Writer: method 0 (stored, images are already compressed). Reader: stored and deflate (DecompressionStream).
 // Works on Blobs, so large images are not copied into one big string. Limit: 4 GB per package (no ZIP64).
 

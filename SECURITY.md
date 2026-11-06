@@ -1,6 +1,6 @@
 # Security policy
 
-CorAnTool runs locally: projects and images stay in the browser (IndexedDB) or on the computer (desktop program).
+SedCoreTool runs locally: projects and images stay in the browser (IndexedDB) or on the computer (desktop program).
 Network requests are made only for optional downloads (map backgrounds from Esri/GEBCO after consent, the DINOv2
 vision model from Hugging Face, and libraries from jsDelivr/SheetJS when the bundled copies are missing).
 

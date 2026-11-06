@@ -1,4 +1,4 @@
-// V0.41: CorAnTool background worker — enhancement and detection off the main thread (the interface no longer freezes
+// V0.41: SedCoreTool background worker — enhancement and detection off the main thread (the interface no longer freezes
 // for 1–3 s on large images). Uses the same pure functions as the main thread, so results are identical.
 import { applyFilters, detectMask, components } from './imageproc.js';
 

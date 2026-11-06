@@ -1,4 +1,4 @@
-// CorAnTool web — gridding of scattered core values for maps (V20), in the spirit of Surfer.
+// SedCoreTool web — gridding of scattered core values for maps (V20), in the spirit of Surfer.
 // No DOM. Distances are in km on a Lambert azimuthal equal-area projection centred on the map (V22; before: degrees).
 // Methods: inverse distance, nearest neighbour, triangulation with linear interpolation (Delaunay),
 // radial basis functions (thin-plate spline = minimum curvature, multiquadric, gaussian), ordinary kriging

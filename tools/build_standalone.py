@@ -1,6 +1,6 @@
 """Build a single self-contained HTML file of the web app (double-click to open, works offline).
 
-Usage:  python tools/build_standalone.py  ->  dist/CorAnTool_V<n>.html (delivery number from app.js DELIVERY)
+Usage:  python tools/build_standalone.py  ->  dist/SedCoreTool_V<n>.html (delivery number from app.js DELIVERY)
 
 ES modules cannot be loaded from file:// URLs, so the modules are concatenated (in dependency
 order, with import/export statements removed) into one inline <script type="module">, and the
@@ -40,7 +40,7 @@ def delivery() -> str:
 
 def build(out: Path | None = None) -> Path:
     ver = delivery()
-    out = out or ROOT / "dist" / f"CorAnTool_{ver}.html"
+    out = out or ROOT / "dist" / f"SedCoreTool_{ver}.html"
     seen: dict[str, str] = {}
     parts = []
     for name in ORDER:
@@ -55,7 +55,7 @@ def build(out: Path | None = None) -> Path:
     assets = {a: f"data:{MIME[Path(a).suffix]};base64," + base64.b64encode((EXAMPLES / a).read_bytes()).decode() for a in ASSETS}
     assets_js = "window.ICHANTOOL_ASSETS = " + json.dumps(assets) + ";"
 
-    html = (APP / "index.html").read_text(encoding="utf-8").replace("<title>CorAnTool</title>", f"<title>CorAnTool {ver}</title>")
+    html = (APP / "index.html").read_text(encoding="utf-8").replace("<title>SedCoreTool</title>", f"<title>SedCoreTool {ver}</title>")
     # V0.40: the hosted page's CSP forbids inline scripts; the single offline file is all inline, so it gets its own
     html = re.sub(r'<meta http-equiv="Content-Security-Policy" content="[^"]*">', lambda m: m.group(0).replace("script-src 'self'", "script-src 'self' 'unsafe-inline'").replace("default-src 'self'", "default-src 'self' data: blob:"), html)
     # V0.27: the bundled fonts go inline too, so the single file looks the same offline

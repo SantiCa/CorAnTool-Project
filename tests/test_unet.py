@@ -10,8 +10,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from ichantool.unet import IGNORE, prepare_dataset, score, split_cores
-from ichantool.unet.dataset import binary_mask, load_export, resample_mask
+from sedcoretool.unet import IGNORE, prepare_dataset, score, split_cores
+from sedcoretool.unet.dataset import binary_mask, load_export, resample_mask
 
 FIX = Path(__file__).parent / "fixtures"
 sys.path.insert(0, str(FIX))
@@ -96,7 +96,7 @@ def test_mask_from_unet_with_onnx_model(tmp_path):
     pytest.importorskip("onnxruntime")
     from onnx import TensorProto, helper
 
-    from ichantool import mask_from_unet
+    from sedcoretool import mask_from_unet
 
     # logits = channel R normalised (dark pixels -> negative logit) with a 1x1 convolution
     w = helper.make_tensor("w", TensorProto.FLOAT, [1, 3, 1, 1], [-1.0, 0.0, 0.0])
@@ -115,10 +115,10 @@ def test_mask_from_unet_with_onnx_model(tmp_path):
 
 
 def test_train_resume_and_export(tmp_path):
-    """V0.17: tiny training on CPU, interrupted after 1 epoch and resumed to 2 (needs ichantool[unet])."""
+    """V0.17: tiny training on CPU, interrupted after 1 epoch and resumed to 2 (needs sedcoretool[unet])."""
     pytest.importorskip("torch")
     pytest.importorskip("segmentation_models_pytorch")
-    from ichantool.unet.train import train
+    from sedcoretool.unet.train import train
 
     exp = _export(tmp_path, cores=("C1", "C2", "C3", "C4"), size=(48, 40))
     prepare_dataset(exp, tmp_path / "ds", tile=32, overlap=8, px_per_cm=10, test_cores=["C4"], val_cores=["C3"])

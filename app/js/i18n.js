@@ -1,4 +1,4 @@
-// CorAnTool web — interface strings (es / en).
+// SedCoreTool web — interface strings (es / en).
 
 const D = {
   es: {
@@ -50,7 +50,7 @@ const D = {
     'r.empty': 'Los resultados aparecen al detectar o marcar bioturbación.', 'r.manualNote': 'BI e ii manuales: elige un valor para registrar tu estimación visual junto a la automática.',
     'p.pct': 'Bioturbación %',
     'busy': 'Procesando…', 'saved': 'Archivo guardado', 'loaded': 'Proyecto cargado', 'err.image': 'No se pudo leer la imagen: {m}',
-    'err.project': 'Ese archivo no es un proyecto de CorAnTool.', 'confirm.new': '¿Empezar un proyecto nuevo? Se perderá lo que no hayas guardado.',
+    'err.project': 'Ese archivo no es un proyecto de SedCoreTool.', 'confirm.new': '¿Empezar un proyecto nuevo? Se perderá lo que no hayas guardado.',
     'confirm.yes': 'Sí, empezar de nuevo', 'confirm.no': 'Cancelar', 'example.name': 'Ejemplo idealizado (V2.1)',
     'status.depth': 'Prof. {d} {u}', 'help.title': 'Cómo funciona', 'help.close': 'Cerrar',
     'help.body': '<ol><li><b>Sondeo e imagen.</b> Añade una o varias imágenes (una por sección), indica techo y muro y, si quieres, un modelo de edad. Dibuja la zona de análisis para dejar fuera la escala y los bordes.</li><li><b>Realce.</b> Ajusta niveles, contraste o contraste local hasta que las trazas se vean bien.</li><li><b>Detección.</b> Detecta candidatos automáticamente. Completa o corrige con la varita, el pincel, el lazo y el borrador. Excluye grietas, huecos y zonas muestreadas.</li><li><b>Identificación.</b> Selecciona un objeto y pulsa 1–9 para asignar el icnotaxón (0 = artefacto). El programa aprende y propone la clase del resto.</li><li><b>Resultados.</b> Porcentaje de bioturbación, BI, ii y porcentaje por icnotaxón por intervalo, junto a la imagen. Exporta CSV, máscara y proyecto.</li></ol><p><b>Atajos:</b> V seleccionar · W varita · B pincel · L lazo · E borrador · X excluir · H mano · O original · F ajustar · N siguiente · Enter aceptar · Supr eliminar · [ ] tamaño · Ctrl+rueda zoom · Ctrl+Z deshacer. Mayús añade al objeto seleccionado; Alt resta.</p>',
@@ -104,7 +104,7 @@ const D = {
     'r.empty': 'Results appear once bioturbation is detected or drawn.', 'r.manualNote': 'Manual BI and ii: pick a value to record your visual estimate next to the automatic one.',
     'p.pct': 'Bioturbation %',
     'busy': 'Processing…', 'saved': 'File saved', 'loaded': 'Project loaded', 'err.image': 'Could not read the image: {m}',
-    'err.project': 'That file is not an CorAnTool project.', 'confirm.new': 'Start a new project? Anything unsaved will be lost.',
+    'err.project': 'That file is not a SedCoreTool project.', 'confirm.new': 'Start a new project? Anything unsaved will be lost.',
     'confirm.yes': 'Yes, start over', 'confirm.no': 'Cancel', 'example.name': 'Idealised example (V2.1)',
     'status.depth': 'Depth {d} {u}', 'help.title': 'How it works', 'help.close': 'Close',
     'help.body': '<ol><li><b>Core and image.</b> Add one or more images (one per section), set top and bottom depths and, optionally, an age model. Draw the analysis area to leave out the scale bar and core edges.</li><li><b>Enhancement.</b> Adjust levels, contrast or local contrast until traces stand out.</li><li><b>Detection.</b> Detect candidates automatically. Complete or correct them with the wand, brush, lasso and eraser. Exclude cracks, voids and sampled areas.</li><li><b>Identification.</b> Select an object and press 1–9 to assign the ichnotaxon (0 = artefact). The program learns and suggests the class of the rest.</li><li><b>Results.</b> Bioturbation percentage, BI, ii and percentage per ichnotaxon per interval, beside the image. Export CSV, mask and project.</li></ol><p><b>Shortcuts:</b> V select · W wand · B brush · L lasso · E eraser · X exclude · H hand · O original · F fit · N next · Enter accept · Del delete · [ ] size · Ctrl+wheel zoom · Ctrl+Z undo. Shift adds to the selected object; Alt subtracts.</p>',
@@ -171,9 +171,9 @@ Object.assign(D.es, {
   'vis.dl': 'Descargar modelo ({mb} MB)', 'vis.file': 'Cargar .onnx', 'vis.calc': 'Calcular rasgos ({n} trazas)', 'vis.loaded': 'Modelo de visión {n} cargado',
   'vis.err': 'No se pudo cargar el modelo de visión:', 'vis.progress': 'Rasgos de visión: {k} de {n}', 'vis.done': 'Rasgos calculados: {n} trazas',
   'tr.open': 'Entrenar en este ordenador…', 'tr.title': 'Entrenar U-Net en este ordenador', 'tr.core': 'Sondeo',
-  'tr.web': 'El entrenamiento dentro del programa solo está en la versión de escritorio. En el navegador: Resultados → «Datos para entrenar U-Net (ZIP)» y después «ichantool unet train» (ver README).',
+  'tr.web': 'El entrenamiento dentro del programa solo está en la versión de escritorio. En el navegador: Resultados → «Datos para entrenar U-Net (ZIP)» y después «sedcoretool unet train» (ver README).',
   'tr.intro': 'Entrena una U-Net con las trazas revisadas de este proyecto, usando la tarjeta gráfica de este ordenador si la hay. El modelo se carga solo en Detección al terminar.',
-  'tr.module': 'Módulo de entrenamiento', 'tr.noModule': 'Falta el módulo de entrenamiento (Python {v} encontrado). Se instala una vez (PyTorch y CorAnTool, 2–3 GB, necesita internet).',
+  'tr.module': 'Módulo de entrenamiento', 'tr.noModule': 'Falta el módulo de entrenamiento (Python {v} encontrado). Se instala una vez (PyTorch y SedCoreTool, 2–3 GB, necesita internet).',
   'tr.install': 'Instalar módulo', 'tr.noPython': 'No se ha encontrado Python 3.10 o posterior. Instálalo desde python.org (en Windows, marca «Add python.exe to PATH») y vuelve a abrir esta ventana.',
   'tr.device': 'Listo. Se entrenará con: {n} ({d}).', 'tr.cpu': 'Sin tarjeta gráfica compatible: funcionará, pero mucho más despacio (horas).',
   'tr.data': 'Sondeos', 'tr.imgs': 'Imágenes', 'tr.traces': 'Trazas revisadas', 'tr.role': 'Uso',
@@ -188,15 +188,15 @@ Object.assign(D.es, {
   'u.noModel': 'Sin modelo U-Net cargado.', 'u.model': 'Modelo: {n} · clases: {c} · px/cm de entrenamiento: {p}', 'u.needOnnx': 'Elige el archivo .onnx del modelo (y su .json).',
   'u.loaded': 'Modelo {n} cargado', 'u.loadErr': 'No se pudo cargar el modelo:', 'u.progress': 'U-Net: tesela {k} de {n}',
   'u.doubt': 'Mostrar zonas dudosas (probabilidad 0,3–0,7)', 'u.note': 'Usa la imagen original (sin realce). La imagen se reescala a la resolución de entrenamiento. Cambiar la probabilidad mínima no vuelve a ejecutar la red.',
-  'r.train': 'Datos para entrenar U-Net (ZIP)', 'r.trainTip': 'Imágenes originales y máscaras de las trazas revisadas de todo el proyecto, para «ichantool unet prepare»', 'u.noReviewed': 'No hay trazas revisadas para exportar.',
+  'r.train': 'Datos para entrenar U-Net (ZIP)', 'r.trainTip': 'Imágenes originales y máscaras de las trazas revisadas de todo el proyecto, para «sedcoretool unet prepare»', 'u.noReviewed': 'No hay trazas revisadas para exportar.',
   'd.kmeans': 'K-medias, 2 clases (como ICY; Miguez-Salas et al., 2019)', 'd.fill': 'Rellenar huecos dentro de las trazas',
   'bk.title': 'Copias de seguridad', 'bk.none': 'Sin copia automática en carpeta.', 'bk.ok': 'Copia automática activa en {dir}. Última: {when}.',
   'bk.needs': 'La copia automática en {dir} necesita permiso otra vez (el navegador lo pide en cada sesión).', 'bk.error': 'Error en la última copia en {dir}. Última correcta: {when}.',
-  'bk.persistOn': 'El navegador ha marcado los datos de CorAnTool como persistentes: no los borrará para liberar espacio.',
+  'bk.persistOn': 'El navegador ha marcado los datos de SedCoreTool como persistentes: no los borrará para liberar espacio.',
   'bk.persistOff': 'El navegador no ha confirmado el almacenamiento persistente: podría borrar los datos si falta espacio. Usa la copia en carpeta.',
   'bk.choose': 'Elegir carpeta de copia automática…', 'bk.reactivate': 'Reactivar copia automática', 'bk.full': 'Descargar copia completa (todos los proyectos)',
   'bk.noFs': 'Este navegador no permite escribir en carpetas (funciona en Chrome y Edge). Descarga copias completas con regularidad.',
-  'bk.help': 'Recomendado: elige una carpeta dentro de OneDrive, Google Drive o Dropbox. CorAnTool guarda ahí cada proyecto 20 s después de cada cambio, una copia diaria en «historial» y tus ajustes. Para recuperar, usa «Importar archivo…» con esos archivos (admite varios a la vez y copias completas).',
+  'bk.help': 'Recomendado: elige una carpeta dentro de OneDrive, Google Drive o Dropbox. SedCoreTool guarda ahí cada proyecto 20 s después de cada cambio, una copia diaria en «historial» y tus ajustes. Para recuperar, usa «Importar archivo…» con esos archivos (admite varios a la vez y copias completas).',
   'f.autoG': 'Gamma automática: la mediana pasa a gris medio (límites 0,19–1, rango de Dorador et al., 2014)',
   'bk.restored': 'restaurado', 'bk.restoredN': '{p} proyectos y {s} ajustes restaurados',
 });
@@ -215,9 +215,9 @@ Object.assign(D.en, {
   'vis.dl': 'Download model ({mb} MB)', 'vis.file': 'Load .onnx', 'vis.calc': 'Compute descriptors ({n} traces)', 'vis.loaded': 'Vision model {n} loaded',
   'vis.err': 'The vision model could not be loaded:', 'vis.progress': 'Vision descriptors: {k} of {n}', 'vis.done': 'Descriptors computed: {n} traces',
   'tr.open': 'Train on this computer…', 'tr.title': 'Train a U-Net on this computer', 'tr.core': 'Core',
-  'tr.web': 'Training inside the program is only available in the desktop version. In the browser: Results → “U-Net training data (ZIP)”, then “ichantool unet train” (see README).',
+  'tr.web': 'Training inside the program is only available in the desktop version. In the browser: Results → “U-Net training data (ZIP)”, then “sedcoretool unet train” (see README).',
   'tr.intro': 'Trains a U-Net on the reviewed traces of this project, using this computer’s graphics card if there is one. The model is loaded in Detection when it finishes.',
-  'tr.module': 'Training module', 'tr.noModule': 'The training module is missing (Python {v} found). It is installed once (PyTorch and CorAnTool, 2–3 GB, needs internet).',
+  'tr.module': 'Training module', 'tr.noModule': 'The training module is missing (Python {v} found). It is installed once (PyTorch and SedCoreTool, 2–3 GB, needs internet).',
   'tr.install': 'Install module', 'tr.noPython': 'Python 3.10 or later was not found. Install it from python.org (on Windows, tick “Add python.exe to PATH”) and reopen this window.',
   'tr.device': 'Ready. Training will use: {n} ({d}).', 'tr.cpu': 'No compatible graphics card: it will work, but much more slowly (hours).',
   'tr.data': 'Cores', 'tr.imgs': 'Images', 'tr.traces': 'Reviewed traces', 'tr.role': 'Use',
@@ -232,15 +232,15 @@ Object.assign(D.en, {
   'u.noModel': 'No U-Net model loaded.', 'u.model': 'Model: {n} · classes: {c} · training px/cm: {p}', 'u.needOnnx': 'Choose the model .onnx file (and its .json).',
   'u.loaded': 'Model {n} loaded', 'u.loadErr': 'The model could not be loaded:', 'u.progress': 'U-Net: tile {k} of {n}',
   'u.doubt': 'Show doubtful zones (probability 0.3–0.7)', 'u.note': 'Uses the original image (no enhancement), rescaled to the training resolution. Changing the minimum probability does not re-run the network.',
-  'r.train': 'U-Net training data (ZIP)', 'r.trainTip': 'Original images and masks of the reviewed traces of the whole project, for “ichantool unet prepare”', 'u.noReviewed': 'There are no reviewed traces to export.',
+  'r.train': 'U-Net training data (ZIP)', 'r.trainTip': 'Original images and masks of the reviewed traces of the whole project, for “sedcoretool unet prepare”', 'u.noReviewed': 'There are no reviewed traces to export.',
   'd.kmeans': 'K-means, 2 classes (as in ICY; Miguez-Salas et al., 2019)', 'd.fill': 'Fill holes inside traces',
   'bk.title': 'Backups', 'bk.none': 'No automatic folder backup.', 'bk.ok': 'Automatic backup active in {dir}. Last: {when}.',
   'bk.needs': 'The automatic backup in {dir} needs permission again (the browser asks every session).', 'bk.error': 'The last backup in {dir} failed. Last good one: {when}.',
-  'bk.persistOn': 'The browser marked CorAnTool data as persistent: it will not delete it to free space.',
+  'bk.persistOn': 'The browser marked SedCoreTool data as persistent: it will not delete it to free space.',
   'bk.persistOff': 'The browser did not confirm persistent storage: it might delete data when space runs low. Use the folder backup.',
   'bk.choose': 'Choose automatic backup folder…', 'bk.reactivate': 'Reactivate automatic backup', 'bk.full': 'Download full backup (all projects)',
   'bk.noFs': 'This browser cannot write to folders (it works in Chrome and Edge). Download full backups regularly.',
-  'bk.help': 'Recommended: choose a folder inside OneDrive, Google Drive or Dropbox. CorAnTool saves each project there 20 s after every change, a daily copy in “historial” and your settings. To recover, use “Import file…” with those files (several at once and full backups are accepted).',
+  'bk.help': 'Recommended: choose a folder inside OneDrive, Google Drive or Dropbox. SedCoreTool saves each project there 20 s after every change, a daily copy in “historial” and your settings. To recover, use “Import file…” with those files (several at once and full backups are accepted).',
   'f.autoG': 'Automatic gamma: median to mid-grey (limits 0.19–1, range of Dorador et al., 2014)',
   'bk.restored': 'restored', 'bk.restoredN': '{p} projects and {s} settings restored',
 });
@@ -769,7 +769,7 @@ Object.assign(D.es, {
  "tour.finish": "Terminar",
  "tut.open": "Proyecto de entrenamiento (recorrido guiado)",
  "tut.name": "Proyecto de entrenamiento",
- "tut.notes": "Proyecto para aprender a usar CorAnTool. Los 7 sondeos son FICTICIOS y sus datos son SINTÉTICOS (tools/make_tutorial.py): no son datos geológicos.",
+ "tut.notes": "Proyecto para aprender a usar SedCoreTool. Los 7 sondeos son FICTICIOS y sus datos son SINTÉTICOS (tools/make_tutorial.py): no son datos geológicos.",
  "tut.coreNote": "Sondeo ficticio con datos sintéticos (proyecto de entrenamiento).",
  "tip.title": "Ayuda",
  "tip.tour": "Recorrido de esta parte",
@@ -846,7 +846,7 @@ Object.assign(D.en, {
  "tour.finish": "Finish",
  "tut.open": "Training project (guided tour)",
  "tut.name": "Training project",
- "tut.notes": "Project to learn CorAnTool. The 7 cores are FICTITIOUS and their data SYNTHETIC (tools/make_tutorial.py).",
+ "tut.notes": "Project to learn SedCoreTool. The 7 cores are FICTITIOUS and their data SYNTHETIC (tools/make_tutorial.py).",
  "tut.coreNote": "Fictitious core with synthetic data (training project).",
  "tip.title": "Help",
  "tip.tour": "Tour of this part",
@@ -1833,7 +1833,7 @@ Object.assign(D.es, {
   'fig.keepRatio': 'Mantener las proporciones de la foto', 'fig.ratioNote': 'Alto/ancho del testigo: {r}', 'geo.cancel': 'Cancelar',
   'load.failed': 'No se ha podido abrir el proyecto: {e}. No se ha guardado nada encima de la copia guardada.',
   'load.badMask': 'la máscara «{k}» de la sección «{s}» está dañada',
-  'load.newer': 'Este proyecto se guardó con una versión más nueva ({v}). Se abre solo para consultar: los cambios no se guardarán. Actualiza CorAnTool para editarlo.',
+  'load.newer': 'Este proyecto se guardó con una versión más nueva ({v}). Se abre solo para consultar: los cambios no se guardarán. Actualiza SedCoreTool para editarlo.',
   'bk.previous': 'anterior', 'err.generic': 'Error: {e}',
   'quota.use': 'Almacenamiento del navegador: {u} MB de {q} MB ({p} %)', 'quota.high': 'El almacenamiento del navegador está al {p} %. Exporta o borra proyectos que no uses para evitar perder cambios.',
 });
@@ -1841,7 +1841,7 @@ Object.assign(D.en, {
   'fig.keepRatio': 'Keep the photo proportions', 'fig.ratioNote': 'Core height/width: {r}', 'geo.cancel': 'Cancel',
   'load.failed': 'The project could not be opened: {e}. Nothing was saved over the stored copy.',
   'load.badMask': 'the «{k}» mask of section «{s}» is damaged',
-  'load.newer': 'This project was saved with a newer version ({v}). It opens read-only: changes will not be saved. Update CorAnTool to edit it.',
+  'load.newer': 'This project was saved with a newer version ({v}). It opens read-only: changes will not be saved. Update SedCoreTool to edit it.',
   'bk.previous': 'previous', 'err.generic': 'Error: {e}',
   'quota.use': 'Browser storage: {u} MB of {q} MB ({p} %)', 'quota.high': 'Browser storage is {p} % full. Export or delete projects you do not use to avoid losing changes.',
 });
@@ -1880,8 +1880,8 @@ Object.assign(D.en, {
 });
 Object.assign(D.es, { 'bk.old': 'La copia automática en carpeta no se hace desde hace {d} días y hay cambios: reactívala en Copias de seguridad.' });
 Object.assign(D.en, { 'bk.old': 'The automatic folder copy has not run for {d} days and there are changes: reactivate it in Backups.' });
-Object.assign(D.es, { 'a11y.core': 'Sondeo', 'a11y.color': 'Color', 'a11y.name': 'Nombre', 'a11y.delete': 'Borrar', 'brand.tip': 'CorAnTool (antes IchAnTool)', 'a11y.keys': 'Atajos de una tecla', 'a11y.keysOn': 'Activados', 'a11y.keysOff': 'Desactivados (solo con Ctrl/⌘ o desde los botones)', 'a11y.keysNote': 'Los atajos de una sola tecla (B, E, S…) pueden interferir con lectores de pantalla o control por voz (WCAG 2.1.4).' });
-Object.assign(D.en, { 'a11y.core': 'Core', 'a11y.color': 'Colour', 'a11y.name': 'Name', 'a11y.delete': 'Delete', 'brand.tip': 'CorAnTool (formerly IchAnTool)', 'a11y.keys': 'Single-key shortcuts', 'a11y.keysOn': 'On', 'a11y.keysOff': 'Off (only with Ctrl/⌘ or from the buttons)', 'a11y.keysNote': 'Single-key shortcuts (B, E, S…) may interfere with screen readers or voice control (WCAG 2.1.4).' });
+Object.assign(D.es, { 'a11y.core': 'Sondeo', 'a11y.color': 'Color', 'a11y.name': 'Nombre', 'a11y.delete': 'Borrar', 'brand.tip': 'SedCoreTool (antes SedCoreTool e IchAnTool)', 'a11y.keys': 'Atajos de una tecla', 'a11y.keysOn': 'Activados', 'a11y.keysOff': 'Desactivados (solo con Ctrl/⌘ o desde los botones)', 'a11y.keysNote': 'Los atajos de una sola tecla (B, E, S…) pueden interferir con lectores de pantalla o control por voz (WCAG 2.1.4).' });
+Object.assign(D.en, { 'a11y.core': 'Core', 'a11y.color': 'Colour', 'a11y.name': 'Name', 'a11y.delete': 'Delete', 'brand.tip': 'SedCoreTool (formerly SedCoreTool and IchAnTool)', 'a11y.keys': 'Single-key shortcuts', 'a11y.keysOn': 'On', 'a11y.keysOff': 'Off (only with Ctrl/⌘ or from the buttons)', 'a11y.keysNote': 'Single-key shortcuts (B, E, S…) may interfere with screen readers or voice control (WCAG 2.1.4).' });
 // V0.43: core location map
 Object.assign(D.es, {
   'fig.t.locmap': 'Mapa de localización de sondeos',

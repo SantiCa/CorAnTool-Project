@@ -1,10 +1,11 @@
-## CorAnTool V0.48
+## SedCoreTool V0.52
 
 Aplicación para identificar y cuantificar trazas en imágenes de sondeos, integrar registros multiproxy
 y exportar figuras. Versión 0.x en desarrollo. Incluye ejemplos públicos; arranca sin proyectos privados.
 
 ### Cambios recientes
 
+- Nuevo nombre: **SedCoreTool** (antes CorAnTool e IchAnTool). Los proyectos `.corantool` y los guardados con la versión anterior se siguen abriendo.
 - Guardado por secciones, edición con deshacer, mejoras de rendimiento y accesibilidad, e importación CSV robusta.
 - Figura de localización de sondeos con proyecciones geográficas, Web Mercator y UTM, retícula y fondos Esri.
 - SheetJS 0.20.3 y pesos DINOv2 fijados a un commit y SHA-256 verificable.
@@ -16,10 +17,10 @@ y exportar figuras. Versión 0.x en desarrollo. Incluye ejemplos públicos; arra
 
 | Sistema | Archivo |
 |---|---|
-| Windows 10/11, x64 | `CorAnTool-V0.48-windows-setup.exe` o `CorAnTool-V0.48-windows-portable.exe` |
-| macOS 13+, Intel y Apple Silicon | `CorAnTool-V0.48-mac-universal.dmg` |
-| Linux, x64 | `CorAnTool-V0.48-linux-x86_64.AppImage` o `CorAnTool-V0.48-linux-amd64.deb` |
-| Navegador, archivo único | `CorAnTool_V0.48.html` |
+| Windows 10/11, x64 | `SedCoreTool-V0.52-windows-setup.exe` o `SedCoreTool-V0.52-windows-portable.exe` |
+| macOS 13+, Intel y Apple Silicon | `SedCoreTool-V0.52-mac-universal.dmg` |
+| Linux, x64 | `SedCoreTool-V0.52-linux-x86_64.AppImage` o `SedCoreTool-V0.52-linux-amd64.deb` |
+| Navegador, archivo único | `SedCoreTool_V0.52.html` |
 | Verificación de las descargas | `SHA256SUMS.txt` y `RELEASE_MANIFEST.json` |
 
 Windows: ejecutar el instalador o abrir el portable. macOS: arrastrar la aplicación a Aplicaciones.

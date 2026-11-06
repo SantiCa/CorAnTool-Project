@@ -1,0 +1,27 @@
+{
+  "title": "SedCoreTool: sediment core analysis (ichnology on core images and multiproxy records)",
+  "upload_type": "software",
+  "creators": [
+    {
+      "name": "Casanova-Arenillas, Santiago"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "ichnology",
+    "bioturbation",
+    "ichnofabric",
+    "sediment core",
+    "multiproxy",
+    "image analysis",
+    "sedimentology"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.3518837",
+      "relation": "isNewVersionOf",
+      "resource_type": "software"
+    }
+  ],
+  "notes": "Formerly IchAnTool (2019; reference version 2.1, Zenodo 3518837) and CorAnTool (2026, until V0.51)."
+}

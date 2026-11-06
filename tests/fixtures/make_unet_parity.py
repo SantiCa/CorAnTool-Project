@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ichantool.unet.tiling import UnetConfig, blend_window, predict_proba, resample_bilinear, tile_starts
+from sedcoretool.unet.tiling import UnetConfig, blend_window, predict_proba, resample_bilinear, tile_starts
 
 W, H, ROI = 50, 37, (3, 2, 47, 35)  # x0, y0, x1, y1
 

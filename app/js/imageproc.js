@@ -1,5 +1,5 @@
 import { hasId } from './core.js';
-// CorAnTool web — image processing (no DOM): enhancement, detection, selection tools, shape features.
+// SedCoreTool web — image processing (no DOM): enhancement, detection, selection tools, shape features.
 
 export function lumaOf(rgba, n) {
   const L = new Float32Array(n);

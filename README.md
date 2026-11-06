@@ -1,11 +1,16 @@
-# CorAnTool
+# SedCoreTool
 
-**Core Analysis Tool** — quantify bioturbation and ichnotaxa in sediment-core images and combine them with any other
+**Sediment Core Tool** — quantify bioturbation and ichnotaxa in sediment-core images and combine them with any other
 down-core record (geochemistry, foraminifera, TOC, colour, magnetic susceptibility…) in one project.
 
-CorAnTool started in 2019 as **IchAnTool**, a script that turned hand-segmented core images into bioturbation series.
-It is now a desktop program (Windows, macOS, Linux) and a Python package
-(import name `ichantool`).
+SedCoreTool started in 2019 as **IchAnTool**, a script that turned hand-segmented core images into bioturbation series,
+and was called **SedCoreTool** in 2026 until V0.51. It is now a desktop program (Windows, macOS, Linux) and a Python
+package (import name `sedcoretool`; the old `ichantool` still works).
+
+> **Earlier names and version 2.1.** The reference version 2.1 (IchAnTool, 2019) is kept unchanged in
+> [`legacy/`](legacy/), archived in Zenodo ([doi:10.5281/zenodo.3518837](https://doi.org/10.5281/zenodo.3518837)) and
+> marked in this repository with the tag `v2.1`. The old repository addresses (`IchAnTool-Project`,
+> `CorAnTool-Project`) redirect here.
 
 > Status: version **0.x** (in development). Version 1.0 will be released when the program is considered complete.
 
@@ -40,7 +45,7 @@ The installers are not code-signed. On Windows, if SmartScreen appears, choose *
 open the program the first time with right-click → *Open*. The program does not update itself: download the new
 installer from Releases and install it over the old one (your projects are kept).
 
-From V0.48, releases also include `CorAnTool_V0.<n>.html` (the standalone web app),
+From V0.48, releases also include `SedCoreTool_V0.<n>.html` (the standalone web app),
 `SHA256SUMS.txt` and `RELEASE_MANIFEST.json` (source commit, file sizes and hashes).
 Maintainers can prepare an unpublished draft from **Actions → Desktop builds → Run workflow → master →
 draft_release**. Default manual builds still produce test artifacts only. Review the draft before publishing;
@@ -100,7 +105,7 @@ window, real proportions and editable labels and symbols.
 ### 7. Saving, sharing and team work
 
 - Projects are **saved automatically** on your computer.
-- **Export this project (with images)** creates a `.corantool` file with the full-resolution images; anyone can open
+- **Export this project (with images)** creates a `.sedcoretool` file (older `.corantool` files still open) with the full-resolution images; anyone can open
   it with *Import file…* on any system.
 - **Automatic copy to a folder**: choose a folder (ideally a shared Drive/OneDrive/Dropbox folder). Each project is
   written there as a folder; a colleague opens it with *Open project folder…*. When the same project is opened again,
@@ -119,31 +124,31 @@ their buttons appear when the app is run from a copy of the repository.
 
 The same program runs in a browser: serve the repository with any static server (`python -m http.server`, then open
 `/app/`), or build one HTML file that opens by double-click and works offline with
-`python tools/build_standalone.py` (→ `dist/CorAnTool_V<n>.html`).
+`python tools/build_standalone.py` (→ `dist/SedCoreTool_V<n>.html`).
 
 ## Python package
 
 ```bash
-pip install "ichantool[excel,plot] @ git+https://github.com/SantiCa/CorAnTool-Project.git"
+pip install "sedcoretool[excel,plot] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
 ```
 
 Command line (image with bioturbation painted black, core top at the top of the image):
 
 ```bash
-ichantool analyze core.png --top 0 --bottom 500 --units cm --bin-px 100 -o core.csv
+sedcoretool analyze core.png --top 0 --bottom 500 --units cm --bin-px 100 -o core.csv
 ```
 
 Colour-coded ichnotaxa (`palette.json` = `{"Zoophycos": "#ff0000", "Chondrites": "#0000ff"}`):
 
 ```bash
-ichantool analyze core_rgb.png --top 0 --bottom 500 --palette palette.json -o core.xlsx
+sedcoretool analyze core_rgb.png --top 0 --bottom 500 --palette palette.json -o core.xlsx
 ```
 
 Python:
 
 ```python
-from ichantool import analyze_image
-from ichantool.plotting import plot_section
+from sedcoretool import analyze_image
+from sedcoretool.plotting import plot_section
 
 section = analyze_image("core.png", top=0, bottom=500, bin_cm=1)   # 1 cm intervals (or bin_px=…)
 section.add_age(model_depth=[0, 500], model_age=[0, 40_000])       # optional age model
@@ -166,11 +171,11 @@ shape descriptors by the embedding of a pre-trained vision model (88 MB download
 Plain-language guide (Spanish): [publications/GUIA_APRENDIZAJE_AUTOMATICO.md](publications/GUIA_APRENDIZAJE_AUTOMATICO.md).
 
 ```bash
-pip install "ichantool[unet] @ git+https://github.com/SantiCa/CorAnTool-Project.git"
+pip install "sedcoretool[unet] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
 # in the app: Results → U-Net training data (ZIP)
-ichantool unet prepare project_segmentation_dataset.zip data --test CORE_A CORE_B   # tiles, split by core
-ichantool unet train data models/unet_v1                                           # GPU recommended
-ichantool unet evaluate project_segmentation_dataset.zip models/unet_v1.onnx --dataset data
+sedcoretool unet prepare project_segmentation_dataset.zip data --test CORE_A CORE_B   # tiles, split by core
+sedcoretool unet train data models/unet_v1                                           # GPU recommended
+sedcoretool unet evaluate project_segmentation_dataset.zip models/unet_v1.onnx --dataset data
 ```
 
 ## Repository layout
@@ -178,7 +183,7 @@ ichantool unet evaluate project_segmentation_dataset.zip models/unet_v1.onnx --d
 ```
 app/                program (HTML + JavaScript); vendor/ = bundled libraries (UTIF, pako, SheetJS) and fonts (IBM Plex, OFL)
 desktop/            desktop packaging (Electron) for Windows, macOS and Linux
-src/ichantool/      Python package
+src/sedcoretool/      Python package
 tests/              automated tests (JavaScript and Python, incl. regression against v2.1)
 examples/           public examples: idealised core, IODP U1385I-1H test core, geochemistry demo, training project
 tools/              offline build, tutorial and demo data, export of the documentation
@@ -200,7 +205,7 @@ legacy/             original v2.1 code (2019), unchanged
 
 ## Citing
 
-If you use CorAnTool, please cite the software (version used and repository); the citation data are in
+If you use SedCoreTool, please cite the software (version used and repository); the citation data are in
 `CITATION.cff` (GitHub shows them under *Cite this repository*).
 
 ## License
@@ -211,7 +216,7 @@ GPL-3.0 — see [LICENSE](LICENSE). Bundled libraries and fonts keep their own l
 
 ## En español (resumen)
 
-CorAnTool mide la bioturbación y los icnotaxones en imágenes de testigos de sondeo y los combina con otros registros
+SedCoreTool mide la bioturbación y los icnotaxones en imágenes de testigos de sondeo y los combina con otros registros
 (geoquímica, foraminíferos, TOC, color…) en profundidad o edad.
 
 **Uso:** crea un proyecto; añade las imágenes indicando a qué sondeo pertenecen y su techo y muro; realza, detecta o
@@ -222,3 +227,7 @@ sus imágenes completas o mediante una carpeta compartida, con comentarios.
 
 **Utilidad:** resultados cuantitativos, reproducibles y documentados en lugar de estimaciones visuales, menos trabajo
 manual y figuras listas para publicar.
+
+**Nombres anteriores:** IchAnTool (2019) y CorAnTool (hasta V0.51). La versión de referencia 2.1 sigue sin cambios
+en Zenodo (doi:10.5281/zenodo.3518837), en la carpeta `legacy/` y en la etiqueta `v2.1`; las direcciones antiguas
+del repositorio redirigen aquí.

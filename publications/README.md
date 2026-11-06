@@ -1,4 +1,4 @@
-# Publicaciones previstas — CorAnTool (antes IchAnTool)
+# Publicaciones previstas — SedCoreTool (antes SedCoreTool e IchAnTool)
 
 Borradores, revistas candidatas y estado de cada trabajo. Estado al **01-11-2026** (software en la entrega V28).
 Todo lo marcado `[TODO]` está pendiente; ningún resultado de estos borradores es definitivo.
@@ -10,7 +10,7 @@ Todo lo marcado `[TODO]` está pendiente; ningún resultado de estos borradores 
 
 | # | Trabajo y aporte | Revista principal (alternativas) | Depende de | Estado |
 |--|------------------------------|------------------------------|----------------|------------|
-| 1 | **Software: CorAnTool.** Herramienta abierta y reproducible | JOSS (Applied Computing and Geosciences; Computers & Geosciences) | Release con DOI | Borrador en inglés |
+| 1 | **Software: SedCoreTool.** Herramienta abierta y reproducible | JOSS (Applied Computing and Geosciences; Computers & Geosciences) | Release con DOI | Borrador en inglés |
 | 2 | **Dataset anotado y segmentación automática.** Datos abiertos y método | Earth System Science Data (Scientific Data; AI in Geosciences; Computers & Geosciences) | 1 e imágenes con permiso | Esquema |
 | 3 | **Validación frente a índices visuales y aplicación paleoambiental.** Interpretación geológica | Palaeogeography, Palaeoclimatology, Palaeoecology (Ichnos; Marine Geology; Sedimentary Geology) | 1 (y 2) | Esquema |
 | 4 | **Clasificación automática de intervalos con datos multiproxy.** Método de aprendizaje automático | Computers & Geosciences (AI in Geosciences; Applied Computing and Geosciences; Marine Geology) | 1 y sondeos con eventos descritos | Esquema y primeras pruebas |
@@ -40,7 +40,7 @@ Qué algoritmos usa cada artículo, qué se puede afirmar, qué falta validar y 
 
 ## Descargas
 Versión completa de este dossier (índice, métodos y defensa, borradores y revistas) en
-[Word](export/Publicaciones_CorAnTool.docx) y [LaTeX](export/Publicaciones_CorAnTool.tex). Se regeneran con
+[Word](export/Publicaciones_SedCoreTool.docx) y [LaTeX](export/Publicaciones_SedCoreTool.tex). Se regeneran con
 `python tools/export_publications.py` (necesita pandoc).
 
 ## Estructura

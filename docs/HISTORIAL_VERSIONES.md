@@ -1,4 +1,4 @@
-# Historial de versiones de CorAnTool (antes IchAnTool)
+# Historial de versiones de SedCoreTool (antes CorAnTool e IchAnTool)
 
 Este documento recoge **qué se hizo, qué cambió y por qué** en cada versión del proyecto.
 Cada entrega lleva un número **V**. Hasta la V33 se numeraron V1, V2, … V33. **Desde el 05-11-2026 la
@@ -85,6 +85,7 @@ La descripción detallada de los algoritmos está en
 | V0.49 | 07-11-2026 | Validación | Prueba final con sondeos reservados (icnotaxones y multiproxy, registrada) y comparación automática web–V2 (exacta con la misma máscara; la diferencia de 0,56 puntos viene del decodificador JPEG, no de los pesos de gris) |
 | V0.50 | 07-11-2026 | Datos y repositorio | Descargas sin datos de ejemplo (solo la costa de Natural Earth); botones de ejemplo ocultos si faltan sus archivos; sin menciones a la tesis ni al artículo de la V2.1 fuera de `publications/` |
 | V0.51 | 07-11-2026 | Figuras | Distribución de icnotaxones: elegir los mostrados, ancho de columna y abundancia en curvas simétricas; orientación horizontal en todas las figuras; ocultar zonas excluidas en todas las figuras con sondeo |
+| V0.52 | 07-11-2026 | Nombre | El programa pasa a llamarse SedCoreTool (antes CorAnTool); paquete Python `sedcoretool` con alias `ichantool`; extensión `.sedcoretool` (se siguen abriendo `.corantool`); datos guardados conservados; enlace a la versión 2.1 en Zenodo |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -675,6 +676,35 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.52 — Nuevo nombre: SedCoreTool (07-11-2026)
+
+- **Qué se hizo:** el programa pasa a llamarse **SedCoreTool** (*Sediment Core Tool*), antes CorAnTool, porque «CorAn»
+  se leía como «Corán». Se mantiene todo lo que permite abrir y conservar el trabajo anterior.
+- **Cambios:**
+  - Aplicación: nombre visible, título, `APP = 'SedCoreTool'` (se aceptan `CorAnTool` e `IchAnTool`); el paquete
+    compartible se exporta como `.sedcoretool` y se siguen abriendo `.corantool`; archivos descargados
+    `sedcoretool_*`; cabecera de las tablas exportadas `# SedCoreTool …`.
+  - Sin cambios a propósito, para no perder datos: claves del navegador (`ichantool*`, `corantool.author`), base
+    IndexedDB `ichantool`, caché `corantool-models`, origen del escritorio `app://corantool`, `window.corantoolDesktop`.
+  - Escritorio: `productName`/`appId` SedCoreTool, instaladores `SedCoreTool-V0.<n>-…`; si existe la carpeta de datos
+    antigua (`CorAnTool`) y no la nueva, se sigue usando la antigua. Entrenador: `python -m sedcoretool.cli`,
+    `SEDCORETOOL_PYTHON` (y `CORANTOOL_PYTHON`).
+  - Python: `src/ichantool` → `src/sedcoretool`; distribución `sedcoretool` con comandos `sedcoretool` e `ichantool`;
+    `src/ichantool/__init__.py` es un alias (aviso de obsolescencia) para que `import ichantool` y sus submódulos
+    sigan funcionando. Salida por defecto de la CLI: `<imagen>_sedcoretool.csv`.
+  - `.zenodo.json` nuevo: título, licencia y relación «versión nueva de» Zenodo 3518837 (versión de referencia 2.1).
+    Sin menciones al artículo, como en V0.50.
+  - Direcciones del repositorio → `SantiCa/SedCoreTool-Project`; flujos de GitHub, herramientas, README,
+    documentación, borradores de `publications/` (y su exportación Word/LaTeX regenerada), CLAUDE.md y AGENTS.md.
+    Las entradas antiguas del historial, del CHANGELOG y de las auditorías no se reescriben.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** pruebas JS y Python (1 nueva: `import ichantool` devuelve `sedcoretool` con aviso y resuelve
+  submódulos); rueda construida con los paquetes `sedcoretool` e `ichantool` y ambos comandos; archivo sin conexión
+  `dist/SedCoreTool_V0.52.html` generado; e2e en Chrome.
+- **Pendiente:** Santiago renombra el repositorio en GitHub (las direcciones antiguas redirigen; no crear otro repositorio
+  con un nombre antiguo) y crea la etiqueta `v2.1` en `1b9f22a` (25-10-2019). En Windows, el instalador nuevo no
+  sustituye a un CorAnTool instalado (otro `appId`): desinstalarlo a mano; los proyectos se conservan.
 
 ## V0.51 — Curvas simétricas, orientación horizontal y zonas excluidas en todas las figuras (07-11-2026)
 

@@ -1,4 +1,4 @@
-// CorAnTool web — formulas of the Data tab (no DOM, no eval).
+// SedCoreTool web — formulas of the Data tab (no DOM, no eval).
 // Column formulas work on whole columns of one core: [XRF Ba/Ti] / TOC_pct, log10(x), zscore(x), movavg(x, 5)…
 // Cell formulas work like a small spreadsheet: =A1*2, =SUM(A1:A5), =MEAN(COL("TOC_pct")), =CORR(COL("a"), COL("b")).
 

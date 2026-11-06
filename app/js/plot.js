@@ -1,4 +1,4 @@
-// CorAnTool web — scientific plots of the Data tab (V21), in the spirit of Golden Software Grapher. No DOM.
+// SedCoreTool web — scientific plots of the Data tab (V21), in the spirit of Golden Software Grapher. No DOM.
 // XY plots (line, scatter, line + symbols, step, area, bars; secondary Y axis; log or inverted axes; curve fits with
 // equation and R²) and stratigraphic plots (one panel per variable sharing a vertical depth/age axis).
 

@@ -1,4 +1,4 @@
-# CorAnTool web app (formerly IchAnTool)
+# SedCoreTool web app (formerly IchAnTool)
 
 Browser application for ichnological analysis of core images. Everything runs locally in the
 browser: images are never uploaded.
@@ -22,7 +22,7 @@ Start screen (all projects, table of all cores, multiproject map) → project �
    exported and imported to reuse them across cores.
 6. **Results** — per-interval bioturbation %, % per ichnotaxon, BI and ii (automatic and manual), drawn
    next to the image at the same depth scale. Exports: results CSV, objects CSV, colour mask PNG and
-   palette JSON (compatible with `ichantool analyze --palette`), and the whole project (JSON).
+   palette JSON (compatible with `sedcoretool analyze --palette`), and the whole project (JSON).
 7. **Core log** — all sections on one depth or age axis with the image resampled to the axis,
    bioturbation, indices and external records (CSV/TXT/Excel); SVG and CSV export.
 8. **Multiproxy** — many cores with any numeric records (long table, one file per core, catalogue) and
@@ -42,7 +42,7 @@ python -m http.server 8000
 # open http://localhost:8000/app/
 ```
 
-Single offline file (no server needed): `python tools/build_standalone.py` -> `dist/CorAnTool_V<n>.html`.
+Single offline file (no server needed): `python tools/build_standalone.py` -> `dist/SedCoreTool_V<n>.html`.
 
 ## Code
 - `js/core.js` — binning, indices, age model, CSV, run-length encoding (mirrors the Python package)

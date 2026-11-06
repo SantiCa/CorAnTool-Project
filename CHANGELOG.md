@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.52 — 2026-11-07
+- Renamed to **SedCoreTool** (formerly CorAnTool and IchAnTool). Python distribution and import name `sedcoretool`, with `ichantool` kept as a deprecated alias (import and command). Shareable packages are now `.sedcoretool`; `.corantool` files and projects saved with older names still open. Browser storage keys, the IndexedDB name and the desktop origin are unchanged so saved data is kept; the desktop app reuses the old `CorAnTool` data folder when present. New `.zenodo.json` links to the version 2.1 archive (Zenodo 3518837).
+
 ## V0.51 — 2026-11-07
 - Ichnotaxa distribution: choose the ichnotaxa shown, column width, and abundance as symmetric (kite) curves, with or without symbols. Horizontal orientation for every figure except maps. Excluded zones can be hidden in every figure that shows the core.
 

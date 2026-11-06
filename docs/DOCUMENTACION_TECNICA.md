@@ -1,4 +1,4 @@
-# Documentación técnica de CorAnTool (antes IchAnTool)
+# Documentación técnica de SedCoreTool (antes CorAnTool e IchAnTool)
 
 Versión del documento: V22 (31-10-2026). Componentes descritos: paquete Python 3.0.0.dev0 y
 aplicación web 1.7.
@@ -8,6 +8,16 @@ IchAnTool (icnología) y ahora analiza también registros multiproxy.
 Por compatibilidad se mantienen el nombre del paquete Python (`ichantool`), las claves del
 almacenamiento del navegador (`ichantool*`) y la lectura de archivos con `app: 'IchAnTool'`; los
 nuevos archivos llevan `app: 'CorAnTool'` y la extensión `.corantool.json`.
+
+**Nombre (desde V0.52).** El programa pasa a llamarse **SedCoreTool** (*Sediment Core Tool*), porque «CorAn» se
+confundía con «Corán». El paquete Python se llama ahora `sedcoretool` (comando `sedcoretool`); `import ichantool` y el
+comando `ichantool` siguen funcionando como alias (con aviso de obsolescencia). Los archivos nuevos llevan
+`app: 'SedCoreTool'` y el paquete compartible la extensión `.sedcoretool`; se siguen leyendo `.corantool` y los
+archivos con `app: 'CorAnTool'` o `'IchAnTool'`. No cambian, para no perder datos guardados: las claves del navegador
+(`ichantool*`, `corantool.author`, caché `corantool-models`), la base IndexedDB `ichantool`, el origen del escritorio
+`app://corantool` y el puente `window.corantoolDesktop`. El escritorio usa la carpeta de datos antigua (`CorAnTool`)
+si existe y la nueva (`SedCoreTool`) aún no. Variables de entorno: `SEDCORETOOL_PYTHON` (también `CORANTOOL_PYTHON`),
+`SEDCORETOOL_TEST_PROFILE`, `SEDCORETOOL_VISION_MODEL`, `SEDCORETOOL_NETWORK_SMOKE`.
 
 Este documento explica **cómo funciona cada parte**, con las fórmulas y los valores por defecto
 tal como están en el código. Cada apartado indica el archivo donde está implementado, para poder
@@ -47,7 +57,7 @@ El proyecto tiene dos implementaciones que comparten las mismas definiciones de 
 
 | Componente | Lenguaje | Uso | Carpeta |
 |------------|----------|-----|---------|
-| Paquete `ichantool` | Python (NumPy, Pillow, pandas) | Análisis por lotes, scripts, reproducibilidad | `src/ichantool/` |
+| Paquete `ichantool` | Python (NumPy, Pillow, pandas) | Análisis por lotes, scripts, reproducibilidad | `src/sedcoretool/` |
 | Aplicación web | JavaScript (sin librerías, salvo UTIF para TIFF) | Trabajo interactivo: realce, detección, edición, etiquetado | `app/` |
 | Código original | Python 3.7 | Referencia de la V2.1 | `legacy/` |
 
@@ -456,9 +466,9 @@ elegidos por ser rápidos, deterministas y fáciles de explicar. La segmentació
 ### 7.5 Segmentación aprendida: U-Net (desde V0.15)
 
 Cuarto método de detección (`method: 'unet'`). Una red U-Net entrenada fuera de la aplicación
-(paquete Python, `ichantool unet train`) da para cada píxel la probabilidad de bioturbación `P`.
+(paquete Python, `sedcoretool unet train`) da para cada píxel la probabilidad de bioturbación `P`.
 La aplicación la ejecuta con ONNX Runtime Web (WebAssembly, un hilo, sin GPU); el paquete Python,
-con ONNX Runtime. Ambos usan las mismas reglas (`app/js/unet.js` y `src/ichantool/unet/tiling.py`),
+con ONNX Runtime. Ambos usan las mismas reglas (`app/js/unet.js` y `src/sedcoretool/unet/tiling.py`),
 comprobadas con el mismo archivo de referencia (`tests/fixtures/unet_parity.json`).
 
 1. **Entrada:** imagen **original** (sin realce) de la zona de análisis. El realce no se usa porque
@@ -490,7 +500,7 @@ comprobadas con el mismo archivo de referencia (`tests/fixtures/unet_parity.json
 Con un modelo multiclase, la aplicación usa por ahora solo `P` (bioturbación sí/no); la clase de la red
 no se asigna a los objetos (lo hace el clasificador de §10).
 
-**Entrenamiento (paquete Python, `ichantool unet`).**
+**Entrenamiento (paquete Python, `sedcoretool unet`).**
 
 - `prepare`: lee el ZIP exportado (§12), reescala cada imagen a una resolución común (por defecto la
   mediana de px/cm; las máscaras, por vecino más próximo con la misma regla de centros), corta teselas
@@ -521,9 +531,9 @@ puede ejecutar PyTorch ni acceder a la tarjeta gráfica.
 1. **Módulo de entrenamiento:** entorno virtual propio en `<datos de usuario>/trainer/venv`, creado con el
    Python ≥ 3.10 del sistema (`py -3`, `python` o `python3`); instala PyTorch (en Windows con tarjeta NVIDIA,
    detectada con `nvidia-smi -L`, desde `https://download.pytorch.org/whl/cu128`, porque PyPI solo tiene la
-   versión para procesador; en Linux y macOS, desde PyPI) e `ichantool[unet]` desde la copia del paquete que
+   versión para procesador; en Linux y macOS, desde PyPI) e `sedcoretool[unet]` desde la copia del paquete que
    viaja con el programa (`resources/python`). Se instala una vez, a petición del usuario (2–3 GB).
-2. **Hardware:** `ichantool unet device` → `cuda` (NVIDIA), `mps` (Apple) o `cpu`, en ese orden de preferencia.
+2. **Hardware:** `sedcoretool unet device` → `cuda` (NVIDIA), `mps` (Apple) o `cpu`, en ese orden de preferencia.
 3. **Datos:** el mismo ZIP que «Datos para entrenar U-Net» (§12), generado en memoria. El usuario marca cada
    sondeo como «Auto», «Validación» o «Prueba» (`--val`, `--test` de `prepare`); «Auto» sigue la regla de
    `prepare` (§7.5).
@@ -541,7 +551,7 @@ Seguridad: la página solo accede a seis funciones (`status`, `install`, `train`
 `openFolder`) a través de `window.corantoolDesktop.trainer`, y el proceso principal solo las atiende si la
 llamada viene de las páginas del propio programa (`app://`).
 
-Dependencias opcionales: `pip install 'ichantool[unet]'` (ONNX Runtime; PyTorch, segmentation-models-pytorch
+Dependencias opcionales: `pip install 'sedcoretool[unet]'` (ONNX Runtime; PyTorch, segmentation-models-pytorch
 y onnx solo para entrenar). El ejecutable de escritorio incluye ONNX Runtime Web
 (`desktop/scripts/prepare.js`); el navegador y el archivo único lo descargan de jsDelivr la primera vez.
 
@@ -745,7 +755,7 @@ Alternativa a los 12 descriptores (§9) como entrada del clasificador (`S.settin
 `'shape'` o `'vision'`; diálogo «Modelos y entrenamiento», pestaña Entrenamiento).
 
 1. **Modelo:** DINOv2 ViT-S/14 (Oquab et al., 2024), red de visión entrenada sin etiquetas con 142 millones
-   de imágenes, en formato ONNX (`onnx-community/dinov2-small`, 88 MB). No se entrena en CorAnTool: solo
+   de imágenes, en formato ONNX (`onnx-community/dinov2-small`, 88 MB). No se entrena en SedCoreTool: solo
    convierte cada imagen en un vector. Se descarga una vez y se guarda en la caché del navegador o del programa
    (`caches`, clave = URL); también se puede cargar un `.onnx` propio con la misma interfaz. Desde V0.38 se calcula
    el SHA-256 del archivo usado, se guarda en el proyecto (`settings.ml.visionSha`) y se avisa si después se carga
@@ -774,7 +784,7 @@ Alternativa a los 12 descriptores (§9) como entrada del clasificador (`S.settin
 **Comprobación técnica V0.48:** modelo ONNX real fijado en V0.45, ejecutado con el ONNX Runtime Web
 incluido en Electron 45.2.1, desde `app://` y con la CSP del programa. Entrada sintética de 32 × 32 px,
 ventana `[3, 4, 25, 27]`, `traceInput` y `pickEmbedding` reales: 384 valores finitos y norma
-0,999998554998956 tras redondear. Prueba opcional `CORANTOOL_VISION_MODEL` en
+0,999998554998956 tras redondear. Prueba opcional `SEDCORETOOL_VISION_MODEL` en
 `tests/e2e/desktop.mjs`. Verifica que los pesos y la inferencia funcionan; no evalúa identificación
 de icnotaxones, entrenamiento ni precisión con testigos independientes.
 
@@ -832,11 +842,11 @@ Los ajustes activos se guardan en el proyecto, así que cualquier resultado se p
 |---------|-----------|
 | `*_bioturbation.csv` | Una fila por intervalo y sección: `section, depth_top, depth_bottom, depth, units, age, age_units, valid_pixels, bioturbation_pct, <clase>_pct…, BI, ii, BI_manual, ii_manual` |
 | `*_objects.csv` | Una fila por objeto: sección, id, clase, estado, sugerencia, confianza, profundidades, área (cm²), longitud y anchura (cm), alargamiento, verticalidad, compacidad, luminancia, contraste, si cuenta |
-| `*_mask.png` | Máscara a tamaño completo: fondo negro y cada píxel contado con el color de su clase. Compatible con `ichantool analyze --palette` del paquete Python |
+| `*_mask.png` | Máscara a tamaño completo: fondo negro y cada píxel contado con el color de su clase. Compatible con `sedcoretool analyze --palette` del paquete Python |
 | `*_palette.json` | `{nombre de clase: "#rrggbb"}` |
 | `*_segmentation_dataset.zip` (desde V0.15) | Datos para entrenar la U-Net (§7.5), de todas las imágenes del proyecto con al menos una traza revisada: `images/<sondeo>__<sección>.png` (zona de análisis original, resolución de trabajo), `masks/…png` (gris de 8 bits: 0 = matriz o clase que no cuenta, k = clase k que cuenta, 255 = ignorar: zona excluida o traza sin clase confirmada; las sugerencias del clasificador no cuentan como revisadas) y `manifest.json` (`kind: "segmentation-dataset"`, clases con índice, y por imagen sondeo, sección, techo, fondo, unidades, px/cm, tamaño, factor de reducción y número de objetos revisados y sin revisar) |
 | Modelo de icnotaxones exportado (`ichantool_model.json`, desde V0.17) | Además de los 12 descriptores, puede ser de vectores del modelo de visión: `features: ["vision:dinov2-small:384"]` y ejemplos de 384 valores. Al importarlo, sus ejemplos van a la biblioteca como `xv` |
-| `modelo.onnx` + `modelo.json` (desde V0.15) | U-Net entrenada con `ichantool unet train`: red ONNX y su descripción (`tile`, `overlap`, `mean`, `std`, `pxPerCm`, `classes`, `output`, historial de entrenamiento y sondeos de cada conjunto) |
+| `modelo.onnx` + `modelo.json` (desde V0.15) | U-Net entrenada con `sedcoretool unet train`: red ONNX y su descripción (`tile`, `overlap`, `mean`, `std`, `pxPerCm`, `classes`, `output`, historial de entrenamiento y sondeos de cada conjunto) |
 | `ichantool_model.json` | Modelo de aprendizaje: lista de descriptores, clases y ejemplos `{name, x}` |
 | `*_registro.svg` / `*_registro.csv` | Registro compuesto de la ventana elegida (§18) |
 | `*_mapa_<a0>-<a1>.svg` / `.csv` | Mapa de una ventana de edad (§21.6) |
@@ -863,9 +873,9 @@ fuera, ordenadas por x). `app.js` solo reúne los datos y guarda.
 
 **Procedencia de los CSV (V0.36).** Todos los CSV exportados (bioturbación, objetos, registro, intervalos, mapa,
 clasificación, figuras, datos) empiezan con líneas `#`:
-`# CorAnTool <entrega> (format 5) · <fecha ISO> · <proyecto>` y
+`# SedCoreTool <entrega> (format 5) · <fecha ISO> · <proyecto>` y
 `# settings: binCm=…; minValid=…; includePred=…; predThr=…; countCandidates=…; detection=…; age model=…`.
-Los lectores de CorAnTool y del paquete Python ya ignoran las líneas que empiezan por `#`.
+Los lectores de SedCoreTool y del paquete Python ya ignoran las líneas que empiezan por `#`.
 
 ---
 
@@ -1051,7 +1061,7 @@ Implementación: `storage.js` y `app.js` (bloque *projects*).
   (si tienen más de una hora).
 - **Guardado automático** 1,5 s después de cualquier cambio. El estado se muestra junto al nombre
   del proyecto. Al abrir la aplicación se abre el último proyecto usado.
-- **Desde V0.8** exportar crea un paquete `.corantool` (ZIP sin compresión: `project.json` con `file.path = images/<id de sección><ext>` y las imágenes originales). La copia automática escribe una carpeta por proyecto (`project.json`, `images/`, `historial/`). Los archivos JSON antiguos (imágenes en base64) se siguen importando.
+- **Desde V0.8** exportar crea un paquete `.corantool` (desde V0.52 `.sedcoretool`; ambos se abren) (ZIP sin compresión: `project.json` con `file.path = images/<id de sección><ext>` y las imágenes originales). La copia automática escribe una carpeta por proyecto (`project.json`, `images/`, `historial/`). Los archivos JSON antiguos (imágenes en base64) se siguen importando.
 - **Guardado por secciones (V0.44, IndexedDB versión 5):** el registro del proyecto (`data`) guarda de cada sección
   solo `{$sec, id, name, file}` y la sección completa va al almacén `secs` con la clave `<proyecto>|<sección>`. Una
   sección se escribe solo si cambió desde la última vez que se escribió o leyó en la sesión (mismas máscaras RLE y
@@ -1411,7 +1421,7 @@ defecto 42): el mismo proyecto da el mismo resultado. Parámetros por defecto en
   60 ms. «Cancelar» detiene el entrenamiento y conserva los modelos anteriores del clasificador interrumpido.
 - **Número de entrega** (`DELIVERY` en `app.js`, p. ej. «V27»): visible junto al nombre del programa (cabecera y
   pantalla inicial), en la ayuda, en el título de la ventana, en los archivos de proyecto (`delivery`) y en el nombre
-  del archivo sin conexión (`dist/CorAnTool_V27.html`, leído por `tools/build_standalone.py`).
+  del archivo sin conexión (`dist/SedCoreTool_V<n>.html`, leído por `tools/build_standalone.py`).
 
 ### 21.5 Validación cruzada
 `crossValidate`:
@@ -1774,14 +1784,14 @@ lista de gráficos (`plots`, `plotCur`).
   (`--max-old-space-size`), aunque Electron limita cada ventana a unos 4 GB de objetos JavaScript (compresión de punteros);
   las imágenes (ArrayBuffer) quedan fuera de ese límite y, por encima de la RAM, el sistema pagina a disco. Los proyectos se
   guardan en IndexedDB dentro de la carpeta de datos del programa, con almacenamiento persistente. Versión del ejecutable =
-  número de entrega (V31 → 31.0.0); archivos `CorAnTool-V31-<sistema>-<arquitectura>`. GitHub Actions
+  número de entrega (V31 → 31.0.0); archivos `SedCoreTool-V0.<n>-<sistema>-<arquitectura>` (antes de V0.52, `CorAnTool-…`). GitHub Actions
   (`.github/workflows/desktop.yml`) compila Windows (instalador NSIS y portable), macOS (dmg universal) y Linux
   (AppImage y deb) al subir una etiqueta `V*` y los publica en Releases. Sin firma de código.
   Desde V0.47 se requiere macOS 13 o posterior (Electron retiró macOS 12 en la versión 44);
   los destinos Windows/Linux de este proyecto siguen siendo x64 y macOS universal (Intel y Apple Silicon).
   Para construir se necesita Node ≥22.12 por `@electron/rebuild` y `node-abi`; CI usa Node 22 actualizado.
   Para pruebas previas, ejecutar `Desktop builds` mediante `workflow_dispatch` sobre `master`: genera
-  artefactos `corantool-windows-latest`, `corantool-macos-latest` y `corantool-ubuntu-latest`,
+  artefactos `sedcoretool-windows-latest`, `sedcoretool-macos-latest` y `sedcoretool-ubuntu-latest`,
   y omite el trabajo `release` porque la referencia es una rama, no una etiqueta.
   No cambia el formato de proyecto, la ruta de datos del usuario ni los algoritmos de análisis.
   Referencia de compatibilidad: [cambios de Electron](https://www.electronjs.org/docs/latest/breaking-changes).
@@ -1876,7 +1886,7 @@ cambia lo que se ve en la imagen de trabajo.
   crea un borrador sin publicar. `tools/prepare_release.py` exige los cinco instaladores de la entrega,
   añade el HTML sin conexión y escribe `RELEASE_MANIFEST.json` (entrega, commit, tamaños, SHA-256)
   y `SHA256SUMS.txt` (seis binarios/HTML y el manifiesto). Rechaza archivos faltantes, vacíos o extra.
-  Todo se adjunta al borrador y al artefacto `corantool-release-bundle`; no se sobrescriben adjuntos existentes.
+  Todo se adjunta al borrador y al artefacto `sedcoretool-release-bundle`; no se sobrescriben adjuntos existentes.
   El borrador fija `target_commitish` al commit compilado. No se crea etiqueta al preparar el borrador;
   GitHub la crea al publicarlo. El modo manual rechaza una entrega que ya tenga etiqueta.
   Zenodo queda aplazado por decisión de Santiago y no bloquea las descargas de GitHub.
@@ -1885,7 +1895,7 @@ cambia lo que se ve en la imagen de trabajo.
   con un perfil temporal y ventanas ocultas. Comprueba `app://`, CSP presente, ORT local, IPC de estado del
   entrenador, detección del ejemplo público y persistencia de una eliminación pendiente tras cerrar y
   reiniciar el proceso. Se ejecuta antes de empaquetar en los tres sistemas (Xvfb en Linux).
-  Con `CORANTOOL_NETWORK_SMOKE=1` se verificaron seis fondos Esri (imágenes 256 × 256, extensión pública
+  Con `SEDCORETOOL_NETWORK_SMOKE=1` se verificaron seis fondos Esri (imágenes 256 × 256, extensión pública
   fija 0°–5° E / 35°–40° N) desde la CSP del escritorio. No usa coordenadas ni datos privados.
   Las pruebas de pantalla y de entrenamiento con hardware real siguen siendo independientes.
 - **CI** (`tests.yml`): Python 3.10/3.12/3.13 en Ubuntu y 3.12 en Windows y macOS, con cobertura (`pytest-cov`);

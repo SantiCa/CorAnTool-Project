@@ -11,12 +11,12 @@ const { default: puppeteer } = await import(process.env.PUPPETEER_MODULE || 'pup
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const requireDesktop = createRequire(path.join(root, 'desktop/package.json'));
 const executable = requireDesktop('electron');
-const profile = mkdtempSync(path.join(tmpdir(), 'corantool-desktop-test-'));
+const profile = mkdtempSync(path.join(tmpdir(), 'sedcoretool-desktop-test-'));
 const errors = [];
 const signature = () => window.ichantool.S.sections.map((s) => `${s.objects.size}:${s.labels.reduce((a, v) => a + !!v, 0)}`).join(',');
 
 async function start() {
-  const env = { ...process.env, CORANTOOL_TEST_PROFILE: profile };
+  const env = { ...process.env, SEDCORETOOL_TEST_PROFILE: profile };
   delete env.ELECTRON_RUN_AS_NODE;
   const child = spawn(executable, [path.join(root, 'tests/e2e/desktop-bootstrap.cjs'), '--headless', '--no-sandbox', '--remote-debugging-port=0'], { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = '';
@@ -70,10 +70,10 @@ try {
   assert.ok(desktop.csp, 'CSP present');
   // Optional real-model/network checks use a local pinned ONNX file and a fixed public map extent.
   // CI remains independent of external services and a large model download.
-  if (process.env.CORANTOOL_VISION_MODEL) {
+  if (process.env.SEDCORETOOL_VISION_MODEL) {
     await p.addScriptTag({ url: 'app://corantool/app/vendor/ort/ort.wasm.min.js' });
     await p.evaluate(() => { const input = document.createElement('input'); input.type = 'file'; input.id = 'smokeModel'; document.body.append(input); });
-    await (await p.$('#smokeModel')).uploadFile(process.env.CORANTOOL_VISION_MODEL);
+    await (await p.$('#smokeModel')).uploadFile(process.env.SEDCORETOOL_VISION_MODEL);
     const vision = await p.evaluate(async () => {
       const m = await import('app://corantool/app/js/vision.js');
       const bytes = await document.getElementById('smokeModel').files[0].arrayBuffer();
@@ -92,7 +92,7 @@ try {
     assert.equal(vision.dim, 384); assert.ok(vision.finite); assert.ok(Math.abs(vision.norm - 1) < 0.001);
     console.log('DINOv2 real-model smoke ok:', JSON.stringify(vision));
   }
-  if (process.env.CORANTOOL_NETWORK_SMOKE === '1') {
+  if (process.env.SEDCORETOOL_NETWORK_SMOKE === '1') {
     const maps = await p.evaluate(async () => {
       const services = ['World_Imagery', 'World_Topo_Map', 'World_Shaded_Relief', 'World_Physical_Map', 'World_Street_Map', 'Ocean/World_Ocean_Base'];
       return Promise.all(services.map(async (service) => {

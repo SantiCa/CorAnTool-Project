@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
-      - run: pytest -q --cov=ichantool --cov-report=term-missing:skip-covered
+      - run: pytest -q --cov=sedcoretool --cov-report=term-missing:skip-covered
 
   web-app:
     runs-on: ${{ matrix.os }}
@@ -55,7 +55,7 @@ jobs:
       - run: python tools/sync_version.py --check
       - run: pip install ruff && ruff check src tests tools
       - run: npx --yes eslint@9 app/js tests/app
-      - run: python tools/build_standalone.py && ls -l dist/CorAnTool_V*.html
+      - run: python tools/build_standalone.py && ls -l dist/SedCoreTool_V*.html
 
   e2e:   # V0.42: open the test core in headless Chrome, detect, delete/undo, save, reload and compare
     runs-on: ubuntu-latest

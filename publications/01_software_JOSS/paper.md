@@ -1,5 +1,5 @@
 ---
-title: 'CorAnTool (formerly IchAnTool): open software for quantitative ichnofabric and multiproxy analysis of sediment cores'
+title: 'SedCoreTool (formerly IchAnTool): open software for quantitative ichnofabric and multiproxy analysis of sediment cores'
 tags:
   - Python
   - ichnology
@@ -34,7 +34,7 @@ indices, ready to be correlated with geochemical, mineralogical, or logging data
 Digital image treatment has improved the visibility and quantification of trace fossils in
 cores [@dorador2014; @dorador2018], but turning treated images into continuous data series
 remained a manual, repetitive task. A first version (IchAnTool), a single script, was
-introduced in @casanova2020. CorAnTool is a complete rewrite: an installable, tested Python package
+introduced in @casanova2020. SedCoreTool is a complete rewrite: an installable, tested Python package
 with a command-line interface and API, and a browser application that needs no installation, aimed at sedimentologists,
 ichnologists, palaeoceanographers, and core-analysis practitioners in academia and industry.
 [TODO: one paragraph on existing alternatives and why IchAnTool is needed.]

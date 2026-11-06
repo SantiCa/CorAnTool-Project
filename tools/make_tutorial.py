@@ -1,4 +1,4 @@
-"""Generate the SYNTHETIC training project of CorAnTool (V19). These are NOT geological data.
+"""Generate the SYNTHETIC training project of SedCoreTool (V19). These are NOT geological data.
 
 Seven fictitious cores at random sea positions of the Mediterranean (seeded; positions on land are rejected with
 the Natural Earth land polygons) with records driven by a simple common "climate" of the last 40 ka:

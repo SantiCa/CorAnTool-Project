@@ -1,4 +1,4 @@
-// CorAnTool web — V0.43: core location map (figure). DOM-free: coordinate reference systems (EPSG:4326, EPSG:3857,
+// SedCoreTool web — V0.43: core location map (figure). DOM-free: coordinate reference systems (EPSG:4326, EPSG:3857,
 // UTM/WGS 84 with zone and hemisphere), map frame, geographic graticule or metric grid, edge labels (DD, DMS or
 // metres), scale bar, north arrow and the SVG. Names are prefixed (lm…) because the offline build joins all modules.
 

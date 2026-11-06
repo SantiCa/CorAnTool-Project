@@ -1,7 +1,7 @@
 // V0.17: training of U-Net models on the user's computer, from the desktop program.
 // The app sends the training ZIP (same as «U-Net training data»); this module runs the Python package
-// (`python -m ichantool.cli unet prepare|train`) in a private virtual environment and reports progress.
-// The environment (PyTorch + ichantool[unet], 2–3 GB) is installed on demand with the system Python ≥ 3.10.
+// (`python -m sedcoretool.cli unet prepare|train`) in a private virtual environment and reports progress.
+// The environment (PyTorch + sedcoretool[unet], 2–3 GB) is installed on demand with the system Python ≥ 3.10.
 // Plain Node (no Electron imports), so it can be tested on its own.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -16,9 +16,9 @@ class Trainer {
    * root: folder for the environment, runs and models (Electron: userData/trainer).
    * pySrc: folder with the Python package source (pyproject.toml + src/).
    * send(event, data): progress events to the window ('log', 'progress', 'done', 'error', 'state').
-   * python: optional interpreter that already has ichantool[unet] (skips the private environment; for tests).
+   * python: optional interpreter that already has sedcoretool[unet] (skips the private environment; for tests).
    */
-  constructor({ root, pySrc, send = () => {}, python = process.env.CORANTOOL_PYTHON || null }) {
+  constructor({ root, pySrc, send = () => {}, python = process.env.SEDCORETOOL_PYTHON || process.env.CORANTOOL_PYTHON || null }) {
     Object.assign(this, { root, pySrc, send, fixedPython: python, child: null, busy: null });
     fs.mkdirSync(path.join(root, 'models'), { recursive: true });
     fs.mkdirSync(path.join(root, 'runs'), { recursive: true });
@@ -45,7 +45,7 @@ class Trainer {
   async status() {
     const py = this.python(), out = { python: py, installed: false, device: null, system: null, models: this.models(), busy: this.busy, platform: process.platform };
     if (!py) { out.system = this.systemPython(); return out; }
-    const r = spawnSync(py, ['-m', 'ichantool.cli', 'unet', 'device'], { encoding: 'utf8', timeout: 120000 });
+    const r = spawnSync(py, ['-m', 'sedcoretool.cli', 'unet', 'device'], { encoding: 'utf8', timeout: 120000 });
     if (r.status === 0) { out.installed = true; try { out.device = JSON.parse(r.stdout.trim().split('\n').pop()); } catch { /* keep null */ } }
     else out.error = (r.stderr || '').trim().split('\n').slice(-3).join('\n');
     return out;
@@ -76,7 +76,7 @@ class Trainer {
     if (code !== 0) throw new Error(code === -1 ? 'cancelled' : `${label}: exit code ${code}`);
   }
 
-  /** Private environment: venv + PyTorch (CUDA build on Windows with an NVIDIA card) + ichantool[unet] from pySrc. */
+  /** Private environment: venv + PyTorch (CUDA build on Windows with an NVIDIA card) + sedcoretool[unet] from pySrc. */
   async install() {
     if (this.busy) throw new Error('busy');
     const sys = this.systemPython();
@@ -89,9 +89,9 @@ class Trainer {
       const torch = ['-m', 'pip', 'install', 'torch'];
       if (WIN && this.hasNvidia()) torch.push('--index-url', 'https://download.pytorch.org/whl/cu128');   // PyPI wheels for Windows are CPU-only
       await this.step('PyTorch', py, torch);
-      const src = path.join(os.tmpdir(), `corantool-py-${Date.now()}`);   // pip builds in the source folder: use a writable copy
+      const src = path.join(os.tmpdir(), `sedcoretool-py-${Date.now()}`);   // pip builds in the source folder: use a writable copy
       fs.cpSync(this.pySrc, src, { recursive: true });
-      try { await this.step('ichantool[unet]', py, ['-m', 'pip', 'install', `${src}[unet]`]); } finally { fs.rmSync(src, { recursive: true, force: true }); }
+      try { await this.step('sedcoretool[unet]', py, ['-m', 'pip', 'install', `${src}[unet]`]); } finally { fs.rmSync(src, { recursive: true, force: true }); }
       this.send('log', '✓');
     } finally { this.busy = null; this.send('state', { busy: null }); }
   }
@@ -112,18 +112,18 @@ class Trainer {
         fs.rmSync(run, { recursive: true, force: true }); fs.mkdirSync(run, { recursive: true });
         for (const ext of ['.ckpt', '.pt', '.onnx', '.json']) fs.rmSync(model + ext, { force: true });
         fs.writeFileSync(path.join(run, 'dataset.zip'), Buffer.from(opt.zip));
-        const a = ['-m', 'ichantool.cli', 'unet', 'prepare', path.join(run, 'dataset.zip'), data, '--tile', String(opt.tile || 512), '--overlap', String(opt.overlap || 64)];
+        const a = ['-m', 'sedcoretool.cli', 'unet', 'prepare', path.join(run, 'dataset.zip'), data, '--tile', String(opt.tile || 512), '--overlap', String(opt.overlap || 64)];
         if (opt.val?.length) a.push('--val', ...opt.val);
         if (opt.test?.length) a.push('--test', ...opt.test);
         await this.step('prepare', py, a);
       }
-      const a = ['-m', 'ichantool.cli', 'unet', 'train', data, model, '--epochs', String(opt.epochs || 60), '--encoder', opt.encoder || 'resnet34', '--progress-json'];
+      const a = ['-m', 'sedcoretool.cli', 'unet', 'train', data, model, '--epochs', String(opt.epochs || 60), '--encoder', opt.encoder || 'resnet34', '--progress-json'];
       if (opt.pretrained === false) a.push('--no-pretrained');
       if (resume) a.push('--resume');
       await this.step(resume ? 'train (resume)' : 'train', py, a);
       const ev = path.join(run, 'evaluation_test.json');
       const test = JSON.parse(fs.readFileSync(path.join(data, 'dataset.json'), 'utf8')).split.test.cores;
-      if (test.length) await this.step('evaluate (test cores)', py, ['-m', 'ichantool.cli', 'unet', 'evaluate', path.join(run, 'dataset.zip'), model + '.onnx', '--dataset', data, '-o', ev]);
+      if (test.length) await this.step('evaluate (test cores)', py, ['-m', 'sedcoretool.cli', 'unet', 'evaluate', path.join(run, 'dataset.zip'), model + '.onnx', '--dataset', data, '-o', ev]);
       this.send('done', { name, evaluation: fs.existsSync(ev) ? JSON.parse(fs.readFileSync(ev, 'utf8')) : null });
       return name;
     } finally { this.busy = null; this.send('state', { busy: null }); }

@@ -1,4 +1,4 @@
-// CorAnTool desktop (V31): the web application in its own window, with more memory and its data on disk.
+// SedCoreTool desktop (V31; formerly CorAnTool): the web application in its own window, with more memory and its data on disk.
 // - The page is served from the app:// scheme (ES modules, IndexedDB and fetch work as on a web server).
 // - The renderer may use up to ~75 % of the computer's RAM for JavaScript (images live outside that limit);
 //   beyond physical RAM the operating system pages memory to disk (SSD) as for any program.
@@ -14,10 +14,14 @@ app.commandLine.appendSwitch('js-flags', `--max-old-space-size=${heapMB}`);
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }]);
 const WEB = path.join(__dirname, 'web');
+// V0.52: renamed CorAnTool → SedCoreTool. If only the old data folder exists, keep using it so saved projects stay;
+// the page origin keeps the old host (app://corantool) for the same reason (IndexedDB belongs to the origin).
+{ const fs = require('node:fs'), old = path.join(app.getPath('appData'), 'CorAnTool');
+  if (fs.existsSync(old) && !fs.existsSync(app.getPath('userData'))) app.setPath('userData', old); }
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1500, height: 950, minWidth: 900, minHeight: 600, title: 'CorAnTool', backgroundColor: '#ecefee',
+    width: 1500, height: 950, minWidth: 900, minHeight: 600, title: 'SedCoreTool', backgroundColor: '#ecefee',
     icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: { contextIsolation: true, sandbox: true, spellcheck: false, preload: path.join(__dirname, 'preload.js') },
   });

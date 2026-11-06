@@ -58,7 +58,7 @@ def mask_from_unet(img: np.ndarray, model, px_per_cm: float | None = None,
                    threshold: float = 0.5) -> tuple[np.ndarray, list[str]]:
     """Label mask from a trained U-Net (V0.15).
 
-    ``model``: path to the .onnx file (its .json next to it) or an ``ichantool.unet.predict.OnnxUnet``.
+    ``model``: path to the .onnx file (its .json next to it) or an ``sedcoretool.unet.predict.OnnxUnet``.
     ``px_per_cm`` of the image, so it is resampled to the training resolution. Pixels with probability of
     bioturbation >= ``threshold`` get class 1 (binary model) or the most probable class (multi-class model).
     """

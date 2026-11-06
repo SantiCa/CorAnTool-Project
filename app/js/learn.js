@@ -1,4 +1,4 @@
-// CorAnTool web — incremental learning of trace-fossil classes from labelled objects.
+// SedCoreTool web — incremental learning of trace-fossil classes from labelled objects.
 // Distance-weighted k-nearest neighbours on standardised shape/colour descriptors:
 // it learns from the first few examples, needs no training step, and refuses to
 // label objects that look unlike anything seen so far (novelty gate).

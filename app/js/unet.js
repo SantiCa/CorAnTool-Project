@@ -1,9 +1,9 @@
 import { topAt } from './core.js';
 // V0.15: learned segmentation (U-Net) in the app — DOM-free and independent of the inference engine.
 // The same tiling, normalisation, blending, resampling and training-mask rules are implemented in
-// src/ichantool/unet/tiling.py; tests in both languages check identical values.
+// src/sedcoretool/unet/tiling.py; tests in both languages check identical values.
 
-/** Default model description (overridden by the model's JSON written by `ichantool unet train`). */
+/** Default model description (overridden by the model's JSON written by `sedcoretool unet train`). */
 export const UNET_DEFAULTS = { tile: 512, overlap: 64, mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225], pxPerCm: null, classes: ['bioturbation'], output: 'logits' };
 /** Label value for pixels that must not be used for training or scoring (excluded zones, unreviewed candidates). */
 export const IGNORE = 255;

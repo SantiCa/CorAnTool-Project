@@ -5,7 +5,7 @@
 <!-- V0.40: Content Security Policy (the offline single file replaces it: everything there is inline) -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://server.arcgisonline.com https://wms.gebco.net; connect-src 'self' data: blob: https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co https://server.arcgisonline.com https://wms.gebco.net; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>CorAnTool</title>
+<title>SedCoreTool</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Quantitative ichnofabric analysis of sediment core images: enhancement, trace detection, learned ichnotaxon identification, bioturbation percentage, BI and ii.">
 <link rel="stylesheet" href="vendor/fonts/fonts.css">
@@ -671,7 +671,7 @@ details.mini[open] { display: grid; gap: 6px; }
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand" data-i18n-title="brand.tip"><b>Cor<i>An</i>Tool</b><span class="vtag" data-version data-i18n-title="ver.tip"></span></div>
+    <div class="brand" data-i18n-title="brand.tip"><b>Sed<i>Core</i>Tool</b><span class="vtag" data-version data-i18n-title="ver.tip"></span></div>
     <button class="btn proj" id="projBtn" data-i18n-title="home.title"><span aria-hidden="true">⌂</span><span class="lbl" data-i18n="proj.label"></span><b id="projName"></b></button>
     <div class="corebar"><span class="lbl" data-i18n="core.label"></span><select id="coreSel"></select><button class="btn small" id="coreAdd" data-i18n-title="core.add">+</button><button class="btn small ghost" id="coreEdit" data-i18n-title="core.edit">✎</button></div>
     <div class="seg" role="group"><button id="modeSection" data-i18n-title="mode.hint.section" aria-pressed="true" data-i18n="mode.section"></button><button id="modeLog" data-i18n-title="mode.hint.log" aria-pressed="false" data-i18n="mode.log"></button><button id="modeData" data-i18n-title="mode.hint.data" aria-pressed="false" data-i18n="mode.data"></button><button id="modeGeo" data-i18n-title="mode.hint.geo" aria-pressed="false" data-i18n="mode.geo"></button><button id="modeFig" data-i18n-title="mode.hint.fig" aria-pressed="false" data-i18n="mode.fig"></button></div>
@@ -1059,9 +1059,9 @@ details.mini[open] { display: grid; gap: 6px; }
 </dialog>
 <section id="home" hidden>
   <header class="hhead">
-    <div class="hbrand"><b>Cor<i>An</i>Tool</b><span class="vtag" data-version data-i18n-title="ver.tip"></span><span data-i18n="home.tagline"></span></div>
+    <div class="hbrand"><b>Sed<i>Core</i>Tool</b><span class="vtag" data-version data-i18n-title="ver.tip"></span><span data-i18n="home.tagline"></span></div>
     <div class="hacts">
-      <label class="btn file"><span data-i18n="proj.import"></span><input type="file" id="impProj" accept=".corantool,.zip,.json,application/json,application/zip" multiple></label>
+      <label class="btn file"><span data-i18n="proj.import"></span><input type="file" id="impProj" accept=".sedcoretool,.corantool,.zip,.json,application/json,application/zip" multiple></label>
       <button class="btn" id="openFolder" data-i18n="proj.openFolder" data-i18n-title="proj.openFolderTip"></button>
       <button class="btn primary" id="newProjOpen" data-i18n="home.newProject"></button>
       <button class="btn" id="projClose" data-i18n="home.back"></button>

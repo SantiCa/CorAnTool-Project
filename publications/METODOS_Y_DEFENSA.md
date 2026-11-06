@@ -4,8 +4,9 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 [README.md](README.md).
 
 ## Lo que hay que saber del software antes de escribir cualquier artículo
-- **Nombre:** desde V16 el programa se llama **CorAnTool** (antes IchAnTool). En los artículos: «CorAnTool (formerly
-  IchAnTool; Casanova-Arenillas et al., 2020)». Citar la entrega usada (p. ej. «V28») y, al enviar, la release con DOI.
+- **Nombre:** desde V0.52 el programa se llama **SedCoreTool** (antes SedCoreTool, V16–V0.51, e IchAnTool). En los
+  artículos: «SedCoreTool (formerly IchAnTool; Casanova-Arenillas et al., 2020)». El código del artículo de 2020 sigue en
+  Zenodo (doi:10.5281/zenodo.3518837), en `legacy/` y en la etiqueta `v2.1`. Citar la entrega usada (p. ej. «V28») y, al enviar, la release con DOI.
 - **Icnotaxones (imágenes):** tres modelos (sondeo, proyecto, todos los proyectos; §10.6 bis) y tres métodos (k-NN,
   bosque aleatorio, Bayes ingenuo; §10.6 ter). Desde V22 la evaluación agrupa por imagen (sección) y cuenta como error
   cualquier predicción de un taxón ausente del conjunto de prueba. Hay que decir qué modelo y método se usó y su acierto
@@ -68,7 +69,7 @@ limitación o trabajo futuro.
 
 ---
 
-## Artículo 1 — Software: CorAnTool (JOSS)
+## Artículo 1 — Software: SedCoreTool (JOSS)
 
 ### Qué describe
 El paquete Python y la aplicación web como herramienta abierta de análisis de sondeos: series continuas de
@@ -165,7 +166,7 @@ identificación.
 | Descriptores de objeto | §9 |
 | k-NN con rechazo de novedad (método base de identificación) | §10 |
 | Rasgos de un modelo de visión preentrenado (DINOv2) como entrada del clasificador (**V0.17, sin evaluar con datos reales**) | §10.6 quater |
-| Entrenamiento de la U-Net en el programa de escritorio (mismo código que `ichantool unet`) | §7.5 |
+| Entrenamiento de la U-Net en el programa de escritorio (mismo código que `sedcoretool unet`) | §7.5 |
 | Segmentación aprendida U-Net: exportación de datos, entrenamiento, evaluación y uso en la aplicación (**implementada en V0.15, sin entrenar con datos reales**) | §7.5 |
 | Formato de máscara y paleta | §12 |
 
@@ -408,7 +409,7 @@ usó y se muestra su efecto (experimento 7).
 ## Artículo 5 — Nota breve en español (Geogaceta)
 
 ### Qué describirá
-Presentación de CorAnTool a la comunidad geológica española: qué hace, para quién es y un ejemplo con un testigo de
+Presentación de SedCoreTool a la comunidad geológica española: qué hace, para quién es y un ejemplo con un testigo de
 datos públicos (IODP U1385I-1H, margen ibérico) y el proyecto de entrenamiento. Sin resultados inéditos.
 
 ### Qué se puede afirmar hoy

@@ -1,8 +1,8 @@
 {
-  "name": "corantool",
-  "productName": "CorAnTool",
-  "version": "0.51.0",
-  "description": "CorAnTool — core analysis: ichnology on core images and multiproxy records",
+  "name": "sedcoretool",
+  "productName": "SedCoreTool",
+  "version": "0.52.0",
+  "description": "SedCoreTool — sediment core analysis: ichnology on core images and multiproxy records",
   "author": {
     "name": "Santiago Casanova-Arenillas",
     "email": "santic1290@gmail.com"
@@ -20,5 +20,5 @@
     "electron-builder": "26.18.0",
     "onnxruntime-web": "1.31.1"
   },
-  "homepage": "https://github.com/SantiCa/CorAnTool-Project"
+  "homepage": "https://github.com/SantiCa/SedCoreTool-Project"
 }

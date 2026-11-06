@@ -44,7 +44,7 @@ def load_export(src: str | Path) -> tuple[list[Item], list[dict]]:
     read = _reader(Path(src))
     man = json.loads(read("manifest.json"))
     if man.get("kind") != "segmentation-dataset":
-        raise ValueError("not a CorAnTool segmentation dataset (manifest kind)")
+        raise ValueError("not a SedCoreTool (or CorAnTool) segmentation dataset (manifest kind)")
     items = []
     for it in man["items"]:
         img = np.asarray(Image.open(io.BytesIO(read(it["image"]))).convert("RGB"))

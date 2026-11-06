@@ -1,9 +1,9 @@
-# Artículo 5 — Nota breve: CorAnTool, una herramienta abierta para el análisis de sondeos
+# Artículo 5 — Nota breve: SedCoreTool, una herramienta abierta para el análisis de sondeos
 
 **Revista:** Geogaceta (Sociedad Geológica de España). Alternativa: Spanish Journal of Palaeontology.
 
 ## Título provisional
-CorAnTool: una herramienta abierta para cuantificar la bioturbación e integrar datos multiproxy en sondeos [TODO]
+SedCoreTool: una herramienta abierta para cuantificar la bioturbación e integrar datos multiproxy en sondeos [TODO]
 
 ## Idea
 Presentar el programa a la comunidad española con un ejemplo reproducible sobre datos públicos (IODP U1385I-1H,

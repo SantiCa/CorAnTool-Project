@@ -5,9 +5,9 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from ichantool import BI_TAYLOR_GOLDRING, II_DROSER_BOTTJER, analyze_image, analyze_mask, mask_from_palette, mask_from_threshold
-from ichantool.cli import main
-from ichantool.depth import depth_to_age, pixel_depths
+from sedcoretool import BI_TAYLOR_GOLDRING, II_DROSER_BOTTJER, analyze_image, analyze_mask, mask_from_palette, mask_from_threshold
+from sedcoretool.cli import main
+from sedcoretool.depth import depth_to_age, pixel_depths
 
 EXAMPLE = Path(__file__).parents[1] / "examples" / "data" / "idealized_core_0-500cm.jpg"
 
@@ -91,7 +91,7 @@ def test_cli(tmp_path):
 
 def test_bin_cm_fractional_edges_match_web_app():
     """V0.1: interval in cm → fractional rows per bin with the same edges as binRows in the web app."""
-    from ichantool.pipeline import bin_edges
+    from sedcoretool.pipeline import bin_edges
     assert bin_edges(100, 12.5) == [(0, 13), (13, 25), (25, 38), (38, 50), (50, 63), (63, 75), (75, 88), (88, 100)]
     assert bin_edges(100, 30) == [(0, 30), (30, 60), (60, 90), (90, 100)]
     assert bin_edges(100, 30, keep_partial=False) == [(0, 30), (30, 60), (60, 90)]
@@ -106,10 +106,26 @@ def test_overlapping_class_layers_v020():
     """V0.20: per-class layers may overlap; the total counts the union, each class its full area."""
     import numpy as np
 
-    from ichantool.pipeline import analyze_mask
+    from sedcoretool.pipeline import analyze_mask
     a = np.zeros((2, 1, 4), bool)
     a[0, 0, :2] = True   # class 1: px 0-1
     a[1, 0, 1:3] = True  # class 2: px 1-2 (overlaps px 1)
     r = analyze_mask(a, 0, 1, bin_px=1, class_names=["A", "B"]).data
     assert r["bioturbation_pct"].iloc[0] == 75
     assert r["A_pct"].iloc[0] == 50 and r["B_pct"].iloc[0] == 50
+
+
+def test_old_import_name_still_works():
+    """V0.52: the package was renamed to sedcoretool; `import ichantool` keeps working (with a warning)."""
+    import importlib
+    import sys
+    import warnings
+
+    import sedcoretool
+    sys.modules.pop("ichantool", None)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        old = importlib.import_module("ichantool")
+    assert old is sedcoretool and any(issubclass(x.category, DeprecationWarning) for x in w)
+    from ichantool.depth import pixel_depths  # submodules resolve through the new package
+    assert callable(pixel_depths)

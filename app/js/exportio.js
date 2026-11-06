@@ -1,9 +1,9 @@
-// CorAnTool web — V0.44: tables written to files and records read from tables. DOM-free and tested
+// SedCoreTool web — V0.44: tables written to files and records read from tables. DOM-free and tested
 // (tests/app/exportio.test.mjs); app.js only gathers the data and saves the files.
 
 /** Provenance lines (start with #, ignored when read back) for an exported CSV. */
 export function provenanceLines({ delivery, format, date, project, settings: st = {}, detection = '', age = 'none' }) {
-  return [`# CorAnTool ${delivery} (format ${format}); exported ${date}; project "${String(project).replace(/"/g, "'")}"`,
+  return [`# SedCoreTool ${delivery} (format ${format}); exported ${date}; project "${String(project).replace(/"/g, "'")}"`,
     `# settings: binCm=${st.binCm}; minValid=${st.minValid}%; includePred=${!!st.includePred}; predThr=${st.predThr}; countCandidates=${!!st.countCandidates}; detection=${detection}; age model=${age}`];
 }
 export const withProvenance = (csv, info) => [...provenanceLines(info), csv].join('\n');

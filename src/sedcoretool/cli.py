@@ -1,4 +1,4 @@
-"""Command line interface: ``ichantool analyze IMAGE --top 0 --bottom 500``."""
+"""Command line interface: ``sedcoretool analyze IMAGE --top 0 --bottom 500``."""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ from .segmentation import mask_from_palette, mask_from_threshold
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="ichantool", description="Quantitative ichnofabric analysis of core images")
-    p.add_argument("--version", action="version", version=f"ichantool {__version__}")
+    p = argparse.ArgumentParser(prog="sedcoretool", description="Quantitative ichnofabric analysis of core images")
+    p.add_argument("--version", action="version", version=f"sedcoretool {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
     a = sub.add_parser("analyze", help="analyse one image")
@@ -31,7 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--palette", type=Path, help="JSON {class: '#rrggbb'} for colour-coded images")
     g.add_argument("--label-mask", action="store_true", help="image is already an integer label mask")
     a.add_argument("--tolerance", type=int, default=10, help="colour tolerance for --palette")
-    a.add_argument("-o", "--output", type=Path, help="output .csv or .xlsx (default: <image>_ichantool.csv)")
+    a.add_argument("-o", "--output", type=Path, help="output .csv or .xlsx (default: <image>_sedcoretool.csv)")
 
     # V0.15: U-Net
     u = sub.add_parser("unet", help="learned segmentation: prepare, train, evaluate, predict").add_subparsers(dest="unet", required=True)
@@ -45,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--val", nargs="*", default=None, help="validation cores")
     pr.add_argument("--test", nargs="*", default=None, help="test cores (never used in training)")
     pr.add_argument("--seed", type=int, default=42)
-    tr = u.add_parser("train", help="train and export model.onnx + model.json (needs ichantool[unet])")
+    tr = u.add_parser("train", help="train and export model.onnx + model.json (needs sedcoretool[unet])")
     tr.add_argument("data", type=Path)
     tr.add_argument("out", type=Path, help="output name, e.g. models/unet_v1")
     tr.add_argument("--encoder", default="resnet34")
@@ -88,7 +88,7 @@ def main(argv=None) -> int:
             mask, names = mask_from_threshold(load_image(args.image), args.threshold)
         section = analyze_mask(mask, args.top, args.bottom, units=args.units, bin_px=args.bin_px,
                                class_names=names, name=args.name or args.image.stem)
-        out = args.output or args.image.with_name(args.image.stem + "_ichantool.csv")
+        out = args.output or args.image.with_name(args.image.stem + "_sedcoretool.csv")
         (to_excel if out.suffix.lower() == ".xlsx" else to_csv)([section], out)
         print(f"{len(section.data)} data points -> {out}")
     elif args.command == "unet":
