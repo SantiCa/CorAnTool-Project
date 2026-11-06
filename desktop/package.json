@@ -1,7 +1,7 @@
 {
   "name": "corantool",
   "productName": "CorAnTool",
-  "version": "0.42.0",
+  "version": "0.43.0",
   "description": "CorAnTool — core analysis: ichnology on core images and multiproxy records",
   "author": {
     "name": "Santiago Casanova-Arenillas",

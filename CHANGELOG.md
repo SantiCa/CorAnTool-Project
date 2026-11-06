@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.43 — 2026-11-06
+- New figure: core location map with base layers (blank, vector, Esri satellite/topographic/relief/physical/streets/ocean), editable extent with zoom and pan, WGS 84 / Web Mercator / UTM (zone and hemisphere) projections, graticule or metric grid, coordinates on any chosen sides in DD, DMS or metres, positionable scale bar and north arrow (UTM convergence), and SVG/PNG/JPEG output.
+
 ## V0.42 — 2026-11-06
 - Tests (audit §3): editing algorithms (scissors, merge, same-ichnotaxon grouping, undo, project migration) moved to the pure module `edit.js` and tested with synthetic overlapping masks; end-to-end headless-Chrome test (open, detect, delete/undo, save, reload, compare) in CI (`npm run e2e`).
 

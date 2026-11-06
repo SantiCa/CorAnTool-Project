@@ -1,5 +1,6 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
+import { LOCMAP_DEFAULTS, lmUtmZone, lmFitBBox, lmZoom, buildLocMapSVG } from './locmap.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
 import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, decodeText, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
@@ -19,7 +20,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.42';
+const DELIVERY = 'V0.43';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -6519,7 +6520,8 @@ function renderFigPanel() {
     syncCoreFigSize();
   } else if (F.type === 'geolog') {
     box.innerHTML = `<label class="f"><span>${t('geo.core')}</span><select id="figGeoCore">${S.cores.map((c) => `<option value="${c.id}" ${c.id === S.geo.view.core ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label><p class="note">${t('fig.geoNote')}</p>`;
-  } else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
+  } else if (F.type === 'locmap') box.innerHTML = locmapPanelHTML();
+  else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
   if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? colOrderHTML('range') + speciesFormHTML(S.logView.style || {}) + axesFormHTML(['total', 'species']) : '')}</details>`);
 }
 
@@ -6565,6 +6567,120 @@ function editSVGLabels(box, edits, save) {
   save(svg.outerHTML);
 }
 
+/* ───────────── V0.43: core location map (figure) ───────────── */
+const LM_BASES = {
+  blank: null, vector: null,
+  satellite: { svc: 'World_Imagery', attr: 'Esri, Maxar, Earthstar Geographics, GIS User Community' },
+  topo: { svc: 'World_Topo_Map', attr: 'Esri and contributors (World Topographic Map)' },
+  relief: { svc: 'World_Shaded_Relief', attr: 'Esri (World Shaded Relief)' },
+  physical: { svc: 'World_Physical_Map', attr: 'Esri, U.S. National Park Service (World Physical Map)' },
+  streets: { svc: 'World_Street_Map', attr: 'Esri, HERE, Garmin, OpenStreetMap contributors (World Street Map)' },
+  ocean: { svc: 'Ocean/World_Ocean_Base', attr: 'Esri, Garmin, GEBCO, NOAA NGDC (World Ocean Base)' },
+};
+const lmSet = () => { const F = S.fig; F.loc = { ...LOCMAP_DEFAULTS, ...(F.loc || {}), labels: { ...LOCMAP_DEFAULTS.labels, ...(F.loc?.labels || {}) } }; return F.loc; };
+const lmPoints = () => S.cores.filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lon)).map((c) => ({ name: c.name, lat: c.lat, lon: c.lon }));
+const lmBgCache = new Map();
+/** Raster base of exactly the frame, asked to Esri in the map CRS (EPSG:4326, 3857 or 326xx/327xx), as a data URL. */
+function locmapBackground(st, r) {
+  const def = LM_BASES[st.base]; if (!def) return null;
+  const fr = r.frame, k = Math.min(2, 4096 / Math.max(fr.W, fr.H)), w = Math.round(fr.W * k), h = Math.round(fr.H * k);
+  const url = `https://server.arcgisonline.com/ArcGIS/rest/services/${def.svc}/MapServer/export?bbox=${[fr.X0, fr.Y0, fr.X1, fr.Y1].map((v) => v.toFixed(r.crs.geographic ? 6 : 1)).join(',')}&bboxSR=${r.crs.epsg}&imageSR=${r.crs.epsg}&size=${w},${h}&format=jpg&f=image`;
+  const hit = lmBgCache.get(url);
+  if (hit && hit !== 'pending') return hit === 'fail' ? null : hit;
+  if (!hit && mapNetConsent()) {
+    lmBgCache.set(url, 'pending');
+    fetchImage(url).then((href) => { lmBgCache.set(url, { href, attribution: def.attr }); scheduleFigure(); })
+      .catch(() => { lmBgCache.set(url, 'fail'); toast(t('ms.bgFail')); scheduleFigure(); });
+  }
+  return null;
+}
+function locmapSVG() {
+  const st = lmSet(), pts = lmPoints();
+  const o = { settings: st, points: pts, land: geoLand, labelsText: { crs: t('lm.crs') } };
+  let r = buildLocMapSVG(o);
+  if (LM_BASES[st.base]) { const bg = locmapBackground(st, r); if (bg) r = buildLocMapSVG({ ...o, bg }); }
+  lastLocmap = r;
+  if (!pts.length) $('lmNote') && ($('lmNote').textContent = t('lm.noCores'));
+  return r.svg;
+}
+let lastLocmap = null;
+function locmapPanelHTML() {
+  const st = lmSet(), b = st.bbox || lmFitBBox(lmPoints(), st.margin), auto = lmUtmZone((b[0] + b[2]) / 2);
+  const opt = (k, vals, lab) => `<select data-lm="${k}">${vals.map((v) => `<option value="${v}" ${String(st[k]) === String(v) ? 'selected' : ''}>${lab(v)}</option>`).join('')}</select>`;
+  const chk = (k, path = k) => `<label class="chk"><input type="checkbox" data-lm="${path}" ${(path.startsWith('labels.') ? st.labels[path.slice(7)] : st[k]) ? 'checked' : ''}><span>${t('lm.' + k)}</span></label>`;
+  const num = (k, min, max, stp) => `<label class="f"><span>${t('lm.' + k)}</span><input type="number" data-lm="${k}" min="${min}" max="${max}" step="${stp}" value="${st[k] ?? ''}" placeholder="${t('fig.auto2')}"></label>`;
+  const pos = (k) => opt(k, ['tl', 'tr', 'bl', 'br'], (v) => t('lm.pos.' + v));
+  return `<p class="note" id="lmNote">${t('lm.intro', { n: lmPoints().length })}</p>
+    <details class="mini" open><summary>${t('lm.view')}</summary>
+      <label class="f"><span>${t('lm.base')}</span>${opt('base', Object.keys(LM_BASES), (v) => t('lm.b.' + v))}</label>
+      <label class="f"><span>${t('lm.baseOpacity')}</span><input type="range" data-lm="baseOpacity" min="0.2" max="1" step="0.05" value="${st.baseOpacity}"></label>
+      <div class="grid2">${['W', 'S', 'E', 'N'].map((q, i) => `<label class="f"><span>${t('lm.bb.' + q)}</span><input type="number" data-lm="bbox.${i}" step="any" value="${+b[i].toFixed(4)}"></label>`).join('')}</div>
+      <div class="row" style="gap:4px;flex-wrap:wrap">${[['in', '＋'], ['out', '－'], ['w', '◀'], ['n', '▲'], ['s', '▼'], ['e', '▶']].map(([k, ic]) => `<button class="btn small" type="button" data-lmz="${k}" title="${t('lm.z.' + k)}" aria-label="${t('lm.z.' + k)}">${ic}</button>`).join('')}<button class="btn small" type="button" data-lmz="fit">${t('lm.z.fit')}</button></div>
+      <div class="grid2"><label class="f"><span>${t('lm.width')}</span><input type="number" data-lm="width" min="300" max="3000" step="50" value="${st.width}"></label>
+      <label class="f"><span>${t('lm.aspect')}</span>${opt('aspect', ['auto', '1:1', '4:3', '3:2', '16:9', 'A4', 'A4v'], (v) => (v === 'auto' ? t('lm.aspectAuto') : v === 'A4' ? 'A4 ↔' : v === 'A4v' ? 'A4 ↕' : v))}</label></div>
+    </details>
+    <details class="mini" open><summary>${t('lm.crsT')}</summary>
+      <label class="f"><span>${t('lm.crs')}</span>${opt('crs', ['EPSG:4326', 'EPSG:3857', 'UTM'], (v) => t('lm.c.' + v.replace(':', '')))}</label>
+      ${st.crs === 'UTM' ? `<div class="grid2"><label class="f"><span>${t('lm.zone')}</span><select data-lm="utmZone"><option value="">${t('lm.zoneAuto', { z: auto })}</option>${Array.from({ length: 60 }, (_, i) => `<option value="${i + 1}" ${st.utmZone === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
+      <label class="f"><span>${t('lm.hemi')}</span><select data-lm="utmSouth"><option value="">${t('lm.hemiAuto')}</option><option value="0" ${st.utmSouth === false ? 'selected' : ''}>${t('lm.hN')}</option><option value="1" ${st.utmSouth === true ? 'selected' : ''}>${t('lm.hS')}</option></select></label></div>` : ''}
+    </details>
+    <details class="mini" open><summary>${t('lm.gridT')}</summary>
+      ${chk('grid')}
+      <div class="grid2"><label class="f"><span>${t('lm.gridType')}</span>${opt('gridType', st.crs === 'EPSG:4326' ? ['auto'] : ['auto', 'geo'], (v) => t('lm.g.' + v))}</label>
+      <label class="f"><span>${t(st.crs === 'EPSG:4326' || st.gridType === 'geo' ? 'lm.stepDeg' : 'lm.stepM')}</span><input type="number" data-lm="gridStep" min="0" step="any" value="${st.gridStep ?? ''}" placeholder="${t('fig.auto2')}"></label></div>
+      <div class="f"><span>${t('lm.sides')}</span><div class="chk2">${['top', 'bottom', 'left', 'right'].map((q) => `<label class="chk"><input type="checkbox" data-lm="labels.${q}" ${st.labels[q] ? 'checked' : ''}><span>${t('lm.side.' + q)}</span></label>`).join('')}</div>
+      <div class="row" style="gap:4px"><button class="btn small" type="button" data-lmz="allSides">${t('mp.all')}</button><button class="btn small" type="button" data-lmz="noSides">${t('mp.none')}</button></div></div>
+      ${st.crs === 'EPSG:4326' || st.gridType === 'geo' ? `<label class="f"><span>${t('lm.fmt')}</span>${opt('coordFmt', ['dd', 'dms'], (v) => t('lm.f.' + v))}</label>` : `<label class="f"><span>${t('lm.unit')}</span>${opt('metricUnit', ['m', 'km'], (v) => v)}</label><p class="note">${t('lm.metricNote')}</p>`}
+      <div class="grid2">${num('labelSize', 6, 24, 1)}<label class="f"><span>${t('lm.gridColor')}</span><input type="color" data-lm="gridColor" value="${st.gridColor}"></label></div>
+      ${chk('ticks')}${chk('rotateSide')}${chk('gridDash')}
+    </details>
+    <details class="mini"><summary>${t('lm.elemT')}</summary>
+      <div class="grid2">${chk('scaleBar')}<label class="f"><span>${t('lm.pos')}</span>${pos('scalePos')}</label>${chk('north')}<label class="f"><span>${t('lm.pos')}</span>${pos('northPos')}</label></div>
+      ${num('northSize', 0.5, 3, 0.1)}
+    </details>
+    <details class="mini"><summary>${t('lm.coresT')}</summary>
+      <div class="grid2"><label class="f"><span>${t('lm.symbol')}</span>${opt('symbol', ['circle', 'square', 'triangle', 'diamond', 'star'], (v) => t('lm.s.' + v))}</label>${num('pointSize', 2, 20, 1)}
+      <label class="f"><span>${t('lm.pointColor')}</span><input type="color" data-lm="pointColor" value="${st.pointColor}"></label><label class="f"><span>${t('lm.land')}</span><input type="color" data-lm="land" value="${st.land}"></label>
+      <label class="f"><span>${t('lm.sea')}</span><input type="color" data-lm="sea" value="${st.sea}"></label>${num('coreLabelSize', 6, 24, 1)}</div>
+      ${chk('coreLabels')}${chk('coast')}
+    </details>
+    <details class="mini" open><summary>${t('lm.outT')}</summary>
+      <div class="grid2"><label class="f"><span>${t('lm.fmtOut')}</span>${opt('fmt', ['svg', 'png', 'jpg'], (v) => v.toUpperCase())}</label>
+      <label class="f"><span>${t('lm.scale')}</span>${opt('scale', [1, 2, 3, 4, 6], (v) => `×${v} (≈${Math.round(96 * v)} ppp)`)}</label></div>
+      <button class="btn primary small" type="button" data-lmz="export">${t('lm.export')}</button>
+    </details>`;
+}
+function onLocmapInput(el) {
+  const st = lmSet(), k = el.dataset.lm, v = el.type === 'checkbox' ? el.checked : el.type === 'number' || el.type === 'range' ? (el.value === '' ? null : +el.value) : el.value;
+  if (k.startsWith('labels.')) st.labels[k.slice(7)] = v;
+  else if (k.startsWith('bbox.')) { const b = [...(st.bbox || lastLocmap?.bbox || lmFitBBox(lmPoints(), st.margin))]; if (v != null) b[+k.slice(5)] = v; if (b[2] > b[0] && b[3] > b[1]) st.bbox = b; }
+  else if (k === 'utmZone') st.utmZone = v ? +v : null;
+  else if (k === 'utmSouth') st.utmSouth = v === '' ? null : v === '1';
+  else if (k === 'scale') st.scale = +v;
+  else st[k] = v;
+  if (k === 'crs' && v === 'EPSG:4326') st.gridType = 'auto';
+  markDirty(); if (['crs', 'gridType', 'base'].includes(k)) renderFigPanel(); scheduleFigure();
+}
+async function exportLocmap() {
+  const st = lmSet(); if (!figSvgCache) return;
+  const name = `${safe(S.name)}_mapa_localizacion`;
+  if (st.fmt === 'svg') { await saveFile(name + '.svg', figSvgCache, 'image/svg+xml'); return; }
+  const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(figSvgCache); await img.decode();
+  const k = st.scale || 3, c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+  const type = st.fmt === 'jpg' ? 'image/jpeg' : 'image/png', blob = await new Promise((r) => c.toBlob(r, type, st.quality));
+  if (blob) await saveFile(name + (st.fmt === 'jpg' ? '.jpg' : '.png'), blob, type);
+}
+$('figPanel').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-lmz]'); if (!b) return;
+  const st = lmSet(), z = b.dataset.lmz, cur = st.bbox || lastLocmap?.bbox || lmFitBBox(lmPoints(), st.margin);
+  if (z === 'export') { busy(exportLocmap); return; }
+  if (z === 'fit') st.bbox = null;
+  else if (z === 'allSides' || z === 'noSides') for (const q of ['top', 'bottom', 'left', 'right']) st.labels[q] = z === 'allSides';
+  else st.bbox = lmZoom(cur, z === 'in' ? 1.5 : z === 'out' ? 1 / 1.5 : 1, z === 'e' ? 0.25 : z === 'w' ? -0.25 : 0, z === 'n' ? 0.25 : z === 's' ? -0.25 : 0);
+  markDirty(); renderFigPanel(); scheduleFigure();
+});
+
 /** V0.13: message for a drawing error (translated when it is an invalid axis, the real message otherwise). */
 const axisErr = (e) => (/^Invalid horizontal axis/.test(e?.message || '') ? t('edit.invalidAxis') : e?.message || String(e));
 function renderFigure() {
@@ -6578,6 +6694,7 @@ function renderFigure() {
     else if (F.type === 'range') svg = rangeSVG();
     else if (F.type === 'log') { renderLog(); svg = lastLog?.svg || null; }
     else if (F.type === 'geolog') { if (geoRT.dirty) geoComputeSamples(); renderGeoLogs(); svg = $('geoLogSvg').querySelector('svg')?.outerHTML || null; }
+    else if (F.type === 'locmap') svg = locmapSVG();
     else { if (geoRT.dirty) geoComputeSamples(); svg = renderGeoMap() || null; }
   } catch (e) { console.error(e); $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(axisErr(e))}</p>`; return; }
   figSvgCache = svg ? wrapFigure(svg, F.title, F.caption) : '';
@@ -6590,6 +6707,7 @@ function renderFigure() {
 let figTimer = 0;
 const scheduleFigure = () => { clearTimeout(figTimer); figTimer = setTimeout(renderFigure, 150); };
 $('figPanel').addEventListener('change', (e) => {
+  if (e.target.dataset.lm != null) { onLocmapInput(e.target); return; }   // V0.43
   if (e.target.dataset.st || e.target.dataset.sph != null || e.target.dataset.ax != null || e.target.dataset.axw != null) { onStyleInput(e); return; }   // V0.5–V0.6: column style
   const F = S.fig, el = e.target;
   if (el.id === 'figType') { F.type = el.value; renderFigPanel(); }

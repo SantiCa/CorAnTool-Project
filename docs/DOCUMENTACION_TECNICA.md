@@ -1837,6 +1837,33 @@ cambia lo que se ve en la imagen de trabajo.
 - Comunidad: `SECURITY.md`, `CODE_OF_CONDUCT.md`, plantillas de incidencias y de PR, `CONTRIBUTING.md`,
   `THIRD_PARTY_NOTICES.md`.
 
+### 22.z Mapa de localización de sondeos (figura, desde V0.43)
+Módulo `locmap.js` (sin DOM); ajustes en `S.fig.loc` (valores por defecto `LOCMAP_DEFAULTS`). Puntos: los sondeos del
+proyecto con latitud y longitud.
+- **Sistemas de referencia** (`lmCRS`): EPSG:4326 (X = lon, Y = lat, en grados, sin escalar); EPSG:3857
+  (`X = a·λ`, `Y = a·ln tan(π/4 + φ/2)`, a = 6 378 137 m, φ limitada a ±85,0511°); UTM WGS 84 (EPSG 326zz norte,
+  327zz sur): Mercator transversa con la serie de Krüger hasta n⁴ (k₀ = 0,9996, E₀ = 500 000 m, N₀ = 0 o 10⁷ m,
+  λ₀ = 6·huso − 183°; error submilimétrico dentro del huso). Huso y hemisferio automáticos (centro del encuadre) o
+  elegidos. Prueba: N(45°, meridiano central) = 4 982 950,4 m y ida y vuelta < 10⁻⁹°.
+- **Encuadre** (`lmFrame`): `bbox = [O, S, E, N]` en grados (por defecto, los sondeos ± 25 % y al menos 0,2°); se
+  proyectan 33 puntos por lado y se toma la envolvente; con una proporción fija (4:3 por defecto, 1:1, 3:2, 16:9,
+  A4) la envolvente se ensancha. Acercar/alejar ×1,5 y desplazar un 25 %.
+- **Cuadrícula:** en geográficas, o si se pide «lat/lon», meridianos y paralelos (curvos en UTM) con paso de
+  1, 2, 5 × 10ᵏ grados en DD o sexagesimal (1″…45°) en DMS; en proyectadas, malla métrica de 1, 2, 5 × 10ᵏ m.
+  Paso automático (~5 líneas) o fijado.
+- **Etiquetas** en los lados elegidos (arriba, abajo, izquierda, derecha, combinables): los meridianos o X arriba y
+  abajo, los paralelos o Y a los lados, donde cada línea corta el marco (240 muestras por lado e interpolación).
+  Formatos: DD (`37.5°N`, decimales según el paso), DMS (`37°30′N`, segundos solo si el paso los tiene) o metros con
+  espacio fino de millares (o km).
+- **Escala:** metros por píxel en el centro del mapa por distancia de círculo máximo (R = 6 371 008,8 m) entre ±10 px;
+  longitud 1, 2, 5 × 10ᵏ m que quepa en `min(220, 0,28·ancho)` px; 4 tramos alternos.
+- **Norte:** apunta al norte geográfico; en UTM gira el ángulo de convergencia (ángulo entre el píxel y el mismo punto
+  0,01° más al norte).
+- **Fondos:** en blanco, vectorial (Natural Earth, sin internet) o imagen de Esri (satélite, topográfico, relieve,
+  físico, callejero, océano) pedida con `bbox`, `bboxSR` e `imageSR` iguales al CRS del mapa, del mismo tamaño que el
+  marco (×2, máx. 4096 px), así que coincide sin deformar en los tres sistemas; requiere el permiso de §21.6 bis.
+- **Salida:** SVG, PNG o JPEG a ×1–×6 (≈ 96–576 ppp).
+
 ## 23. Referencias
 
 - Casanova-Arenillas, S., Rodríguez-Tovar, F.J., Martínez-Ruiz, F. (2020). Applied ichnology in

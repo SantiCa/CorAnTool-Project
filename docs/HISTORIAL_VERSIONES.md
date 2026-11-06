@@ -76,6 +76,7 @@ La descripción detallada de los algoritmos está en
 | V0.40 | 06-11-2026 | Ingeniería | Auditoría §7: versión única 0.40.0, licencia GPL en escritorio, script de release, CI en 3 sistemas con cobertura y linters, Dependabot, CSP y SRI, archivos de comunidad |
 | V0.41 | 06-11-2026 | Rendimiento | Auditoría §4: realce y detección en un Web Worker, lienzos reducidos sin copia a tamaño completo, búferes reutilizados, solapes compactados al guardar, presupuesto de memoria completo, kriging O(n) por celda |
 | V0.42 | 06-11-2026 | Pruebas | Auditoría §3: `edit.js` (tijeras, fusión, deshacer, migración) probado con máscaras solapadas; prueba de extremo a extremo en Chrome dentro del CI |
+| V0.43 | 06-11-2026 | Figuras | Mapa de localización de sondeos: capas base, encuadre y zoom, proyecciones WGS 84/Web Mercator/UTM con huso, cuadrícula, coordenadas por lado en DD/DMS o metros, escala y norte con posición, salida SVG/PNG/JPEG |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -666,6 +667,28 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.43 — Mapa de localización de sondeos (06-11-2026)
+
+- **Qué se hizo:** nueva figura «Mapa de localización de sondeos» (Figuras → Tipo):
+  - Vista y capas: fondo en blanco, vectorial, satélite, topográfico, relieve, físico, callejero u océano (Esri);
+    opacidad; encuadre editable (O, S, E, N), acercar, alejar, desplazar y ajustar a los sondeos; ancho y proporción.
+  - Proyección: WGS 84 geográficas (EPSG:4326), Web Mercator (EPSG:3857) o UTM con huso y hemisferio (automáticos o
+    elegidos).
+  - Cuadrícula visible u oculta (lat/lon, o métrica en las proyectadas), paso automático o fijado, color y trazo.
+  - Coordenadas en los lados que se elijan (todos, ninguno o cualquier combinación), con marcas; DD o DMS en
+    geográficas y X/Y en metros (o km) en proyectadas; etiquetas laterales en vertical u horizontal.
+  - Barra de escala y flecha de norte (con la convergencia en UTM), cada una mostrable y en una de las cuatro esquinas.
+  - Símbolo, tamaño y color de los sondeos, nombres, colores de tierra y mar.
+  - Salida SVG, PNG o JPEG con resolución elegible.
+- **Cambios:** `app/js/locmap.js` (nuevo, en `ORDER`), `app.js` (panel, dibujo, fondos, exportación), `index.html`,
+  `i18n.js`, `tests/app/locmap.test.mjs`. `DELIVERY` = V0.43.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 88 pruebas JS (4 nuevas: UTM frente a valores de referencia e ida y vuelta, Web Mercator,
+  formatos DD/DMS/métrico, escala, convergencia del norte y SVG). En Chrome: mapas en EPSG:4326, UTM 29N con etiquetas
+  en los cuatro lados y EPSG:3857 con cuadrícula lat/lon en DMS; sin errores.
+- **Pendiente:** los fondos de Esri no se pudieron descargar desde el entorno de prueba (red bloqueada): comprobar en
+  un equipo con internet; incluir sondeos de otros proyectos; mapa de situación (recuadro).
 
 ## V0.42 — Pruebas de edición y de extremo a extremo (auditoría, sección 3) (06-11-2026)
 
