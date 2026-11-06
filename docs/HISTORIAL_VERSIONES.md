@@ -73,6 +73,7 @@ La descripción detallada de los algoritmos está en
 | V0.37 | 06-11-2026 | Ciencia | Auditoría §2: modelo de edad (coma decimal, cabeceras, aviso Bacon), evaluación de icnotaxones agrupada y marcada optimista, multiproxy sin fugas (familias emparentadas, escalado por pliegue, margen), criterio de realce con coherencia espacial |
 | V0.38 | 06-11-2026 | Datos | Auditoría §6: lector CSV robusto (comillas, miles, Latin-1, aviso de celdas perdidas), permiso antes de enviar la zona a Esri/GEBCO, SHA-256 del modelo de visión, copia automática de todos los proyectos con reintento y aviso, script para SheetJS 0.20.3 |
 | V0.39 | 06-11-2026 | Interfaz | Auditoría §5: nombres accesibles, patrón ARIA de pestañas, avisos anunciados, atajos desactivables, contrastes AA, CSS duplicado unido, objetivos táctiles |
+| V0.40 | 06-11-2026 | Ingeniería | Auditoría §7: versión única 0.40.0, licencia GPL en escritorio, script de release, CI en 3 sistemas con cobertura y linters, Dependabot, CSP y SRI, archivos de comunidad |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -663,6 +664,27 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.40 — Ingeniería y GitHub (auditoría, sección 7) (06-11-2026)
+
+- **Qué se hizo:**
+  - Una sola versión: `DELIVERY` → `0.40.0` en Python, CITATION.cff (ya titulado CorAnTool, repositorio nuevo) y
+    escritorio (`tools/sync_version.py`, comprobado por una prueba y por el CI).
+  - Licencia del escritorio: GPL-3.0-or-later (antes MIT).
+  - `tools/release.sh` para publicar entregas (release con instaladores; DOI si Zenodo está enlazado).
+  - pytest con `pythonpath = ["src"]`; `ruff` y ESLint configurados (0 errores).
+  - CI: Windows y macOS, cobertura, versión, linters y archivo sin conexión; `desktop.yml` sin el disparador
+    duplicado, Node 22 y pytest; permisos por trabajo. Dependabot.
+  - CSP en la página y SRI en las librerías de respaldo (pako pasa a jsDelivr: mismo archivo que el incluido).
+  - SECURITY.md, CODE_OF_CONDUCT.md, plantillas, CONTRIBUTING ampliado, THIRD_PARTY_NOTICES.md.
+- **Cambios:** `tools/sync_version.py`, `tools/release.sh`, `.github/`, `eslint.config.js`, `pyproject.toml`,
+  `CITATION.cff`, `desktop/package.json` y lock, `app/index.html` (CSP), `app/js/app.js` (`VENDOR`, `loadScript`),
+  `tools/build_standalone.py`, `CLAUDE.md` (pasos 6 y 7). `DELIVERY` = V0.40.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 7.
+- **Comprobación:** 79 pruebas JS (1 nueva) y 16 de Python; ruff y ESLint sin errores; página y archivo sin
+  conexión abiertos con la CSP sin avisos en Chrome.
+- **Pendiente:** decidir el nombre en PyPI; enlazar el repositorio con Zenodo y ejecutar `tools/release.sh`;
+  trabajo por ramas y PR (decisión de Santiago); probar la CSP en el programa de escritorio.
 
 ## V0.39 — Accesibilidad y CSS (auditoría, sección 5) (06-11-2026)
 

@@ -1,0 +1,11 @@
+name: Feature request
+description: A new analysis, figure or tool
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes: { label: What do you need to do?, description: The scientific or practical task, with an example if possible }
+    validations: { required: true }
+  - type: textarea
+    id: refs
+    attributes: { label: References, description: Papers or methods that describe it }

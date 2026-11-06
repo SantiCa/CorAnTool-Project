@@ -1,4 +1,4 @@
-"""IchAnTool: quantitative ichnofabric analysis of core images.
+"""CorAnTool (formerly IchAnTool; import name ``ichantool``): quantitative ichnofabric analysis of core images.
 
 Turns segmented core images (bioturbation masks) into continuous
 depth (or age) series of bioturbation percentage, per-ichnotaxon
@@ -13,7 +13,7 @@ from .io import load_image, load_mask
 from .pipeline import CoreSection, analyze_image, analyze_mask
 from .segmentation import mask_from_palette, mask_from_threshold, mask_from_unet
 
-__version__ = "3.0.0.dev0"
+__version__ = "0.40.0"
 
 __all__ = [
     "mask_from_unet",

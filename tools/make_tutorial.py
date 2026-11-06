@@ -95,7 +95,7 @@ def main():
                     teph[(depth >= td) & (depth < td + 3)] = 1
                     ivd.append((name, round(td, 1), round(td + 3, 1), "Litología", "Tefra"))
         n = len(depth)
-        e = lambda s: rng.normal(0, s, n)
+        e = lambda s: rng.normal(0, s, n)  # noqa: B023 (used inside this iteration)
         rec = {
             "XRF Ti/Ca": 0.08 + 0.10 * cold + 0.25 * turb + 0.15 * teph + e(0.012),
             "XRF Ba/Ti": 0.6 + 2.2 * org - 0.2 * turb + e(0.08),

@@ -99,7 +99,7 @@ def main():
     head = ["core", "lat", "lon", "depth_m", "age_ka", "Ti/Al", "Zr/Rb", "Ba/Al", "Mn/Al", "Ca_pct", "TOC_pct", "event_true"]
     (OUT / "cores").mkdir(parents=True, exist_ok=True)
     allrows, ivrows, rng_iv = [], [], np.random.default_rng(SEED + 1)
-    for name, (lat, lon, wd) in CORES.items():
+    for name, (lat, lon, _wd) in CORES.items():
         rows = make_core(rng, name, lat, lon)
         allrows += rows
         ivrows += make_intervals(rng_iv, name, rows)

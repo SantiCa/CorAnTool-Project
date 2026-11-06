@@ -45,6 +45,7 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.40, 06-11-2026 (Claude):** ingeniería y GitHub (auditoría §7).
 - **V0.39, 06-11-2026 (Claude):** accesibilidad y CSS (auditoría §5).
 - **V0.38, 06-11-2026 (Claude):** importación, copias y privacidad (auditoría §6). Pendiente que Santiago ejecute `tools/update_vendor.sh`.
 - **V0.37, 06-11-2026 (Claude):** correcciones científicas (auditoría §2).

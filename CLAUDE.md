@@ -9,8 +9,8 @@ Every delivery that changes code, algorithms, defaults or files must, in the sam
 3. Update `docs/DOCUMENTACION_TECNICA.md` if any algorithm, formula, default value, file format or validation result changes. Formulas there must match the code exactly.
 4. Update `publications/METODOS_Y_DEFENSA.md` if the change affects what a paper can claim.
 5. Add a short English entry to `CHANGELOG.md`.
-6. Set `DELIVERY` in `app/js/app.js` to the new V<n> (shown in the app; used for the offline file name `dist/CorAnTool_V<n>.html` and the desktop version).
-7. To publish desktop downloads, push the tag `V0.<n>` (GitHub Actions builds Windows/macOS/Linux and creates the Release).
+6. Set `DELIVERY` in `app/js/app.js` to the new V<n> (shown in the app; used for the offline file name `dist/CorAnTool_V<n>.html` and the desktop version) and run `python3 tools/sync_version.py` (writes 0.<n>.0 to pyproject, `__init__.py`, CITATION.cff and desktop/package.json; a test checks it).
+7. To publish desktop downloads, run `tools/release.sh` (checks, then pushes the tag `V0.<n>`; GitHub Actions builds Windows/macOS/Linux and creates the Release).
 
 ## Handoff
 - Shared Claude/Codex workflow and current editing turn: read `docs/COORDINACION_IA.md` before editing. Only one editor at a time in the shared checkout; other chats review read-only. Do not start old pending tasks without a concrete request.

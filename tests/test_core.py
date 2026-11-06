@@ -5,8 +5,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from ichantool import (BI_TAYLOR_GOLDRING, II_DROSER_BOTTJER, analyze_image, analyze_mask,
-                       mask_from_palette, mask_from_threshold)
+from ichantool import BI_TAYLOR_GOLDRING, II_DROSER_BOTTJER, analyze_image, analyze_mask, mask_from_palette, mask_from_threshold
 from ichantool.cli import main
 from ichantool.depth import depth_to_age, pixel_depths
 
@@ -106,6 +105,7 @@ def test_bin_cm_fractional_edges_match_web_app():
 def test_overlapping_class_layers_v020():
     """V0.20: per-class layers may overlap; the total counts the union, each class its full area."""
     import numpy as np
+
     from ichantool.pipeline import analyze_mask
     a = np.zeros((2, 1, 4), bool)
     a[0, 0, :2] = True   # class 1: px 0-1

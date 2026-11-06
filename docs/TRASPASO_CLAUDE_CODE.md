@@ -9,7 +9,7 @@ Estado del proyecto al pasar de la conversación de claude.ai a Claude Code. Lé
 ## Estado
 - Última entrega: **V0.1** (`DELIVERY` en `app/js/app.js`; aplicación 2.3 y programa de escritorio; imágenes en disco, resolución por sección, intervalo en cm).
 - Pruebas: `npm test` (44, Node) y `pytest` (9, Python). Deben pasar antes de cada commit.
-- Rama de trabajo: `master`. Remoto: `https://github.com/SantiCa/IchAnTool-Project.git` (público).
+- Rama de trabajo: `master`. Remoto: `https://github.com/SantiCa/CorAnTool-Project.git` (público; antes IchAnTool-Project, GitHub redirige).
 
 ## Cómo ejecutar
 - App en local: desde la raíz, `python -m http.server 8765` y abrir `http://localhost:8765/app/`.

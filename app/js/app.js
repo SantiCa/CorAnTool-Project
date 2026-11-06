@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.39';
+const DELIVERY = 'V0.40';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -239,12 +239,20 @@ const rowAtDepth = (s, d) => s.roi.y0 + ((d - s.top) / (s.bottom - s.top)) * (s.
 
 /** V0.14: the libraries ship with the program (app/vendor); the internet copy is only a fallback (e.g. single offline file). */
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';   // V0.15: U-Net engine (desktop build copies it to vendor/ort)
-const VENDOR = { 'pako.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', 'UTIF.js': 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'xlsx.full.min.js': 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'ort/ort.wasm.min.js': ORT_CDN + 'ort.wasm.min.js' };
+// V0.40: internet fallback pinned with Subresource Integrity (hashes of the npm files that jsDelivr serves; the
+// bundled copies in app/vendor are byte-identical). SheetJS 0.20.3 is not on npm: no hash until it is bundled.
+const VENDOR = {
+  'pako.min.js': ['https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js', 'sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j'],
+  'UTIF.js': ['https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'sha384-RyBmXHdfZ/Uon+ud+/AqSyWpUWnKYt2tkRG/P4gWoRUGDU+qIAV3tGBPNlYTBZEF'],
+  'xlsx.full.min.js': ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', null],
+  'ort/ort.wasm.min.js': [ORT_CDN + 'ort.wasm.min.js', 'sha384-tNxIwEqSlcdvKtUte98AsccPbDKM958LBXB/+3BLS42TTihXHKTWgdqPqXI/lot8'],
+};
 /** Loads a library from app/vendor, else from the internet; resolves to 'local' or 'cdn'. */
-function loadLib(file) { return loadScript(`vendor/${file}`).then(() => 'local', () => loadScript(VENDOR[file]).then(() => 'cdn')); }
-function loadScript(src) {
+function loadLib(file) { return loadScript(`vendor/${file}`).then(() => 'local', () => loadScript(...VENDOR[file]).then(() => 'cdn')); }
+function loadScript(src, integrity = null) {
   return new Promise((res, rej) => {
     const el = document.createElement('script'); el.src = src; el.onload = res;
+    if (integrity) { el.integrity = integrity; el.crossOrigin = 'anonymous'; }
     el.onerror = () => rej(new Error('library unavailable: ' + src)); document.head.appendChild(el);
   });
 }

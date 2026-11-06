@@ -116,7 +116,7 @@ The same program runs in a browser: serve the repository with any static server 
 ## Python package
 
 ```bash
-pip install "ichantool[excel,plot] @ git+https://github.com/SantiCa/IchAnTool-Project.git"
+pip install "ichantool[excel,plot] @ git+https://github.com/SantiCa/CorAnTool-Project.git"
 ```
 
 Command line (image with bioturbation painted black, core top at the top of the image):

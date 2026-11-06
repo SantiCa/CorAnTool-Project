@@ -1,0 +1,19 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes: { label: Version, description: "Shown next to the name (e.g. V0.40)", placeholder: V0.40 }
+    validations: { required: true }
+  - type: dropdown
+    id: where
+    attributes: { label: Where, options: [Web (browser), Desktop program, Offline single file, Python package] }
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes: { label: Steps to reproduce, description: What you did, what you expected and what happened }
+    validations: { required: true }
+  - type: textarea
+    id: files
+    attributes: { label: Files, description: "A small public image, table or exported project that shows the problem (never unpublished data)" }

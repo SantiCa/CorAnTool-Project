@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import base64
 import json
-import sys
 import re
 from pathlib import Path
 
@@ -58,6 +57,8 @@ def build(out: Path | None = None) -> Path:
     assets_js = "window.ICHANTOOL_ASSETS = " + json.dumps(assets) + ";"
 
     html = (APP / "index.html").read_text(encoding="utf-8").replace("<title>CorAnTool</title>", f"<title>CorAnTool {ver}</title>")
+    # V0.40: the hosted page's CSP forbids inline scripts; the single offline file is all inline, so it gets its own
+    html = re.sub(r'<meta http-equiv="Content-Security-Policy" content="[^"]*">', lambda m: m.group(0).replace("script-src 'self'", "script-src 'self' 'unsafe-inline'").replace("default-src 'self'", "default-src 'self' data: blob:"), html)
     # V0.27: the bundled fonts go inline too, so the single file looks the same offline
     fdir = APP / "vendor" / "fonts"
     fcss = re.sub(r"url\('([^']+\.woff2)'\)", lambda m: "url(data:font/woff2;base64," + base64.b64encode((fdir / m.group(1)).read_bytes()).decode() + ")", (fdir / "fonts.css").read_text(encoding="utf-8"))

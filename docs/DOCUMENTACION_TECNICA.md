@@ -1805,6 +1805,21 @@ cambia lo que se ve en la imagen de trabajo.
   `#6f7a75`.
 - Pantallas táctiles (`pointer: coarse`): botones y pestañas de ≥ 36 px, casillas de 20 px.
 
+### 22.y Ingeniería del repositorio (desde V0.40)
+- **Versión única:** `DELIVERY = 'V0.<n>'` en `app/js/app.js` → `0.<n>.0` en `pyproject.toml`, `__version__`,
+  `CITATION.cff` y `desktop/package.json` (`tools/sync_version.py`; `--check` en CI y la prueba
+  `tests/app/version.test.mjs`). El paquete de Python conserva el nombre `ichantool`.
+- **Publicación:** `tools/release.sh` comprueba (rama, árbol limpio, versiones, pruebas) y empuja la etiqueta; el
+  flujo `desktop.yml` (solo con etiquetas o a mano) construye y publica. Permisos mínimos por trabajo.
+- **CI** (`tests.yml`): Python 3.10/3.12/3.13 en Ubuntu y 3.12 en Windows y macOS, con cobertura (`pytest-cov`);
+  pruebas web en los tres sistemas (cobertura en Ubuntu); comprobación de versión, `ruff`, ESLint
+  (`eslint.config.js`, solo reglas de corrección) y construcción del archivo sin conexión. Dependabot semanal.
+- **Seguridad del navegador:** `Content-Security-Policy` en `index.html` (scripts propios y de jsDelivr/SheetJS,
+  WebAssembly, imágenes y conexiones solo a Esri, GEBCO, Hugging Face y jsDelivr; el archivo sin conexión permite
+  scripts en línea). Las librerías de respaldo por internet llevan SRI (`sha384`) salvo SheetJS 0.20.3.
+- Comunidad: `SECURITY.md`, `CODE_OF_CONDUCT.md`, plantillas de incidencias y de PR, `CONTRIBUTING.md`,
+  `THIRD_PARTY_NOTICES.md`.
+
 ## 23. Referencias
 
 - Casanova-Arenillas, S., Rodríguez-Tovar, F.J., Martínez-Ruiz, F. (2020). Applied ichnology in

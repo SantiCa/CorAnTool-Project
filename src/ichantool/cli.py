@@ -124,6 +124,7 @@ def _unet(args) -> int:
             args.output.write_text(json.dumps(r, indent=2, default=float), encoding="utf-8")
     elif args.unet == "predict":
         from PIL import Image
+
         from .segmentation import mask_from_unet
         mask, names = mask_from_unet(load_image(args.image, "RGB"), args.model, args.px_per_cm, args.threshold)
         out = args.output or args.image.with_name(args.image.stem + "_unet_mask.png")

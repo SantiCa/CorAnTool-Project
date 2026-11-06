@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.40 — 2026-11-06
+- Engineering (audit §7): single version source (0.40.0 everywhere, checked by a test), desktop licence GPL-3.0-or-later, `tools/release.sh`, CI on Windows/macOS/Linux with coverage, linters (ruff, ESLint) and the offline build, Dependabot, Content-Security-Policy and SRI for CDN fallbacks, SECURITY, code of conduct, issue/PR templates and third-party notices.
+
 ## V0.39 — 2026-11-06
 - Accessibility (audit §5): accessible names for all sliders, ARIA tab pattern with arrow keys, live regions for toasts and save/detection status, tooltips no longer override visible names, option to turn off single-key shortcuts, AA colour contrast in both themes, translated labels, duplicate CSS rules merged, larger touch targets.
 

@@ -4,25 +4,55 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   python:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         python-version: ["3.10", "3.12", "3.13"]
+        include:   # V0.40: smoke test on the other desktop systems
+          - { os: windows-latest, python-version: "3.12" }
+          - { os: macos-latest, python-version: "3.12" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
-      - run: pytest -q
+      - run: pytest -q --cov=ichantool --cov-report=term-missing:skip-covered
 
   web-app:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - run: node --test --experimental-test-coverage 'tests/app/*.test.mjs'
+        if: matrix.os == 'ubuntu-latest'
       - run: npm test
+        if: matrix.os != 'ubuntu-latest'
+
+  checks:   # V0.40: version consistency, linters and the offline single-file build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python tools/sync_version.py --check
+      - run: pip install ruff && ruff check src tests tools
+      - run: npx --yes eslint@9 app/js tests/app
+      - run: python tools/build_standalone.py && ls -l dist/CorAnTool_V*.html
