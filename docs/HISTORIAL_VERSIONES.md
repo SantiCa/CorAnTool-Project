@@ -75,6 +75,7 @@ La descripción detallada de los algoritmos está en
 | V0.39 | 06-11-2026 | Interfaz | Auditoría §5: nombres accesibles, patrón ARIA de pestañas, avisos anunciados, atajos desactivables, contrastes AA, CSS duplicado unido, objetivos táctiles |
 | V0.40 | 06-11-2026 | Ingeniería | Auditoría §7: versión única 0.40.0, licencia GPL en escritorio, script de release, CI en 3 sistemas con cobertura y linters, Dependabot, CSP y SRI, archivos de comunidad |
 | V0.41 | 06-11-2026 | Rendimiento | Auditoría §4: realce y detección en un Web Worker, lienzos reducidos sin copia a tamaño completo, búferes reutilizados, solapes compactados al guardar, presupuesto de memoria completo, kriging O(n) por celda |
+| V0.42 | 06-11-2026 | Pruebas | Auditoría §3: `edit.js` (tijeras, fusión, deshacer, migración) probado con máscaras solapadas; prueba de extremo a extremo en Chrome dentro del CI |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -665,6 +666,20 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.42 — Pruebas de edición y de extremo a extremo (auditoría, sección 3) (06-11-2026)
+
+- **Qué se hizo:** los algoritmos de edición salen de `app.js` a `app/js/edit.js` (puro, sin DOM): piezas de las
+  tijeras (`splitPieces`), qué traza conserva el id al unir (`mergeKeeper`), grupos del mismo icnotaxón solapados
+  (`sameTaxonGroups`), deshacer píxeles (`undoPixels`) y migración v1/v2 → v3 (`upgradeProject`). Cuatro pruebas con
+  máscaras sintéticas solapadas. Prueba de extremo a extremo (`tests/e2e/smoke.mjs`) en el CI.
+- **Cambios:** `app/js/edit.js` (nuevo, en `ORDER` del archivo sin conexión), `app.js` (usa edit.js),
+  `tests/app/edit.test.mjs`, `tests/e2e/smoke.mjs`, `.github/workflows/tests.yml` (trabajo `e2e`), `package.json`
+  (`npm run e2e`). `DELIVERY` = V0.42.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 3.
+- **Comprobación:** 84 pruebas JS y 16 de Python; e2e local correcto (356 trazas; tras guardar y recargar, trazas y
+  píxeles idénticos en las 6 secciones).
+- **Pendiente:** extraer también exportaciones e importación de registros a módulos probados.
 
 ## V0.41 — Rendimiento y memoria (auditoría, sección 4) (06-11-2026)
 

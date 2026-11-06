@@ -868,18 +868,24 @@ Los lectores de CorAnTool y del paquete Python ya ignoran las líneas que empiez
 ## 13. Validación realizada
 
 ### 13.1 Pruebas automáticas
-Recuento en V0.37: **18 de Python** (16 se ejecutan; 2 se omiten si faltan `onnx`/`torch`) y **77 de la web**.
+Recuento en V0.42: **18 de Python** (16 se ejecutan; 2 se omiten si faltan `onnx`/`torch`), **84 de la web** y una
+prueba de extremo a extremo.
 - **Python (`tests/test_core.py`, `tests/test_unet.py`):** tramos de índices, porcentajes e intervalos en
   casos calculados a mano, último intervalo incompleto, multiclase por colores, gris y RGB,
   profundidad y edad, imagen de ejemplo, línea de comandos, U-Net y **regresión frente al CSV publicado
   de la V2** (coincidencia exacta en profundidad, porcentaje, BI e ii). Esta regresión automática solo existe en
   Python; la comparación de la web con la V2 (§13.2) se hizo una vez a mano.
-- **Web (`tests/app/*.test.mjs`, 77 pruebas):** `core` 13 (mismos casos de índices e intervalos que en Python,
+- **Web (`tests/app/*.test.mjs`):** `core` 13 (mismos casos de índices e intervalos que en Python,
   exclusiones, modelo de edad con coma decimal y columnas por cabecera, RLE y su validación, CSV), `log` 15
   (lectura de tablas, ejes, SVG y CSV del registro), `geo` 15 (multiproxy: catálogos, remuestreo, reglas,
   clasificadores, validación dejando un sondeo fuera y por bloques con margen y escalado por pliegue, k-medias,
   mapa), `enhance` 9 (realce), `unet` 6, `learn` 4 (icnotaxones, pliegues agrupados y esquema de validación),
-  `vision` 4, `overlap` 3 (trazas solapadas), `sheet` 3, `interp` 2, `plot` 2, `zip` 1.
+  `vision` 4, `overlap` 3 (trazas solapadas), `sheet` 3, `interp` 3, `plot` 2, `zip` 1, y desde V0.40–V0.42 `version`
+  1 (versión única) y `edit` 4 (tijeras, fusión del mismo icnotaxón, deshacer y migración v2→v3 con máscaras
+  sintéticas solapadas; `app/js/edit.js`). Total en V0.42: 84.
+- **Extremo a extremo (V0.42, `tests/e2e/smoke.mjs`, `npm run e2e`):** en Chrome sin pantalla abre el sondeo de
+  prueba, repite la detección (mismo número de trazas), borra y deshace una traza, guarda, recarga y compara trazas y
+  píxeles por sección; falla con cualquier error de la página. Se ejecuta en el CI.
 - Se ejecutan automáticamente en GitHub en cada cambio (`.github/workflows/tests.yml`).
 
 ### 13.2 Comparación de la aplicación web con la V2 publicada

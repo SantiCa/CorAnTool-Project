@@ -24,7 +24,7 @@ Every delivery that changes code, algorithms, defaults or files must, in the sam
 
 ## Code
 - Python package: `src/ichantool/` — tests `pytest`.
-- Web app: `app/` (no build step, ES modules) — pure modules `core.js`, `imageproc.js`, `learn.js`, `log.js`, `zip.js`, `geo.js`, `interp.js`, `plot.js`, `sheet.js` must stay DOM-free; tests `npm test`. New modules must be added to `tools/build_standalone.py` (ORDER) and top-level names must not clash across modules.
+- Web app: `app/` (no build step, ES modules) — pure modules `core.js`, `edit.js`, `imageproc.js`, `learn.js`, `log.js`, `zip.js`, `geo.js`, `interp.js`, `plot.js`, `sheet.js` must stay DOM-free; tests `npm test`. New modules must be added to `tools/build_standalone.py` (ORDER) and top-level names must not clash across modules.
 - Analysis definitions (binning, indices, depth mapping) must stay identical in Python and JS; keep the regression test against `legacy/v2.1_console/example_output.csv` passing.
 - Never modify `legacy/`.
 - Name: the app is **CorAnTool** since V16; keep the Python import name `ichantool`, the IndexedDB/localStorage keys `ichantool*` and accept project files with `app: 'IchAnTool'`.

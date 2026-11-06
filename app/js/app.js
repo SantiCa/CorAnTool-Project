@@ -7,6 +7,7 @@ import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSeg
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
 import { evalColumn, evalCells, cellName, FUNCTIONS, parseFormula, formulaRefs, fillLinear } from './sheet.js';
 import { Classifier, TaxonModel, evaluateModels, vec, FEATURES } from './learn.js';
+import { splitPieces, mergeKeeper, sameTaxonGroups, undoPixels, upgradeProject } from './edit.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
 import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } from './unet.js';
@@ -18,7 +19,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.41';
+const DELIVERY = 'V0.42';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -451,18 +452,7 @@ const addPx = (op, i, id) => {
 };
 /** V0.30: after a class change, traces of the same ichnotaxon that overlap are merged into one. */
 function mergeSameTaxon(s, ids) {
-  const groups = [];
-  for (const id of ids) {
-    const o = s.objects.get(id); if (!o?.bbox) continue;
-    const c = o.cls ?? null, partners = new Set(), [x0, y0, x1, y1] = o.bbox;
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const v = s.labels[y * s.w + x]; if (v >= 0) continue;
-      const st = s.stacks[-v]; if (!st.includes(id)) continue;
-      for (const q of st) if (q !== id && clsKey(s, q) === c) partners.add(q);
-    }
-    if (partners.size) groups.push([id, ...partners]);
-  }
-  for (const g of groups) if (g.every((id) => s.objects.has(id))) mergeObjects(g);
+  for (const g of sameTaxonGroups(s.labels, s.w, s.stacks, s.objects, ids)) if (g.every((id) => s.objects.has(id))) mergeObjects(g);   // V0.42: edit.js
 }
 const subPx = (op, i, id) => setLabel(op, i, withoutId(op.s.labels[i], id, op.s.stacks, six(op.s)));
 /** Remove a set of ids from every pixel. */
@@ -510,8 +500,7 @@ function undo() {
 }
 function undoOne(op) {
   const s = op.s;
-  for (let k = op.lm.length - 2; k >= 0; k -= 2) s.labels[op.lm[k]] = op.lm[k + 1];
-  for (let k = op.ex.length - 2; k >= 0; k -= 2) s.exclude[op.ex[k]] = op.ex[k + 1];
+  undoPixels(s.labels, s.exclude, op.lm, op.ex);   // V0.42: edit.js
   s.objects = new Map(op.objs.map((o) => [o.id, o])); s.nextId = op.nextId; S.selected = op.sel;
   $('undoBtn').disabled = !S.undo.length;
   if (s !== sec()) selectSection(S.sections.indexOf(s));
@@ -592,26 +581,8 @@ function splitAlong(pts) {
   else for (const i of cut) { const v = topAt(L[i], st); if (v) { id = v; break; } }
   const o = id && s.objects.get(id);
   if (!o?.bbox) { toast(t('cut.none')); return; }
-  const [x0, y0, x1, y1] = o.bbox, bw = x1 - x0 + 1, bh = y1 - y0 + 1, comp = new Int32Array(bw * bh);   // −1 cut, 0 outside, k ≥ 1 piece
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * s.w + x; if (hasId(L[i], id, st)) comp[(y - y0) * bw + x - x0] = cut.has(i) ? -1 : -2; }
-  let n = 0; const size = [0];
-  for (let j = 0; j < comp.length; j++) {   // pieces: 4-connected, without the cut pixels
-    if (comp[j] !== -2) continue;
-    n++; size.push(0); const q = [j]; comp[j] = n;
-    while (q.length) {
-      const c = q.pop(), x = c % bw; size[n]++;
-      for (const d of [x > 0 ? c - 1 : -1, x < bw - 1 ? c + 1 : -1, c - bw, c + bw]) if (d >= 0 && d < comp.length && comp[d] === -2) { comp[d] = n; q.push(d); }
-    }
-  }
+  const [x0, y0] = o.bbox, { comp, bw, n, main } = splitPieces(L, s.w, st, o.bbox, id, cut);   // V0.42: edit.js
   if (n < 2) { toast(t('cut.noSplit')); return; }
-  for (let changed = true; changed;) {   // cut pixels go to the neighbouring piece
-    changed = false;
-    for (let j = 0; j < comp.length; j++) {
-      if (comp[j] !== -1) continue; const x = j % bw;
-      for (const d of [x > 0 ? j - 1 : -1, x < bw - 1 ? j + 1 : -1, j - bw, j + bw]) if (d >= 0 && d < comp.length && comp[d] > 0) { comp[j] = comp[d]; changed = true; break; }
-    }
-  }
-  const main = size.indexOf(Math.max(...size.slice(1)));   // the largest piece keeps the id
   const op = beginOp(s), ids = [0];
   for (let k = 1; k <= n; k++) ids.push(k === main ? id : newObject(s, o.cls, o.src).id);
   for (let k = 1; k <= n; k++) if (k !== main) { const c = s.objects.get(ids[k]); c.pred = o.pred; c.conf = o.conf; c.nt = o.nt; op.touched.add(ids[k]); }
@@ -627,7 +598,7 @@ function splitAlong(pts) {
 function mergeObjects(list) {
   const s = sec(); if (!s) return;
   const objs = list.map((id) => s.objects.get(id)).filter((o) => o?.bbox); if (objs.length < 2) return;
-  const keep = [...objs].sort((a, b) => (!!b.cls - !!a.cls) || b.area - a.area)[0], L = s.labels, st = s.stacks;
+  const keep = mergeKeeper(objs), L = s.labels, st = s.stacks;   // V0.42: edit.js
   const op = beginOp(s);
   for (const o of objs) {
     if (o === keep) continue;
@@ -2686,23 +2657,9 @@ async function loadSection(q) {
 }
 let loadMigrated = false;
 
-/** v1/v2 files → v3 structure: the images become one core; the geochemistry cores become further cores. */
 /* V0.36: version 5 = trace overlaps (stacks, V0.20), cell edits (V0.35). A newer file opens read-only. */
 const FORMAT_VERSION = 5;
 let readOnlyProject = false;
-function upgradeProject(p) {
-  if (p.version >= 3) return p;
-  const geo = p.geo || {}, old = geo.cores || [], main = old.find((c) => c.id === 'main');
-  const cores = [];
-  if ((p.sections || []).length || (p.records || []).length || !old.length) {
-    cores.push({ id: 'main', name: main?.name?.split(' · ')[0] || p.name || 'Sondeo', lat: main?.lat ?? null, lon: main?.lon ?? null, units: p.sections?.[0]?.units || 'm',
-      imp: null, records: p.records || [], logView: p.logView, age: p.age || { text: '', units: 'ka' }, sections: p.sections || [] });
-  }
-  for (const c of old) if (c.id !== 'main') cores.push({ id: c.id, name: c.name, lat: c.lat, lon: c.lon, waterDepth: c.waterDepth, units: c.units || 'm', source: c.source,
-    imp: { depth: c.depth, age: c.age, proxies: c.proxies }, records: [], age: { text: c.ageText || '', units: 'ka' }, sections: [] });
-  const { cores: _o, ...g } = geo;
-  return { ...p, version: 3, geo: g, cores, curCore: cores[0]?.id };
-}
 
 async function loadProject(p) {
   blankStart = false;

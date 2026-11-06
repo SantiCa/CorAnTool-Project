@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app"
-ORDER = ["core.js", "imageproc.js", "learn.js", "unet.js", "vision.js", "log.js", "storage.js", "zip.js", "i18n.js", "geo.js", "interp.js", "plot.js", "sheet.js", "app.js"]
+ORDER = ["core.js", "edit.js", "imageproc.js", "learn.js", "unet.js", "vision.js", "log.js", "storage.js", "zip.js", "i18n.js", "geo.js", "interp.js", "plot.js", "sheet.js", "app.js"]
 EXAMPLES = ROOT / "examples"
 # Files the app loads with fetchAsset(path); embedded so the single file works offline.
 ASSETS = ["data/idealized_core_0-500cm.jpg"] + [f"U1385I-1H/web/397-U1385I-1H-{i}-A_50pxcm.jpg" for i in range(1, 7)] + [

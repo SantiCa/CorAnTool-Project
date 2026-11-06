@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.42 — 2026-11-06
+- Tests (audit §3): editing algorithms (scissors, merge, same-ichnotaxon grouping, undo, project migration) moved to the pure module `edit.js` and tested with synthetic overlapping masks; end-to-end headless-Chrome test (open, detect, delete/undo, save, reload, compare) in CI (`npm run e2e`).
+
 ## V0.41 — 2026-11-06
 - Performance (audit §4): enhancement and detection run in a Web Worker; side column and figure pictures are reduced straight to output size (no full-resolution canvases per stroke); reused morphology buffers; overlap stacks compacted on save; memory budget counts U-Net maps and cached canvases, undo has its own budget; cached side-column series; kriging solves one system (O(n) per cell).
 
