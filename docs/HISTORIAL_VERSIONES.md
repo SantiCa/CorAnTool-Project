@@ -74,6 +74,7 @@ La descripción detallada de los algoritmos está en
 | V0.38 | 06-11-2026 | Datos | Auditoría §6: lector CSV robusto (comillas, miles, Latin-1, aviso de celdas perdidas), permiso antes de enviar la zona a Esri/GEBCO, SHA-256 del modelo de visión, copia automática de todos los proyectos con reintento y aviso, script para SheetJS 0.20.3 |
 | V0.39 | 06-11-2026 | Interfaz | Auditoría §5: nombres accesibles, patrón ARIA de pestañas, avisos anunciados, atajos desactivables, contrastes AA, CSS duplicado unido, objetivos táctiles |
 | V0.40 | 06-11-2026 | Ingeniería | Auditoría §7: versión única 0.40.0, licencia GPL en escritorio, script de release, CI en 3 sistemas con cobertura y linters, Dependabot, CSP y SRI, archivos de comunidad |
+| V0.41 | 06-11-2026 | Rendimiento | Auditoría §4: realce y detección en un Web Worker, lienzos reducidos sin copia a tamaño completo, búferes reutilizados, solapes compactados al guardar, presupuesto de memoria completo, kriging O(n) por celda |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -664,6 +665,24 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.41 — Rendimiento y memoria (auditoría, sección 4) (06-11-2026)
+
+- **Qué se hizo:** realce interactivo y detección en segundo plano (Web Worker; el archivo sin conexión sigue en el
+  hilo principal); columna lateral y figuras de sección reducidas directamente a su tamaño (sin lienzos de ~80 MB a
+  20 MP por pincelada); morfología con búferes reutilizados; pilas de solapes compactadas al guardar; presupuesto de
+  memoria con U-Net y lienzos, y límite de memoria del deshacer; caché de las series laterales; kriging con un solo
+  sistema lineal.
+- **Cambios:** `app/js/worker.js` (nuevo; no entra en el archivo sin conexión), `app.js` (`offload`, `enhanceAsync`,
+  `detectSection` asíncrona, `reduceRGBA`, `sectionCanvas`, `sectionModeCanvas`, serialización, `pxTouch`,
+  `commitOp`, `sideSeries`), `imageproc.js` (`morph`, `postMask`), `interp.js` (kriging). `DELIVERY` = V0.41.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 4.
+- **Comprobación:** 80 pruebas JS (1 nueva: kriging) y 16 de Python. En Chrome: detección de U1385I con el worker
+  (356 candidatos, igual que antes) y en el archivo sin conexión sin worker (356); capturas de la columna y figuras
+  sin diferencias visibles.
+- **Pendiente:** guardar por secciones (solo las cambiadas); `dropIds`/`objectStats` limitados al rectángulo de los
+  objetos (requiere garantizar que el rectángulo siempre está al día); realce de la sección al abrirla también en el
+  worker.
 
 ## V0.40 — Ingeniería y GitHub (auditoría, sección 7) (06-11-2026)
 

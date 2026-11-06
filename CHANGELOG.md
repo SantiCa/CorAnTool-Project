@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.41 — 2026-11-06
+- Performance (audit §4): enhancement and detection run in a Web Worker; side column and figure pictures are reduced straight to output size (no full-resolution canvases per stroke); reused morphology buffers; overlap stacks compacted on save; memory budget counts U-Net maps and cached canvases, undo has its own budget; cached side-column series; kriging solves one system (O(n) per cell).
+
 ## V0.40 — 2026-11-06
 - Engineering (audit §7): single version source (0.40.0 everywhere, checked by a test), desktop licence GPL-3.0-or-later, `tools/release.sh`, CI on Windows/macOS/Linux with coverage, linters (ruff, ESLint) and the offline build, Dependabot, Content-Security-Policy and SRI for CDN fallbacks, SECURITY, code of conduct, issue/PR templates and third-party notices.
 

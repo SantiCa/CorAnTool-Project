@@ -125,12 +125,10 @@ export function interpolate(points, bbox, nx, ny, opt = {}) {
     info.variogram = { model: o.variogram, ...vg }; info.few = n < 15;
     const g = (h) => variogram(o.variogram, h, vg.nugget, vg.sill, vg.range);
     const A = xy.map((p) => [...xy.map((q) => g(dist(p, q))), 1]).concat([[...xy.map(() => 1), 0]]);
-    // inverse of the kriging matrix once (columns solved against the identity); weights per cell = A⁻¹ · b
-    const cols = A.map((_, j) => solve(A, A.map((__, i) => (i === j ? 1 : 0))));
-    if (cols.every(Boolean)) {
-      const Ai = A.map((_, i) => cols.map((col) => col[i]));
-      at = (c) => { const b = [...xy.map((q) => g(dist(q, c))), 1]; let s = 0; for (let i = 0; i < n; i++) { let w = 0; for (let k = 0; k <= n; k++) w += Ai[i][k] * b[k]; s += w * v[i]; } return s; };
-    }
+    // V0.41: estimate = λᵀv with λ = A⁻¹b; A is symmetric, so λᵀv = bᵀ(A⁻¹[v; 0]) = bᵀu: one solve, then O(n) per cell
+    // (before: n + 1 solves and O(n²) per cell; same values up to rounding)
+    const u = solve(A, [...v, 0]);
+    if (u) at = (c) => { let s = u[n]; for (let i = 0; i < n; i++) s += u[i] * g(dist(xy[i], c)); return s; };
   }
   if (!at) { // inverse distance (also the fallback when a system cannot be solved)
     at = (c) => {

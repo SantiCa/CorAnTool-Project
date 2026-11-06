@@ -1012,6 +1012,16 @@ Implementación: `storage.js` y `app.js` (bloque *projects*).
 - **Imágenes en disco (V0.1, formato de proyecto v4):** cada archivo original se escribe **una sola
   vez** en `images` y la sección guarda solo la referencia (`file.key`). El guardado automático ya no
   reescribe las imágenes. Los proyectos anteriores se migran solos al abrirlos y guardarse.
+- **Rendimiento (V0.41):** el realce interactivo (deslizadores) y la detección (máscara + componentes) se calculan en un
+  *Web Worker* (`app/js/worker.js`, mismas funciones puras: resultados idénticos); sin él (archivo sin conexión,
+  `file://`) se calculan en el hilo principal. Solo se aplica la última petición de realce de cada sección. La
+  columna lateral y las figuras de sección se reducen directamente a su tamaño de salida (`reduceRGBA`: filtro de caja
+  con alfa premultiplicado, como el escalado del lienzo) sin lienzos a resolución completa. La morfología de la
+  detección reutiliza tres búferes. Al guardar, las pilas de solapes se compactan en una copia (la memoria y el
+  deshacer conservan las suyas). El presupuesto de píxeles (~0,9 GB) cuenta también las probabilidades U-Net y los
+  lienzos en caché; el deshacer tiene su propio límite (~200 MB de píxeles cambiados, como mucho 30 pasos). Las series
+  de la columna lateral se guardan en caché por sección. Kriging: un solo sistema `A·u = [v; 0]` y
+  `ẑ(c) = u₀ + Σ uᵢ γ(dᵢ)` por celda (antes, la inversa completa y O(n²) por celda).
 - **Memoria (V0.1):** al abrir un proyecto no se decodifica ninguna imagen. Los píxeles (original y
   realzada, 8 bytes/px) se leen del disco al trabajar con una sección y se liberan las menos recientes
   por encima de ~0,9 GB (siempre se conserva la sección activa). Las máscaras (5 bytes/px) se
@@ -1465,8 +1475,9 @@ interpolado en su centro.
   Surfer, resuelto de forma exacta en lugar de iterativa); «suavizado» λ se suma a la diagonal.
 - **Funciones de base radial:** multicuádrica `√(r² + c²)`, gaussiana `exp(−(r/c)²)` o placa delgada; `c` = forma
   (1 por defecto); mismo sistema `[Φ + λI, P; Pᵀ, 0]`.
-- **Kriging ordinario:** sistema `[Γ, 1; 1ᵀ, 0]` con `Γᵢⱼ = γ(dᵢⱼ)`; su inversa se calcula una vez y los pesos
-  de cada celda son `A⁻¹·[γ(dᵢ), 1]`. Variogramas esférico, exponencial (`1 − e^(−3h/a)`), gaussiano
+- **Kriging ordinario:** sistema `[Γ, 1; 1ᵀ, 0]` con `Γᵢⱼ = γ(dᵢⱼ)`; los pesos de cada celda son `λ = A⁻¹·[γ(dᵢ), 1]`
+  y la estimación `λᵀv`; como A es simétrica, desde V0.41 se resuelve una vez `A·u = [v; 0]` y `ẑ = Σ uᵢγ(dᵢ) + uₙ`
+  (mismo valor, O(n) por celda). Variogramas esférico, exponencial (`1 − e^(−3h/a)`), gaussiano
   (`1 − e^(−3(h/a)²)`) y lineal con pepita y meseta. Ajuste automático: semivariograma empírico en 8 clases de
   distancia hasta la mitad de la distancia máxima; meseta = varianza de los valores; alcance (30 valores hasta la
   distancia máxima) y pepita (0–50 % de la meseta) por mínimos cuadrados ponderados por `n_h / h²` (el `fit.method = 7` de gstat, Pebesma, 2004; Cressie, 1985, propuso `n_h / γ(h)²`; desde V22, antes `n_h`). Con menos de 15 sondeos se avisa de que el

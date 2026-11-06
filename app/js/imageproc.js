@@ -163,8 +163,7 @@ export function applyFilters(src, w, h, p) {
   return dst;
 }
 
-function morph(m, w, h, dilate) {
-  const t = new Uint8Array(m.length), o = new Uint8Array(m.length);
+function morph(m, w, h, dilate, t = new Uint8Array(m.length), o = new Uint8Array(m.length)) {   // V0.41: t, o reusable
   for (let y = 0; y < h; y++) {
     const r = y * w;
     for (let x = 0; x < w; x++) {
@@ -250,8 +249,14 @@ export function detectMask(rgba, w, h, roi, exclude, p, prob = null) {
 
 /** Opening and closing `p.smooth` times with a 3 × 3 square (separable), then optional hole filling. */
 function postMask(m, w, h, roi, p) {
-  for (let k = 0; k < p.smooth; k++) m = morph(morph(m, w, h, false), w, h, true); // opening
-  for (let k = 0; k < p.smooth; k++) m = morph(morph(m, w, h, true), w, h, false); // closing
+  // V0.41: three buffers reused in turn instead of two new arrays per pass (same result)
+  if (p.smooth > 0) {
+    const t = new Uint8Array(m.length); let a = m, b = new Uint8Array(m.length);
+    const step = (dil) => { morph(a, w, h, dil, t, b); [a, b] = [b, a]; };
+    for (let k = 0; k < p.smooth; k++) { step(false); step(true); } // opening
+    for (let k = 0; k < p.smooth; k++) { step(true); step(false); } // closing
+    m = a;
+  }
   if (p.fillHoles) m = fillHoles(m, w, h, roi);
   return m;
 }
