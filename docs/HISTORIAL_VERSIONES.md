@@ -79,6 +79,7 @@ La descripción detallada de los algoritmos está en
 | V0.43 | 06-11-2026 | Figuras | Mapa de localización de sondeos: capas base, encuadre y zoom, proyecciones WGS 84/Web Mercator/UTM con huso, cuadrícula, coordenadas por lado en DD/DMS o metros, escala y norte con posición, salida SVG/PNG/JPEG |
 | V0.44 | 06-11-2026 | Ingeniería | Restos de la auditoría: guardado por secciones, borrado de trazas por rectángulo, realce al abrir en el worker, exportaciones e importación de registros en módulo probado, sin estilos en línea en el HTML |
 | V0.45 | 06-11-2026 | Dependencias y reproducibilidad | SheetJS 0.20.3 oficial incluida con licencia y SRI; DINOv2 fijado a un commit y SHA-256 comprobados |
+| V0.46 | 06-11-2026 | Integración Git | Merge de origin/master: setup-node v7 en CI y escritorio, conservando V0.45 y su historial |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -669,6 +670,24 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.46 — Integración de origin/master conservando V0.45 (06-11-2026)
+
+- **Qué se hizo:** integración mediante merge de `origin/master` (`02747f0`) en el estado local
+  `74fcdaf`, conservando los commits de V0.45 y la integración anterior de GitHub Actions.
+- **Cambios:** `actions/setup-node` v4 → v7 en `.github/workflows/tests.yml` y
+  `.github/workflows/desktop.yml` (PR #17). `DELIVERY` = V0.46 y versiones sincronizadas a 0.46.0;
+  historial, changelog y traspaso actualizados.
+- **Por qué:** las dos ramas habían avanzado por separado; el merge conserva ambos historiales
+  sin reescribir commits y permite un push normal.
+- **Comprobación:** merge sin conflictos; 91 pruebas JS superadas con `node --test tests/app/*.test.mjs`
+  (equivalente a `npm test`); Python: 16 superadas y 2 omitidas por dependencias ONNX opcionales.
+  E2E `tests/e2e/smoke.mjs` con Chrome y servidor en el puerto 8765: 356 trazas en la primera sección,
+  detección repetible, borrado/deshacer y recarga idéntica, sin errores de página. Versión 0.46.0 coherente,
+  HTML sin conexión generado y `git diff --check` correcto. Se verificó que los archivos SheetJS,
+  licencia y fijación de DINOv2 son idénticos a V0.45. Sin cambios de algoritmos ni afirmaciones científicas.
+- **Pendiente:** comprobar los instaladores del escritorio en una entrega específica para las PR #20/#21;
+  inferencia DINOv2 interactiva y configuración de Zenodo antes de publicar una release.
 
 ## V0.45 — SheetJS y pesos de visión reproducibles (06-11-2026)
 

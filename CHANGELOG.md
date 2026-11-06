@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.46 — 2026-11-06
+- Merged the remaining setup-node v7 workflow update from origin/master while preserving V0.45 and its commit history; synchronized component versions.
+
 ## V0.45 — 2026-11-06
 - Replaced bundled SheetJS 0.18.5 with the official 0.20.3 build and licence, added SRI to its CDN fallback, and pinned DINOv2 to a verified Hugging Face commit and ONNX SHA-256.
 
