@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.38 — 2026-11-06
+- Import, backups and privacy (audit §6): CSV reader handles quotes, thousands separators and Windows-1252 files and reports cells read as empty; consent before map backgrounds send the study area to Esri/GEBCO; SHA-256 of the vision model stored in the project; automatic folder copy covers every modified project, retries and warns when stale; `tools/update_vendor.sh` to move SheetJS to 0.20.3 (CDN fallback already 0.20.3).
+
 ## V0.37 — 2026-11-06
 - Science fixes (audit §2): age model reads decimal commas and header columns, warns on pasted Bacon tables; ichnotaxon evaluation always leaves whole sections (or cores) out, reports the scheme and flags accuracy as optimistic; multiproxy classifiers exclude parent/child families of the target, refit global scaling per fold and leave a gap between blocks; enhancement ranking without traces uses Fisher × spatial coherence and falls back to no enhancement; unused idwGrid removed; variogram citation fixed.
 

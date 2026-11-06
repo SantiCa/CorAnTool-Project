@@ -1,7 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
+import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, decodeText, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.37';
+const DELIVERY = 'V0.38';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -239,7 +239,7 @@ const rowAtDepth = (s, d) => s.roi.y0 + ((d - s.top) / (s.bottom - s.top)) * (s.
 
 /** V0.14: the libraries ship with the program (app/vendor); the internet copy is only a fallback (e.g. single offline file). */
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';   // V0.15: U-Net engine (desktop build copies it to vendor/ort)
-const VENDOR = { 'pako.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', 'UTIF.js': 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'xlsx.full.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'ort/ort.wasm.min.js': ORT_CDN + 'ort.wasm.min.js' };
+const VENDOR = { 'pako.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', 'UTIF.js': 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'xlsx.full.min.js': 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'ort/ort.wasm.min.js': ORT_CDN + 'ort.wasm.min.js' };
 /** Loads a library from app/vendor, else from the internet; resolves to 'local' or 'cdn'. */
 function loadLib(file) { return loadScript(`vendor/${file}`).then(() => 'local', () => loadScript(VENDOR[file]).then(() => 'cdn')); }
 function loadScript(src) {
@@ -650,8 +650,14 @@ async function loadVision(file = null, download = false) {
         try { await (await caches.open(VIS_CACHE)).put(VISION_MODEL.url, new Response(blob)); } catch { /* no cache here (single offline file) */ }
       }
       if (!bytes) return;
+      // V0.38: SHA-256 of the model file; vectors from different files are not comparable
+      let sha = null; try { sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map((x) => x.toString(16).padStart(2, '0')).join(''); } catch { /* no WebCrypto (file://) */ }
+      if (sha && VISION_MODEL.sha256 && sha !== VISION_MODEL.sha256 && !file) toast(t('vis.shaExpected'), 9000);
+      const ml = (S.settings.ml ||= { ...ML_DEFAULT });
+      if (sha && ml.visionSha && ml.visionSha !== sha) toast(t('vis.shaDiff', { a: ml.visionSha.slice(0, 12), b: sha.slice(0, 12) }), 10000);
+      else if (sha && !ml.visionSha) { ml.visionSha = sha; markDirty(); }
       const session = await window.ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] });
-      VIS = { session, src: file ? file.name : VISION_MODEL.name };
+      VIS = { session, src: file ? file.name : VISION_MODEL.name, sha256: sha };
       if (file || download) toast(t('vis.loaded', { n: VIS.src }));
     } catch (e) { VIS = null; toast(t('vis.err') + ' ' + (e?.message || e)); }
   };
@@ -2235,7 +2241,7 @@ function setAge() {
 $('ageText').addEventListener('input', setAge);
 $('ageUnits').addEventListener('change', setAge);
 $('ageFile').addEventListener('change', async (e) => {
-  const f = e.target.files[0]; if (!f) return; const txt = await f.text(); e.target.value = '';
+  const f = e.target.files[0]; if (!f) return; const txt = decodeText(await f.arrayBuffer()); e.target.value = '';
   // V0.28: a Bacon table (*_ages.txt) is converted to core units; other files are read as "depth, age[, min, max]"
   const units = S.sections[0]?.units || curCore()?.units || 'cm', div = { a: 1, ka: 1000, Ma: 1e6 }[$('ageUnits').value] || 1000;
   const bac = baconToAgeText(txt, { center: S.age.center || 'median', depthUnit: units, ageDiv: div });
@@ -2957,7 +2963,7 @@ async function startup() {
   setSaveState(storageOK ? 'saved' : 'off');
   if (VIEW_ONLY) { await startWindow(); return; }
   if (storageOK) setTimeout(() => gcImages().catch(() => {}), 15000);   // V0.1: images of deleted sections
-  await loadPresets(); await initBackups();
+  await loadPresets(); await initBackups(); setTimeout(() => checkBackupAge().catch(() => {}), 4000);
   const firstRun = storageOK && !(await listProjects().catch(() => [])).length;
   showHome();
   if (firstRun) { blankStart = true; return; }   // V31: clean start — the start screen invites to create or open a project (examples on demand)
@@ -3053,15 +3059,31 @@ function scheduleBackup() {
   backupPending = true; clearTimeout(backupTimer); backupTimer = setTimeout(backupNow, 20000);
 }
 
+let backupRetries = 0;
 async function backupNow() {
   clearTimeout(backupTimer);
-  if (backupState !== 'ok' || !backupDir) return;
+  if ((backupState !== 'ok' && backupState !== 'error') || !backupDir) return;
   try {
+    const since = lastBackup;
     if (S.sections.length || S.records.length) await writeProjectFolder(backupDir, serialize());
+    // V0.38: every other project changed since the last copy is copied too (not only the open one)
+    if (storageOK) for (const m of await listProjects().catch(() => [])) {
+      if (m.id === S.id || !(m.updated > since)) continue;
+      const d = await getProject(m.id).catch(() => null); if (d) await writeProjectFolder(backupDir, d);
+    }
     await writeText(backupDir, 'corantool_ajustes.json', JSON.stringify(settingsBundle(), null, 1));
-    lastBackup = Date.now(); backupPending = false; setPref('lastBackup', lastBackup).catch(() => {});
-  } catch (e) { backupState = 'error'; console.error(e); }
+    lastBackup = Date.now(); backupPending = false; backupRetries = 0; backupState = 'ok'; setPref('lastBackup', lastBackup).catch(() => {});
+  } catch (e) {
+    backupState = 'error'; console.error(e);
+    if (backupRetries++ < 3) backupTimer = setTimeout(backupNow, 60000 * backupRetries);   // V0.38: retried after 1, 2 and 3 min
+  }
   renderBackupState();
+}
+/** V0.38: warning when the automatic copy is set but has not run for a week (or needs reactivating) and there are changes. */
+async function checkBackupAge() {
+  if (!backupDir || !storageOK) return;
+  const newest = Math.max(0, ...(await listProjects().catch(() => [])).map((m) => m.updated || 0));
+  if (newest > lastBackup && (backupState === 'needs' || Date.now() - lastBackup > 7 * 864e5)) toast(t('bk.old', { d: lastBackup ? Math.floor((Date.now() - lastBackup) / 864e5) : '?' }), 9000);
 }
 
 $('bkChoose').addEventListener('click', async () => {
@@ -3578,13 +3600,7 @@ $('recList').addEventListener('click', (e) => {
 $('recFile').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   try {
-    let text;
-    if (/\.xlsx?$|\.ods$/i.test(f.name)) {
-      if (!window.XLSX) await loadLib('xlsx.full.min.js');
-      const wb = window.XLSX.read(await f.arrayBuffer(), { type: 'array' });
-      text = window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t' });
-    } else text = await f.text();
-    const tab = parseTable(text);
+    const tab = await readTableFile(f);
     if (tab.headers.length < 2 || !tab.rows.length) throw new Error(t('rec.short'));
     pendingTable = tab;
     const g = guessAxisColumn(tab.headers);
@@ -4135,13 +4151,16 @@ function openGeoImport(kind, tabs, names) {
   $('giNote').textContent = t(iv ? 'geo.r.noteIv' : 'geo.r.note');
   $('geoImpDlg').showModal();
 }
+/** V0.38: table file (CSV/TXT as UTF-8 or Windows-1252, or Excel/ODS); warns about text cells read as empty. */
 async function readTableFile(f) {
+  let tab;
   if (/\.xlsx?$|\.ods$/i.test(f.name)) {
     if (!window.XLSX) await loadLib('xlsx.full.min.js');
     const wb = window.XLSX.read(await f.arrayBuffer(), { type: 'array' });
-    return parseTable(window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t' }));
-  }
-  return parseTable(await f.text());
+    tab = parseTable(window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t' }));
+  } else tab = parseTable(decodeText(await f.arrayBuffer()));
+  if (tab.dropped || tab.short) toast(`«${f.name}»: ` + [tab.dropped ? t('imp.dropped', { n: tab.dropped, c: tab.droppedCols.slice(0, 4).join(', ') }) : '', tab.short ? t('imp.short', { r: tab.short }) : ''].filter(Boolean).join('; ') + '.', 8000);
+  return tab;
 }
 for (const [id, kind] of [['giFileLong', 'long'], ['giFileCore', 'core'], ['giFileCat', 'catalogue'], ['giFileIv', 'intervals']]) {
   $(id).addEventListener('change', async (e) => {
@@ -4950,7 +4969,14 @@ const MAP_BG = {
   photo: { url: ESRI('World_Imagery'), attr: 'Imagen: Esri, Maxar, Earthstar Geographics y GIS User Community (World Imagery)' },
   photobathy: { url: GEBCO, url2: ESRI('World_Imagery'), attr: 'Batimetría: GEBCO Compilation Group (GEBCO_LATEST); tierra: Esri, Maxar, Earthstar Geographics (World Imagery)' },
 };
-const bgCache = new Map(), bgPromises = new Map(); let bgFailShown = false;
+const bgCache = new Map(), bgPromises = new Map(); let bgFailShown = false, mapNetAsked = null;
+function mapNetConsent() {
+  try { if (localStorage.getItem('ichantool.mapNet') === 'yes') return true; } catch { /* storage blocked */ }
+  if (mapNetAsked !== null) return mapNetAsked;
+  mapNetAsked = confirm(t('map.netAsk'));
+  if (mapNetAsked) try { localStorage.setItem('ichantool.mapNet', 'yes'); } catch { /* storage blocked */ }
+  return mapNetAsked;
+}
 const blobToDataURL = (b) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
 async function fetchImage(url) { const r = await fetch(url); if (!r.ok || !/^image\//.test(r.headers.get('content-type') || '')) throw new Error(`HTTP ${r.status}`); return blobToDataURL(await r.blob()); }
 /** Background for a map: returns {href, href2, attribution} when cached; otherwise starts the download and calls onReady. */
@@ -4959,6 +4985,7 @@ function mapBackground(kind, bbox, onReady, proj = 'plate') {
   const key = `${kind}|${proj}|${bgWidth}|${bbox.join(',')}`, hit = bgCache.get(key);
   if (hit && hit !== 'pending') return hit === 'fail' ? null : hit;
   if (!hit) {
+    if (!mapNetConsent()) return null;   // V0.38: explicit consent before the study area is sent to Esri/GEBCO
     bgCache.set(key, 'pending');
     // square pixels in degrees (ArcGIS would otherwise widen the extent); the image is then stretched onto the cos(lat) map
     const [mx0, my0] = merc(bbox[0], bbox[1]), [mx1, my1] = merc(bbox[2], bbox[3]);
@@ -5446,7 +5473,7 @@ function mlTrainHTML() {
   }
   const fset = m.features || 'shape', pend = fset === 'vision' ? pendingEmb() : 0;   // V0.17: input vectors
   const feats = `<h3>${t('vis.title')}</h3><div class="mlmethods">${['shape', 'vision'].map((k) => `<label class="mlm ${fset === k ? 'on' : ''}"><input type="radio" name="mlFeat" data-ml="features" value="${k}" ${fset === k ? 'checked' : ''}><b>${t('vis.f.' + k)}</b><span class="note">${t('vis.d.' + k)}</span></label>`).join('')}</div>`
-    + (fset === 'vision' ? `<p class="note">${VIS ? t('vis.ready', { n: esc(VIS.src) }) : t('vis.none', { mb: VISION_MODEL.mb })} ${t('vis.pending', { n: pend })}</p><div class="row">${VIS ? '' : `<button class="btn small primary" id="visDl">${t('vis.dl', { mb: VISION_MODEL.mb })}</button><label class="btn small file"><span>${t('vis.file')}</span><input type="file" id="visFile" accept=".onnx"></label>`}<button class="btn small" id="visCalc" ${VIS && pend ? '' : 'disabled'}>${t('vis.calc', { n: pend })}</button></div>` : '');
+    + (fset === 'vision' ? `<p class="note">${VIS ? t('vis.ready', { n: esc(VIS.src) }) + (VIS.sha256 ? ` <span class="note" title="SHA-256 ${VIS.sha256}">(${VIS.sha256.slice(0, 12)}…)</span>` : '') : t('vis.none', { mb: VISION_MODEL.mb })} ${t('vis.pending', { n: pend })}</p><div class="row">${VIS ? '' : `<button class="btn small primary" id="visDl">${t('vis.dl', { mb: VISION_MODEL.mb })}</button><label class="btn small file"><span>${t('vis.file')}</span><input type="file" id="visFile" accept=".onnx"></label>`}<button class="btn small" id="visCalc" ${VIS && pend ? '' : 'disabled'}>${t('vis.calc', { n: pend })}</button></div>` : '');
   return `${feats}<h3>${t('ml.tab.train')}</h3><p class="note">${t('ml.trainIntro')}</p><div class="mlmethods">${methods}</div><div class="row" style="align-items:end;gap:12px">${params}
     <label class="f"><span>${t('l.novelty')}</span><input type="number" data-ml="novelty" min="1" max="8" step="0.5" value="${S.settings.novelty}" style="width:80px"></label></div>
     <p class="note">${t('ml.paramHelp.' + m.method)} ${t('ml.noveltyHelp')}</p>

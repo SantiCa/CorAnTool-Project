@@ -1864,3 +1864,18 @@ Object.assign(D.en, {
 });
 Object.assign(D.es, { 'f.rankNoGain': 'Ningún realce supera con claridad a la imagen sin realce: se deja sin realce.' });
 Object.assign(D.en, { 'f.rankNoGain': 'No enhancement clearly beats the image without enhancement: none is applied.' });
+// V0.38
+Object.assign(D.es, { 'imp.dropped': '{n} celdas con texto en columnas numéricas se leen como vacías ({c})', 'imp.short': '{r} filas tienen menos columnas que la cabecera' });
+Object.assign(D.en, { 'imp.dropped': '{n} text cells in numeric columns are read as empty ({c})', 'imp.short': '{r} rows have fewer columns than the header' });
+Object.assign(D.es, {
+  'vis.shaExpected': 'El modelo de visión descargado no coincide con el esperado (SHA-256): los vectores pueden no ser comparables con los publicados.',
+  'vis.shaDiff': 'Este modelo de visión (SHA-256 {b}…) no es el que se usó en el proyecto ({a}…): los vectores ya calculados no son comparables; recalcúlalos o carga el archivo original.',
+  'map.netAsk': 'Los fondos de mapa se descargan de Esri (ArcGIS Online) o GEBCO: se envía a esos servidores la extensión del mapa (la zona de estudio). Los datos de los sondeos no salen del ordenador. ¿Continuar?',
+});
+Object.assign(D.en, {
+  'vis.shaExpected': 'The downloaded vision model does not match the expected one (SHA-256): vectors may not be comparable with published ones.',
+  'vis.shaDiff': 'This vision model (SHA-256 {b}…) is not the one used in the project ({a}…): vectors already computed are not comparable; recompute them or load the original file.',
+  'map.netAsk': 'Map backgrounds are downloaded from Esri (ArcGIS Online) or GEBCO: the map extent (the study area) is sent to those servers. Core data never leave the computer. Continue?',
+});
+Object.assign(D.es, { 'bk.old': 'La copia automática en carpeta no se hace desde hace {d} días y hay cambios: reactívala en Copias de seguridad.' });
+Object.assign(D.en, { 'bk.old': 'The automatic folder copy has not run for {d} days and there are changes: reactivate it in Backups.' });

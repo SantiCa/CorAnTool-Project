@@ -133,3 +133,15 @@ test('V0.33: column order and hidden columns', async () => {
   assert.deepEqual(orderCols(cols.slice(), { colOrder: ['c', 'a'], colHide: ['b'] }, 1).map((c) => c.id), ['axis', 'c', 'a']);
   assert.deepEqual(orderCols(cols.slice(), {}, 1).map((c) => c.id), ['axis', 'a', 'b', 'c']);
 });
+
+test('V0.38: quoted fields, thousands separators, dropped cells and Latin-1', async () => {
+  const { parseTable, decodeText } = await import('../../app/js/log.js');
+  const a = parseTable('depth,name,val\n1,"a, b",2\n2,"say ""hi""",3');
+  assert.deepEqual(a.text[0], ['1', 'a, b', '2']); assert.equal(a.text[1][1], 'say "hi"'); assert.deepEqual(a.rows.map((r) => r[2]), [2, 3]);
+  const b = parseTable('depth;Ba\n1;1.234,5\n2;12,5\n3;n.d.');
+  assert.deepEqual(b.rows.map((r) => r[1]), [1234.5, 12.5, null]); assert.equal(b.dropped, 1); assert.deepEqual(b.droppedCols, ['Ba']);
+  const c = parseTable('depth\tBa\n1\t1,234.5\n2\t3');
+  assert.deepEqual(c.rows.map((r) => r[1]), [1234.5, 3]);
+  assert.equal(decodeText(new Uint8Array([0x50, 0x72, 0x6f, 0x66, 0x2e, 0x20, 0xb5, 0x6d])), 'Prof. µm');
+  assert.equal(decodeText(new TextEncoder().encode('Profundidad (µm)')), 'Profundidad (µm)');
+});

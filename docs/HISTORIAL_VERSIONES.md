@@ -71,6 +71,7 @@ La descripción detallada de los algoritmos está en
 | V0.35 | 06-11-2026 | Datos | Hoja de datos tipo Excel: valores editables con aviso, celdas modificadas marcadas y reversibles, columnas calculadas con interpolación |
 | V0.36 | 06-11-2026 | Datos seguros | Auditoría §1: formato 5 y solo lectura, RLE comprobado, carga fallida sin guardar, guardado al cerrar, procedencia en CSV, copia previa al reemplazar, rotación del historial, cuota, avisos de error, deshacer agrupado |
 | V0.37 | 06-11-2026 | Ciencia | Auditoría §2: modelo de edad (coma decimal, cabeceras, aviso Bacon), evaluación de icnotaxones agrupada y marcada optimista, multiproxy sin fugas (familias emparentadas, escalado por pliegue, margen), criterio de realce con coherencia espacial |
+| V0.38 | 06-11-2026 | Datos | Auditoría §6: lector CSV robusto (comillas, miles, Latin-1, aviso de celdas perdidas), permiso antes de enviar la zona a Esri/GEBCO, SHA-256 del modelo de visión, copia automática de todos los proyectos con reintento y aviso, script para SheetJS 0.20.3 |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -661,6 +662,28 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.38 — Importación, copias y privacidad (auditoría, sección 6 y punto 7) (06-11-2026)
+
+- **Qué se hizo:**
+  - Lector de tablas: comillas (con separador dentro y `""`), separadores de miles, coma decimal mejor detectada,
+    archivos en Windows-1252 (Excel en Windows) y aviso de celdas con texto leídas como vacías y filas cortas. Una
+    última línea suelta ya no cambia el separador. Lo usan registros, multiproxy y modelo de edad.
+  - Mapas: permiso explícito antes de pedir fondos a Esri o GEBCO (se envía la zona de estudio).
+  - Modelo de visión: SHA-256 del archivo, guardado en el proyecto, con aviso si cambia; `rev` y `sha256` preparados
+    para fijar la versión.
+  - Copia automática: copia todos los proyectos modificados, reintenta tres veces y avisa si lleva > 7 días sin
+    hacerse con cambios pendientes.
+  - SheetJS: respaldo por internet a la 0.20.3 oficial y `tools/update_vendor.sh` para sustituir la 0.18.5
+    incluida (`cdn.sheetjs.com` no era accesible desde aquí; npm ya no recibe versiones oficiales).
+- **Cambios:** `log.js` (`parseTable`, `decodeText`), `app.js` (`readTableFile`, importación de registros y
+  edades, `mapNetConsent`, `loadVision`, `backupNow`, `checkBackupAge`), `vision.js`, `i18n.js`,
+  `tools/update_vendor.sh`. `DELIVERY` = V0.38.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 6 y punto 7.
+- **Comprobación:** 78 pruebas JS (1 nueva). En Chrome: CSV en Latin-1 con `µ`, `1.234,5` y `n.d.` → cabecera
+  correcta, 1234,5 y aviso de 1 celda; sin errores.
+- **Pendiente:** ejecutar `tools/update_vendor.sh` en un equipo con internet y confirmar; fijar el commit de
+  DINOv2.
 
 ## V0.37 — Correcciones científicas (auditoría, sección 2) (06-11-2026)
 

@@ -3,15 +3,35 @@ import { interpAge, toCSV } from './core.js';
 
 /** Parse CSV / TXT tables: delimiter , ; tab | or spaces; optional header; decimal comma; '#' comments. */
 export function parseTable(text) {
-  const lines = String(text || '').replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim() && !/^\s*#/.test(l));
-  if (!lines.length) return { headers: [], rows: [], text: [] };
+  const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim() && !/^\s*#/.test(l));
+  if (!lines.length) return { headers: [], rows: [], text: [], dropped: 0, droppedCols: [] };
   const head = lines.slice(0, 6);
-  const delim = ['\t', ';', ',', '|'].find((d) => head.every((l) => l.split(d).length > 1)) || /\s+/;
-  const split = (l) => (delim instanceof RegExp ? l.trim().split(delim) : l.split(delim)).map((c) => c.trim().replace(/^"(.*)"$/, '$1'));
-  const decimalComma = delim !== ',' && lines.slice(0, 30).some((l) => /\d,\d/.test(l));
+  // V0.38: fields between double quotes may contain the delimiter ("a, b") and "" for a quote
+  const splitQ = (l, d) => {
+    if (!l.includes('"')) return l.split(d);
+    const out = []; let cur = '', q = false;
+    for (let i = 0; i < l.length; i++) {
+      const ch = l[i];
+      if (q) { if (ch === '"') { if (l[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"' && !cur.trim()) { q = true; cur = ''; }
+      else if (l.startsWith(d, i)) { out.push(cur); cur = ''; i += d.length - 1; }
+      else cur += ch;
+    }
+    out.push(cur); return out;
+  };
+  // the delimiter splits the first line and all but at most one of the next lines (a stray last line is tolerated)
+  const delim = ['\t', ';', ',', '|'].find((d) => splitQ(head[0], d).length > 1 && head.filter((l) => splitQ(l, d).length > 1).length >= head.length - (head.length > 2 ? 1 : 0)) || /\s+/;
+  const split = (l) => (delim instanceof RegExp ? l.trim().split(delim) : splitQ(l, delim)).map((c) => c.trim().replace(/^"(.*)"$/, '$1'));
+  const sample = lines.slice(0, 30).flatMap(split);   // V0.38: "1,5" means decimal comma; "1,234.5" means thousands
+  const decimalComma = delim !== ',' && sample.some((c) => /^[-+]?\d+,\d+$/.test(c) || /^[-+]?\d{1,3}(\.\d{3})+,\d+$/.test(c)) && !sample.some((c) => /^[-+]?\d{1,3}(,\d{3})+\.\d+$/.test(c));
   const num = (c) => {
     if (c == null || c === '') return null;
-    const v = Number(decimalComma ? c.replace(',', '.') : c);
+    let x = c.replace(/^\+/, '');
+    // V0.38: thousands separators ("1.234,5" with decimal comma, "1,234.5" otherwise) and spaces inside numbers
+    if (decimalComma && /^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(x)) x = x.replace(/\./g, '');
+    else if (!decimalComma && delim !== ',' && /^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(x)) x = x.replace(/,/g, '');
+    if (/^-?\d{1,3}( \d{3})+([.,]\d+)?$/.test(x)) x = x.replace(/ /g, '');
+    const v = Number(decimalComma ? x.replace(',', '.') : x);
     return Number.isFinite(v) ? v : null;
   };
   const first = split(lines[0]);
@@ -20,7 +40,20 @@ export function parseTable(text) {
   const body = (hasHeader ? lines.slice(1) : lines).map(split);
   const rows = body.map((c) => headers.map((_, i) => num(c[i])));
   const cells = body.map((c) => headers.map((_, i) => c[i] ?? ''));
-  return { headers, rows, text: cells };
+  // V0.38: cells with text in mostly numeric columns are read as empty: counted so the interface can warn
+  let dropped = 0; const droppedCols = [];
+  headers.forEach((h, i) => {
+    const filled = cells.filter((r) => r[i] !== ''), ok = rows.filter((r) => r[i] != null).length, bad = filled.length - ok;
+    if (bad > 0 && ok >= bad) { dropped += bad; droppedCols.push(h); }
+  });
+  const short = body.filter((c) => c.length < headers.length).length;
+  return { headers, rows, text: cells, dropped, droppedCols, short };
+}
+
+/** V0.38: text of a file, as UTF-8 or, if it is not valid UTF-8 (e.g. Excel CSV on Windows), as Windows-1252. */
+export function decodeText(buf) {
+  const b = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch { return new TextDecoder('windows-1252').decode(b); }
 }
 
 /** Guess which column holds depth/age and which axis it is. */

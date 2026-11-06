@@ -757,7 +757,11 @@ Alternativa a los 12 descriptores (§9) como entrada del clasificador (`S.settin
 1. **Modelo:** DINOv2 ViT-S/14 (Oquab et al., 2024), red de visión entrenada sin etiquetas con 142 millones
    de imágenes, en formato ONNX (`onnx-community/dinov2-small`, 88 MB). No se entrena en CorAnTool: solo
    convierte cada imagen en un vector. Se descarga una vez y se guarda en la caché del navegador o del programa
-   (`caches`, clave = URL); también se puede cargar un `.onnx` propio con la misma interfaz.
+   (`caches`, clave = URL); también se puede cargar un `.onnx` propio con la misma interfaz. Desde V0.38 se calcula
+   el SHA-256 del archivo usado, se guarda en el proyecto (`settings.ml.visionSha`) y se avisa si después se carga
+   otro distinto (sus vectores no son comparables). `VISION_MODEL.rev` (revisión de Hugging Face) sigue en `main`:
+   para fijar el archivo, poner el commit y el `sha256` esperado en `vision.js` (Hugging Face no era accesible desde
+   el entorno de esta entrega).
 2. **Ventana:** cuadrado centrado en el rectángulo de la traza `[x₀, y₀, x₁, y₁]`, de lado
    `L = max(16, round(max(ancho, alto)·(1 + 2·0,25)))`; centro `((x₀ + x₁ + 1)/2, (y₀ + y₁ + 1)/2)`. Incluye
    un 25 % de sedimento alrededor por cada lado (contexto). Fuera de la imagen se repite el borde.
@@ -1101,14 +1105,21 @@ o mayor que la de los intervalos.
 Implementación: `log.js::parseTable, guessAxisColumn` y `app.js` (diálogo de registros).
 
 - **Formatos:** CSV, TXT, TSV o DAT, y Excel (`.xlsx`, `.xls`, `.ods`, primera hoja, leída con la
-  librería SheetJS 0.18.5).
+  librería SheetJS; la incluida es la 0.18.5, con vulnerabilidades conocidas al abrir archivos ajenos
+  (CVE-2023-30533, CVE-2024-22363): `tools/update_vendor.sh` la sustituye por la 0.20.3 oficial, que no se pudo
+  descargar desde aquí; el respaldo por internet ya apunta a `cdn.sheetjs.com/xlsx-0.20.3`).
+- **Texto** (V0.38, `log.js::decodeText`): UTF-8 y, si no es UTF-8 válido (CSV de Excel en Windows), Windows-1252.
 - **Lectura** (`parseTable`):
-  - separador detectado entre tabulador, punto y coma, coma o barra vertical (el primero presente en
-    las 6 primeras líneas) o espacios;
-  - coma decimal si el separador no es la coma y aparecen números del tipo `1,5`;
+  - separador detectado entre tabulador, punto y coma, coma o barra vertical: el primero que divide la primera
+    línea y todas las demás de las 6 primeras salvo una (V0.38; antes, todas) o, si no, espacios;
+  - campos entre comillas dobles, que pueden contener el separador y `""` (V0.38);
+  - coma decimal si el separador no es la coma y aparece una celda del tipo `1,5` o `1.234,5`, y ninguna del tipo
+    `1,234.5` (V0.38);
+  - separador de miles (V0.38): `1.234,5` con coma decimal, `1,234.5` sin ella, y `1 234,5`;
   - cabecera si la primera fila tiene algún texto no numérico;
   - se ignoran las líneas que empiezan por `#`;
-  - las celdas no numéricas se tratan como vacías.
+  - las celdas no numéricas se tratan como vacías; desde V0.38 se cuentan (`dropped`, en columnas con mayoría de
+    números) junto con las filas más cortas que la cabecera (`short`) y se avisa al importar.
 - **Columna de eje:** se propone la primera cabecera que parezca profundidad (depth, prof, mbsf,
   CSF, CCSF, mcd, m, cm) o, si no hay, edad (age, edad, ka, Ma, yr, cal). El usuario puede cambiarla
   e indicar si es profundidad o edad.
@@ -1159,6 +1170,10 @@ sesión, con el botón «Reactivar copia automática».
 de ajustes. Si un proyecto ya existe con el mismo identificador, se pregunta si reemplazarlo o importarlo como
 copia («restaurado»). Desde V0.36, al reemplazar, la versión local se guarda antes como copia
 «<nombre> (anterior <fecha>)».
+
+**Copia automática (V0.38):** cada copia escribe también los demás proyectos modificados desde la anterior (no solo
+el abierto); si falla se reintenta a 1, 2 y 3 minutos; al arrancar se avisa si hay cambios y la copia lleva más de 7
+días sin hacerse o necesita reactivarse.
 
 ---
 
@@ -1422,7 +1437,10 @@ entrenado. «Colorear registros por clase» rellena el fondo de cada columna de 
   «Foto aérea + batimetría» = GEBCO debajo y World_Imagery recortada con los polígonos de tierra de
   Natural Earth. Con fondo de imagen la tierra vectorial se dibuja solo como línea de costa y la IDW
   con opacidad 0,55. Las imágenes se guardan como data URL (el SVG exportado es autónomo). Si falla la
-  descarga se dibuja el mapa simple.
+  descarga se dibuja el mapa simple. **Privacidad (V0.38):** el fondo por defecto es el vectorial (sin red); antes
+  de la primera descarga de un fondo se pide permiso, avisando de que la extensión del mapa (la zona de estudio) se
+  envía a Esri o GEBCO; la respuesta se recuerda (`localStorage ichantool.mapNet`). Los datos de los sondeos nunca
+  salen del ordenador.
 - **Barra de escala:** km por píxel = `Δlon · 111,32 · cos(lat central) / 900`; se elige el mayor
   valor 1, 2 o 5 × 10ⁿ km que quepa en 160 px.
 - **Zoom** (`zoomBBox(bbox, f, lon, lat, dlon, dlat)`): `x0' = lon − (lon − x0)/f + dlon`, ídem para
