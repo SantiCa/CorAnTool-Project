@@ -69,6 +69,14 @@ export function extraTicks(from, to, height, style = {}) {
 }
 const labelLen = (st) => (+st?.yLabelLen > 0 ? +st.yLabelLen : 6);
 
+/** V0.33: reorder (st.colOrder) and hide (st.colHide) columns in place, keeping the first `keep` columns fixed. */
+export function orderCols(cols, st = {}, keep = 0) {
+  const ord = st.colOrder || [], hide = new Set(st.colHide || []), rank = (c) => { const k = ord.indexOf(c.id); return k < 0 ? 1e6 : k; };
+  const body = cols.slice(keep).map((c, i) => ({ c, i })).filter(({ c }) => !hide.has(c.id)).sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i).map(({ c }) => c);
+  cols.splice(keep, cols.length - keep, ...body);
+  return cols;
+}
+
 export function niceRange(min, max) {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
   if (min === max) { min -= Math.abs(min) * 0.1 || 1; max += Math.abs(max) * 0.1 || 1; }
@@ -214,6 +222,10 @@ export function buildLogSVG(o) {
   for (const r of o.records) { const id = 'rec:' + r.name; cols.push({ key: 'rec', id, w: wOf(id, o.recWidth || 120), title: r.name, rec: r }); }
   if (o.marks?.length && !(t.image && o.image)) cols.splice(1, 0, { key: 'marks', id: 'marks', w: wOf('marks', 40), title: L.marks || 'Traces' });
   if (o.idList) cols.push({ key: 'idlist', id: 'idlist', w: wOf('idlist', 150), title: L.idList || 'Identified ichnotaxa' });
+  // V0.33: column order (style.colOrder, ids) and hidden columns (style.colHide, ids; nothing is deleted); the axis stays first
+  cols.forEach((c, i) => { if (!c.id && c.key === 'image') c.id = 'image:' + (c.img?.title || i); });
+  const allCols = cols.filter((c) => c.key !== 'axis').map((c) => ({ id: c.id, title: c.full || c.title, key: c.key }));
+  orderCols(cols, st, 1);
   let x = 8;
   for (const c of cols) { c.x = x; x += c.w + 14; }
   const W = x;
@@ -379,7 +391,7 @@ export function buildLogSVG(o) {
     out.push(`${k.symbol ? traceSymbol(lx + 5, ly + 9, k.color, k.symbol) : `<rect x="${lx}" y="${ly}" width="10" height="10" fill="${k.color}"/>`}<text x="${lx + 14}" y="${ly + 9}" fill="#1c2422">${escXml(k.name)}</text>`);
   });
   out.push('</svg>');
-  return { svg: out.join(''), width: W, height: Htot, plotTop: top, plotHeight: H,
+  return { svg: out.join(''), width: W, height: Htot, plotTop: top, plotHeight: H, columns: allCols,
     layout: cols.filter((c) => c.key !== 'axis').map((c) => ({ id: c.id || null, key: c.key, x: c.x, w: c.w, title: c.full || c.title, bkey: c.band?.key || null })) };
 }
 
@@ -409,6 +421,8 @@ export function buildRangeSVG(o) {
   const spHide = new Set(o.style?.speciesHide || []);   // V0.31
   const inWin = (p) => (p.a != null ? p.a >= from && p.a <= to : p.a1 > from && p.a0 < to);
   const cols = o.classes.filter((c) => !spHide.has(c.name)).filter((c) => rows.some((r) => (r.classPct?.[c.index] || 0) > 0) || [...(o.presence || []), ...(o.points || [])].some((p) => p.index === c.index && inWin(p)));
+  const allCols = cols.map((c) => ({ id: 'sp:' + c.name, title: c.name, key: 'sp' }));   // V0.33: ichnotaxon columns can be reordered and hidden
+  cols.forEach((c) => { c.id = 'sp:' + c.name; }); orderCols(cols, o.style || {});
   const totW = o.total ? 90 : 0, W = x0 + totW + (o.total ? 14 : 0) + cols.length * colW + 20 + Math.min(110, longest * 5.2 * 0.5), Htot = top + H + 26;
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`,
     `<rect width="${W}" height="${Htot}" fill="#ffffff"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`];
@@ -480,7 +494,7 @@ export function buildRangeSVG(o) {
     x += colW;
   }
   out.push('</svg>');
-  return { svg: out.join(''), width: W, height: Htot };
+  return { svg: out.join(''), width: W, height: Htot, columns: allCols };
 }
 
 /** CSV of the intervals inside the window, plus external records interpolated at each interval centre. */

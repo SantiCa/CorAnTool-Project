@@ -66,6 +66,7 @@ La descripción detallada de los algoritmos está en
 | V0.30 | 05-11-2026 | Edición de trazas | Solape solo entre icnotaxones distintos; trazas del mismo icnotaxón que se solapan se unen al reasignar |
 | V0.31 | 05-11-2026 | Figuras | Elegir qué icnotaxones se dibujan y representarlos apilados o cada uno en su columna |
 | V0.32 | 06-11-2026 | Figuras | Distribución de icnotaxones: un símbolo por traza o marca en su profundidad, eje propio en edad, trazas/marcas/ambas |
+| V0.33 | 06-11-2026 | Figuras | Orden de las columnas (arrastrar o flechas) y visibilidad en todos los gráficos; mostrar u ocultar familias de intervalos sin borrarlas |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -656,6 +657,19 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.33 — Orden y visibilidad de las columnas en todos los gráficos (06-11-2026)
+
+- **Qué se hizo:** en «Escalas y estilo» de Columna y Figuras, en «Escalas» de Multiproxy y en la Distribución de
+  icnotaxones hay una lista «Orden y visibilidad de las columnas»: se arrastran las filas o se usan las flechas para
+  cambiar el orden de izquierda a derecha, y desmarcar oculta la columna sin borrar sus datos. Las familias de
+  intervalos están en esa lista y además tienen la casilla «Mostrar esta familia en los gráficos» en Multiproxy.
+- **Cambios:** `log.js::orderCols` (nuevo; `buildLogSVG` y `buildRangeSVG` devuelven `columns`), `app.js`
+  (`colOrderHTML`, `syncColOrder`, arrastrar y soltar, `geoLayerShow`), `index.html`, `i18n.js`. `DELIVERY` = V0.33.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 71 pruebas JS (1 nueva); en Chrome con U1385I: BI movido antes de «Por icnotaxón», ii oculto en
+  Columna; familia «Events» oculta en Multiproxy; sin errores.
+- **Pendiente / no probado:** la columna lateral de Bioturbación mantiene su propio menú (V0.24) sin orden.
 
 ## V0.32 — Distribución de icnotaxones en su profundidad, en edad y por origen (06-11-2026)
 

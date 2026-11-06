@@ -126,3 +126,10 @@ test('V0.22: extra vertical ticks skip labelled positions', async () => {
   assert.equal(minor.length, 21 - 3 - 2);
   assert.ok(!minor.includes(10) && !minor.includes(5));
 });
+
+test('V0.33: column order and hidden columns', async () => {
+  const { orderCols } = await import('../../app/js/log.js');
+  const cols = [{ id: 'axis' }, { id: 'a' }, { id: 'b' }, { id: 'c' }];
+  assert.deepEqual(orderCols(cols.slice(), { colOrder: ['c', 'a'], colHide: ['b'] }, 1).map((c) => c.id), ['axis', 'c', 'a']);
+  assert.deepEqual(orderCols(cols.slice(), {}, 1).map((c) => c.id), ['axis', 'a', 'b', 'c']);
+});

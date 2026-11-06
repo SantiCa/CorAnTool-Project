@@ -1781,6 +1781,9 @@ foto por defecto (`style.imgAspect = 'keep'`: ancho = alto del gráfico / (alto/
 secciones; × `imgStretch`) o fijo (`imgW`). Flechas (`fig.arrowSrc` = todas / solo marcas a mano / solo trazas,
 `arrowExcl` grupos excluidos, `objScale` tamaño de las de cada traza, `markScale`, `markStroke(W)`, `labelSize`,
 `labelColor`, `labelHalo`), compartidas por Secciones y la Columna.
+Desde V0.33, `style.colOrder` (ids de columna en orden de izquierda a derecha) y `style.colHide` (ids ocultos; no se
+borra nada) se aplican en `log.js::orderCols` a Columna, Figuras › Sondeo, Multiproxy (su propio `geo.view.style`) y
+las columnas de icnotaxones de la Distribución (`sp:<nombre>`). Las familias de intervalos son `band:fam:<id>`.
 Desde V0.32, la figura de distribución dibuja un símbolo por cada traza identificada (centroide del objeto, con la
 clase efectiva) y por cada marca puesta a mano, en su profundidad o edad (`app.js::figPoints`), en vez de uno por
 intervalo; `fig.rangeSrc` = `all` / `objects` / `marks`, `fig.rangeHollow` (marcas huecas), `fig.rangeAxis` = eje propio

@@ -75,6 +75,13 @@ label.file:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; 
 .step > summary .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text); font: 600 11px/1 var(--font-data); letter-spacing: 0; }
 .step > summary::after { content: ""; margin-left: auto; width: 6px; height: 6px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
 .step[open] > summary::after { transform: rotate(-135deg); }
+.colord { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; }   /* V0.33 */
+.colord li { display: flex; align-items: center; gap: 4px; padding: 2px 4px; border: 1px solid var(--line); border-radius: var(--r); background: var(--field); font-size: 12px; }
+.colord li.dragging { opacity: .5; }
+.colord .grip { cursor: grab; color: var(--muted); padding: 0 2px; user-select: none; }
+.colord .chk { flex: 1; min-width: 0; align-items: center; }
+.colord .chk span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.colord .btn.small { padding: 0 6px; min-height: 22px; }
 .exp.sticky { position: sticky; bottom: 0; padding: 10px 14px; background: var(--panel); border-top: 1px solid var(--line); display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; }
 .step .body { padding: 2px 14px 14px; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
 /* V19.1: nothing in the side panels may be wider than the panel (long labels wrap instead of being cut) */
@@ -908,7 +915,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <summary><span class="n">3</span><span data-i18n="geo.s3"></span><span class="ssum" id="geoSum3"></span></summary>
         <div class="body">
           <div data-i18n-title="gx.tip.layer" class="f"><span data-i18n="geo.layer"></span>
-            <div class="row" style="flex-wrap:nowrap"><select id="geoLayerSel"></select><button class="btn small" id="geoLayerDel" data-i18n-title="geo.layerDel">✕</button></div></div>
+            <div class="row" style="flex-wrap:nowrap"><select id="geoLayerSel"></select><button class="btn small" id="geoLayerDel" data-i18n-title="geo.layerDel">✕</button></div><label class="chk"><input type="checkbox" id="geoLayerShow" checked><span data-i18n="geo.layerShow"></span></label></div>
           <div class="grid2"><label class="f"><span data-i18n="geo.layerName"></span><input type="text" id="geoLayerName"></label>
             <label data-i18n-title="gx.tip.parent" class="f"><span data-i18n="geo.layerParent"></span><select id="geoLayerParent"></select></label></div>
           <div class="row" style="flex-wrap:nowrap"><input type="text" id="geoNewLayer" data-i18n-ph="geo.newLayer"><button class="btn small" id="geoAddLayer" data-i18n="geo.addLayer"></button></div>

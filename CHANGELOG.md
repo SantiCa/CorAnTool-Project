@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.33 — 2026-11-06
+- Every chart: reorder columns (drag or arrows) and hide them without deleting data; interval families can be hidden from the charts.
+
 ## V0.32 — 2026-11-06
 - Ichnotaxa distribution figure: one symbol per identified trace or hand-placed mark at its own depth or age; its own depth/age axis; choose traces, marks or both (hollow symbols for marks).
 

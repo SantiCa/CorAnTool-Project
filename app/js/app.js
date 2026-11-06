@@ -1,7 +1,7 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
+import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.32';
+const DELIVERY = 'V0.33';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -3268,6 +3268,7 @@ function renderLog() {
   }); } catch (e) { console.error(e); box.innerHTML = `<p class="note">${esc(axisErr(e))}</p>`; lastLog = null; return; }
   box.innerHTML = res.svg;
   lastLog = { ...D, from, to, classes, records, svg: res.svg };
+  syncColOrder('log', res.columns);   // V0.33
   editSVGLabels(box, (lv.textEdits ||= {}), (svg) => { if (lastLog) lastLog.svg = svg; });
   const ov = geoOverlay(D.axis);
   logInteract(box, res, { from, to, axisLabel, records, bands: ov.bands || [], widths: lv.colW, onResize: () => { markDirty(); renderLog(); if ($('logStyle')) $('logStyle').innerHTML = styleFormHTML(); },
@@ -3289,11 +3290,58 @@ function logStyleOf(D) {
   else { unit = st.yUnit && UNIT_TO_CM[st.yUnit] ? st.yUnit : D.base; f = UNIT_TO_CM[D.base] / UNIT_TO_CM[unit]; }
   return { style: { ...st, yFactor: f }, label: `${t(D.axis === 'age' ? 'r.age' : 'r.depth')} (${unit})` };
 }
+/* ───────────── V0.33: order and visibility of the columns of every chart ───────────── */
+const lastCols = { log: [], geo: [], range: [] };
+const colView = (kind) => (kind === 'geo' ? S.geo.view : S.logView);
+function colOrderHTML(kind) {
+  const lv = colView(kind), st = lv.style || {}, hide = new Set(st.colHide || []);
+  const cols = orderCols(lastCols[kind].map((c) => ({ ...c })), { colOrder: st.colOrder });
+  const li = (c) => `<li draggable="true" data-colid="${esc(c.id)}"><span class="grip" aria-hidden="true">⋮⋮</span><label class="chk"><input type="checkbox" data-colshow="${esc(c.id)}" ${hide.has(c.id) ? '' : 'checked'}><span title="${esc(c.title || c.id)}">${esc(c.title || c.id)}</span></label><button type="button" class="btn small ghost" data-colmv="-1" aria-label="${esc(t('co.up'))}">↑</button><button type="button" class="btn small ghost" data-colmv="1" aria-label="${esc(t('co.down'))}">↓</button></li>`;
+  return `<div class="f" data-colord="${kind}"><span>${t('co.title')}</span>${cols.length ? `<ol class="colord">${cols.map(li).join('')}</ol><p class="note">${t('co.note')}</p>` : `<p class="note">${t('co.empty')}</p>`}</div>`;
+}
+/** After a chart is built: remember its columns and refresh the list if the set of columns changed. */
+function syncColOrder(kind, columns) {
+  if (!columns) return;
+  const key = (a) => a.map((c) => c.id).sort().join('|'), changed = key(columns) !== key(lastCols[kind]);
+  lastCols[kind] = columns;
+  if (changed) document.querySelectorAll(`[data-colord="${kind}"]`).forEach((el) => { el.outerHTML = colOrderHTML(kind); });
+}
+function afterColChange(kind) {
+  markDirty();
+  if (kind === 'geo') setTimeout(renderGeoLogs, 0); else { scheduleLog(); requestRender(); }
+  if (mode === 'fig') scheduleFigure();
+}
+function saveColOrder(box) {
+  const kind = box.dataset.colord, lv = colView(kind); lv.style ||= {};
+  lv.style.colOrder = [...box.querySelectorAll('li[data-colid]')].map((l) => l.dataset.colid);
+  afterColChange(kind);
+}
+document.addEventListener('change', (e) => {
+  const el = e.target; if (el.dataset?.colshow == null) return;
+  const box = el.closest('[data-colord]'), lv = colView(box.dataset.colord); lv.style ||= {};
+  const h = new Set(lv.style.colHide || []); if (el.checked) h.delete(el.dataset.colshow); else h.add(el.dataset.colshow);
+  lv.style.colHide = [...h]; afterColChange(box.dataset.colord);
+});
+document.addEventListener('click', (e) => {
+  const b = e.target.closest?.('[data-colmv]'); if (!b) return;
+  const li = b.closest('li'), box = b.closest('[data-colord]'), d = +b.dataset.colmv;
+  const sib = d < 0 ? li.previousElementSibling : li.nextElementSibling; if (!sib) return;
+  if (d < 0) sib.before(li); else sib.after(li);
+  b.focus(); saveColOrder(box);
+});
+let colDrag = null;
+document.addEventListener('dragstart', (e) => { const li = e.target.closest?.('li[data-colid]'); if (!li) return; colDrag = li; li.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', li.dataset.colid); } catch { /* old browsers */ } });
+document.addEventListener('dragover', (e) => {
+  if (!colDrag) return; const li = e.target.closest?.('li[data-colid]'); if (!li || li === colDrag || li.parentElement !== colDrag.parentElement) return;
+  e.preventDefault(); const r = li.getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) li.before(colDrag); else li.after(colDrag);
+});
+document.addEventListener('dragend', () => { if (!colDrag) return; const box = colDrag.closest('[data-colord]'); colDrag.classList.remove('dragging'); colDrag = null; if (box) saveColOrder(box); });
+
 function styleFormHTML() {
   const st = { ...LOG_STYLE, ...(S.logView.style || {}) }, num = (k, lab, step = 'any', min = 0) => `<label class="f"><span>${t(lab)}</span><input type="number" data-st="${k}" step="${step}" min="${min}" value="${st[k] ?? ''}" placeholder="${t('fig.auto2')}"></label>`;
   const chk = (k, lab) => `<label class="chk"><input type="checkbox" data-st="${k}" ${st[k] ? 'checked' : ''}><span>${t(lab)}</span></label>`;
   const sel = (k, lab, opts) => `<label class="f"><span>${t(lab)}</span><select data-st="${k}">${opts.map(([v, l]) => `<option value="${v}" ${String(st[k] ?? '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
-  return `<div class="grid2">
+  return `${colOrderHTML('log')}<div class="grid2">
     ${sel('yUnit', 'st.yUnit', [['', t('st.native')], ['m', 'm'], ['cm', 'cm'], ['mm', 'mm']])}
     ${sel('yUnitAge', 'st.yUnitAge', [['', t('st.native')], ['a', 'a'], ['ka', 'ka'], ['Ma', 'Ma']])}
     ${num('yStep', 'st.yStep')}${num('yDiv', 'st.yDiv', 1, 1)}
@@ -3369,6 +3417,12 @@ function renderLogPanel() {
 
 $('logStyle').addEventListener('change', onStyleInput);   // V0.5
 $('geoStyleForm').addEventListener('change', onStyleInput);   // V0.22
+$('geoLayerShow').addEventListener('change', (e) => {   // V0.33: hide or show the active interval family in every chart, without deleting it
+  const id = 'band:fam:' + S.geo.activeLayer;
+  for (const lv of [S.geo.view, S.logView]) { lv.style ||= {}; const h = new Set(lv.style.colHide || []); if (e.target.checked) h.delete(id); else h.add(id); lv.style.colHide = [...h]; }
+  document.querySelectorAll('[data-colshow]').forEach((c) => { if (c.dataset.colshow === id) c.checked = e.target.checked; });
+  markDirty(); setTimeout(renderGeoLogs, 0); scheduleLog();
+});
 $('logPanel').addEventListener('change', (e) => {
   if (e.target.closest('#logStyle')) return;
   const el = e.target, lv = S.logView;
@@ -3749,6 +3803,8 @@ function renderGeoPanel() {
   $('geoRatioA').innerHTML = opts; $('geoRatioB').innerHTML = opts;
   // layers
   const tree = layerTree();
+  { const id = 'band:fam:' + g.activeLayer, hidden = (S.geo.view.style?.colHide || []).includes(id);   // V0.33: family visible in the charts
+    $('geoLayerShow').checked = !hidden; }
   $('geoLayerSel').innerHTML = tree.map(({ layer, depth }) => `<option value="${layer.id}" ${layer.id === g.activeLayer ? 'selected' : ''}>${'  '.repeat(depth)}${depth ? '↳ ' : ''}${esc(layer.name)}</option>`).join('');
   $('geoLayerName').value = L?.name || '';
   $('geoLayerParent').innerHTML = `<option value="">${t('geo.noParent')}</option>` + g.layers.filter((l) => L && l.id !== L.id && !isDescendant(l.id, L.id)).map((l) => `<option value="${l.id}" ${l.id === L?.parent ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
@@ -4185,7 +4241,8 @@ function renderGeoLogs() {
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image') },
     colWidths: (g.view.colW ||= {}), recWidth: g.view.trackW || 120, style: g.view.style || {},
   });
-  if (!$('geoStyleBox').open || !$('geoStyleForm').innerHTML) $('geoStyleForm').innerHTML = verticalStyleHTML(g.view.style || {}) + axesFormHTML(['total', ...records.map((r) => 'rec:' + r.name)], g.view, records.map((r) => r.name));
+  syncColOrder('geo', res.columns);   // V0.33
+  if (!$('geoStyleBox').open || !$('geoStyleForm').innerHTML) $('geoStyleForm').innerHTML = colOrderHTML('geo') + verticalStyleHTML(g.view.style || {}) + axesFormHTML(['total', ...records.map((r) => 'rec:' + r.name)], g.view, records.map((r) => r.name));
   box.innerHTML = res.svg;
   geoLast = { core, from, to, top: res.plotTop, height: res.plotHeight, axis, layout: res.layout, width: res.width };
   $('geoTrackW').value = g.view.trackW || 120;
@@ -5840,12 +5897,14 @@ function coreSVG() {
   const images = S.sections.length && lv.tracks.image ? coreImages(D, from, to, H, { panels: F.corePanels, mode: 'enh', hideExcl: F.coreHideExcl, w: imgW }) : null, image = images?.[0] || null;   // V0.25
   const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
   const LS = logStyleOf(D);
-  return buildLogSVG({
+  const res = buildLogSVG({
     style: LS.style, colWidths: S.logView.colW || {}, title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: LS.label,
     from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, images, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
     marks: compositeMarks(D), idList: idMode() || compositeMarks(D).length ? idListOf(D.rows, compositeMarks(D)) : null, legendClasses: legendOf(classes, compositeMarks(D)),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
-  }).svg;
+  });
+  syncColOrder('log', res.columns);   // V0.33
+  return res.svg;
 }
 
 /* ── V32: core-section figure (versions of the same interval side by side) and ichnotaxa range chart ── */
@@ -6066,8 +6125,10 @@ function rangeSVG() {
   const F = S.fig, D = compositeData(F.rangeAxis || S.logView.axis), [from, to] = figAxisWin(D);
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, plain: !!c.plain })).filter((c) => S.classes[c.index].id !== 'artifact');
   const points = figPoints(D, F.rangeSrc || 'all');
-  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(F.rangeDisplay === 'bars' ? 'fig.rangeSub' : F.rangeDisplay === 'both' ? 'fig.rangeSubBoth' : 'fig.rangeSubPts'), axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
-    from, to, height: F.rangeH, rows: D.rows, classes, points, markHollow: F.rangeSrc === 'all' && F.rangeHollow !== false, display: F.rangeDisplay || 'symbols', total: F.rangeTotal, totalLabel: t('log.total') }).svg;
+  const res = buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(F.rangeDisplay === 'bars' ? 'fig.rangeSub' : F.rangeDisplay === 'both' ? 'fig.rangeSubBoth' : 'fig.rangeSubPts'), axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
+    from, to, height: F.rangeH, rows: D.rows, classes, points, markHollow: F.rangeSrc === 'all' && F.rangeHollow !== false, display: F.rangeDisplay || 'symbols', total: F.rangeTotal, totalLabel: t('log.total') });
+  setTimeout(() => syncColOrder('range', res.columns), 0);   // V0.33 (after the form exists)
+  return res.svg;
 }
 
 /** Adds title and caption around any figure SVG. */
@@ -6161,7 +6222,7 @@ function renderFigPanel() {
   } else if (F.type === 'geolog') {
     box.innerHTML = `<label class="f"><span>${t('geo.core')}</span><select id="figGeoCore">${S.cores.map((c) => `<option value="${c.id}" ${c.id === S.geo.view.core ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label><p class="note">${t('fig.geoNote')}</p>`;
   } else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
-  if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? speciesFormHTML(S.logView.style || {}) + axesFormHTML(['total', 'species']) : '')}</details>`);
+  if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? colOrderHTML('range') + speciesFormHTML(S.logView.style || {}) + axesFormHTML(['total', 'species']) : '')}</details>`);
 }
 
 /** Editable SVG labels. Keys include source text and occurrence; offsets use the parent SVG coordinates. */
