@@ -2,6 +2,10 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.34 — 2026-11-06
+- Multiproxy: colour records by the chosen family or several (blended or one strip each).
+- Intervals of one family never overlap within a core; touching or overlapping intervals of the same class are joined.
+
 ## V0.33 — 2026-11-06
 - Every chart: reorder columns (drag or arrows) and hide them without deleting data; interval families can be hidden from the charts.
 

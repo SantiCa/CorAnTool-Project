@@ -45,6 +45,8 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.34, 06-11-2026 (Claude):** colorear por familia; intervalos sin solape y unión de contiguos.
+
 - **V0.33, 06-11-2026 (Claude):** orden y visibilidad de columnas en todos los gráficos.
 
 - **V0.32, 06-11-2026 (Claude):** distribución de icnotaxones por traza, en edad y por origen.

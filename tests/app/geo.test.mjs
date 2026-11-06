@@ -175,3 +175,16 @@ test('training steps: validation yields once per fold, the neural network once p
   for (let s = g.next(); ; s = g.next()) { if (s.done) { m = s.value; break; } e++; }
   assert.equal(e, 12); assert.deepEqual(m.W, fitModel('mlp', X, y, { epochs: 12, patience: 100 }, 2).W);
 });
+
+test('V0.34: intervals of a family do not overlap and equal neighbours merge', async () => {
+  const { tidyIntervals } = await import('../../app/js/geo.js');
+  const base = { core: 'c', layer: 'L', axis: 'depth' };
+  let n = 0; const newId = () => 'n' + (++n);
+  // new interval B (priority) inside A splits A; same-class neighbour C touching A's right part merges with it
+  const r = tidyIntervals([{ ...base, id: 'A', from: 0, to: 10, cat: 'x' }, { ...base, id: 'B', from: 4, to: 6, cat: 'y' }, { ...base, id: 'C', from: 10, to: 12, cat: 'x' }], { priority: 'B', newId });
+  assert.deepEqual(r.list.map((q) => [q.from, q.to, q.cat]), [[0, 4, 'x'], [4, 6, 'y'], [6, 12, 'x']]);
+  assert.ok(r.changed);
+  // other families and cores are independent
+  const r2 = tidyIntervals([{ ...base, id: 'A', from: 0, to: 10, cat: 'x' }, { ...base, layer: 'M', id: 'D', from: 2, to: 5, cat: 'x' }]);
+  assert.equal(r2.list.length, 2); assert.ok(!r2.changed);
+});

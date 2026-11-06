@@ -1781,6 +1781,11 @@ foto por defecto (`style.imgAspect = 'keep'`: ancho = alto del gráfico / (alto/
 secciones; × `imgStretch`) o fijo (`imgW`). Flechas (`fig.arrowSrc` = todas / solo marcas a mano / solo trazas,
 `arrowExcl` grupos excluidos, `objScale` tamaño de las de cada traza, `markScale`, `markStroke(W)`, `labelSize`,
 `labelColor`, `labelHalo`), compartidas por Secciones y la Columna.
+Desde V0.34, **intervalos**: dentro de un mismo sondeo, familia, eje y tipo (manual o automático) no se solapan y los
+contiguos o solapados de la misma clase se unen (`geo.js::tidyIntervals`). El intervalo recién dibujado o editado
+manda: los que solapa se recortan o se parten en dos. Se aplica a cada edición, a las importaciones y al abrir proyectos
+antiguos (con aviso si cambia algo). **Colorear registros por clase** (`geo.view.shadeBy`: ids de familias o
+`target`; `shadeMode` = `mix`, colores superpuestos con opacidad 0,34/n, o `split`, una franja por familia).
 Desde V0.33, `style.colOrder` (ids de columna en orden de izquierda a derecha) y `style.colHide` (ids ocultos; no se
 borra nada) se aplican en `log.js::orderCols` a Columna, Figuras › Sondeo, Multiproxy (su propio `geo.view.style`) y
 las columnas de icnotaxones de la Distribución (`sp:<nombre>`). Las familias de intervalos son `band:fam:<id>`.

@@ -75,6 +75,7 @@ label.file:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; 
 .step > summary .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text); font: 600 11px/1 var(--font-data); letter-spacing: 0; }
 .step > summary::after { content: ""; margin-left: auto; width: 6px; height: 6px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
 .step[open] > summary::after { transform: rotate(-135deg); }
+.shadeby { flex-basis: 100%; display: grid; gap: 4px; }
 .colord { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; }   /* V0.33 */
 .colord li { display: flex; align-items: center; gap: 4px; padding: 2px 4px; border: 1px solid var(--line); border-radius: var(--r); background: var(--field); font-size: 12px; }
 .colord li.dragging { opacity: .5; }
@@ -950,7 +951,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <div class="gtool">
           <div class="grp" role="group" data-i18n-title="gx.tip.core"><button class="btn small" id="geoCorePrev" data-i18n-title="gx.prevCore">◀</button><select id="geoCoreSel" aria-label="core"></select><button class="btn small" id="geoCoreNext" data-i18n-title="gx.nextCore">▶</button></div>
           <div class="grp"><label class="chk" data-i18n-title="cl.tip.showEmpty"><input type="checkbox" id="geoShowEmpty"><span data-i18n="cl.showEmpty"></span></label></div>
-          <div class="grp"><label class="chk" data-i18n-title="gx.tip.shade"><input type="checkbox" id="geoShade"><span data-i18n="geo.shade"></span></label>
+          <div class="grp"><label class="chk" data-i18n-title="gx.tip.shade"><input type="checkbox" id="geoShade"><span data-i18n="geo.shade"></span></label><div id="geoShadeBy" class="shadeby" hidden></div>
             <label class="f inl" data-i18n-title="gx.tip.trackW"><span data-i18n="gx.trackW"></span><input type="range" id="geoTrackW" min="60" max="260" step="10"></label>
             <button class="btn small" id="geoTrackReset" data-i18n="gx.trackReset" data-i18n-title="gx.tip.trackReset"></button></div>
           <div class="grp"><details class="mini" id="geoStyleBox" data-stt="geo"><summary data-i18n="st.scales"></summary><div id="geoStyleForm" style="min-width:320px"></div></details></div>

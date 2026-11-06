@@ -11,14 +11,14 @@ import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
 import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } from './unet.js';
 import { VISION_MODEL, visionFeatureId, traceWindow, traceInput, pickEmbedding } from './vision.js';
-import { coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, colStats, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidate, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
+import { tidyIntervals, coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, colStats, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidate, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
 
 /** App name (V16: IchAnTool → CorAnTool). Files written by IchAnTool are still accepted; browser storage keys keep the old name. */
 const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.33';
+const DELIVERY = 'V0.34';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -3551,6 +3551,7 @@ function normalizeGeo(pg = {}) {
   if (!pg.layers) {
     g.layers = pg.labels ? [{ id: 'events', name: gd.layers[0].name, parent: null, cats: pg.labels }] : gd.layers;
     g.intervals = (pg.intervals || []).map((q) => ({ ...q, layer: q.layer || 'events', cat: q.cat ?? q.label }));
+    { const r = tidyIntervals(g.intervals, { newId: uid }); if (r.changed) { g.intervals = r.list; setTimeout(() => toast(t('iv.tidied')), 600); } }   // V0.34: older projects may have overlaps
     g.rules = (pg.rules || []).map((r) => ({ ...r, layer: r.layer || 'events', cat: r.cat ?? r.label }));
     g.activeCat = pg.activeLabel || g.layers[0].cats[0]?.id;
   }
@@ -3583,7 +3584,15 @@ function geoCat(id) {
   if (/^G\d+$/.test(id)) return { id, name: S.geo.groupNames[id] || id, color: GROUP_COLORS[(parseInt(id.slice(1), 10) - 1) % GROUP_COLORS.length] };
   return null;
 }
-const geoMarkDirty = () => { geoRT.dirty = true; markDirty(); };
+/** V0.34: every change to intervals keeps each family without overlaps and joins touching intervals of the same class. */
+function tidyGeo(priority = geoSelIv) {
+  const r = tidyIntervals(S.geo.intervals, { priority, newId: uid });
+  if (!r.changed) return false;
+  S.geo.intervals = r.list;
+  if (geoSelIv && !r.list.some((q) => q.id === geoSelIv)) geoSelIv = null;
+  return true;
+}
+const geoMarkDirty = () => { tidyGeo(); geoRT.dirty = true; markDirty(); };
 const shortTitle = (s, n = 9) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
 /** Layers in tree order (parents before children) with their depth in the hierarchy. */
@@ -4059,6 +4068,7 @@ function addNamedIntervals(recs, axis) {
     const dup = g.intervals.some((q) => q.core === core && q.layer === L.id && q.axis === axis && q.cat === cat.id && Math.abs(q.from - r.from) < 1e-9 && Math.abs(q.to - r.to) < 1e-9);
     if (!dup) g.intervals.push({ id: uid(), core, layer: L.id, axis, from: r.from, to: r.to, cat: cat.id });
   }
+  tidyGeo(null);   // V0.34: imported intervals follow the same rule
   return newLayers.size;
 }
 $('giOk').addEventListener('click', () => {
@@ -4121,7 +4131,7 @@ async function loadGeoDemo() {
     const cat = e === w[0] ? w[1] : e === 'background' ? 'background' : null;
     if (cat && has(cat)) evIv.push({ id: uid(), core: 'demo-' + r[ix('core')], layer: 'events', axis: 'age', from: a - 0.25, to: a + 0.25, cat });
   });
-  g.intervals.push(...mergeIntervals(evIv));
+  g.intervals.push(...mergeIntervals(evIv)); tidyGeo(null);   // V0.34
   if (!g.rules.some((r) => r.layer === 'events')) g.rules.push({ id: uid(), layer: 'events', cat: 'lowox', enabled: true, conds: [{ feature: 'Ba/Al', op: 'z>', value: 1.5 }, { feature: 'Mn/Al', op: 'z<', value: -0.5 }] });
   g.view.core = 'demo-DEMO-09'; g.map = { ...g.map, a0: 6, a1: 10, mode: 'class' };
   geoMarkDirty(); geoTrain();
@@ -4220,10 +4230,21 @@ function renderGeoLogs() {
   }).filter((r) => r.pts.some((p) => p[1] != null)) : [];
   const bands = coreBands(core, axis, true, g.view.showEmpty !== false);
   $('geoShade').checked = !!g.view.shade; $('geoShowEmpty').checked = g.view.showEmpty !== false;
-  let shade = null;
+  renderShadeBy();
+  let shade = null, shadeLanes = 1;
   if (g.view.shade) {
-    const T = geoRT.test?.core === core.id ? geoRT.test.preds : null;
-    shade = segmentsFor(core.id, T ? (i) => T[i]?.label : geoRT.preds.length ? (i) => geoRT.preds[i]?.label : (i) => geoRT.labels[i]?.label, axis, st.step);
+    // V0.34: colour by the chosen families (their intervals), side by side or blended; none chosen = classifier target/predictions
+    const by = (g.view.shadeBy || []).filter((id) => id === 'target' || geoLayer(id));
+    if (!by.length || (by.length === 1 && by[0] === 'target')) {
+      const T = geoRT.test?.core === core.id ? geoRT.test.preds : null;
+      shade = segmentsFor(core.id, T ? (i) => T[i]?.label : geoRT.preds.length ? (i) => geoRT.preds[i]?.label : (i) => geoRT.labels[i]?.label, axis, st.step);
+    } else {
+      const split = g.view.shadeMode === 'split', n = by.length, fo = split ? 0.3 : Math.max(0.12, 0.34 / n);
+      shade = by.flatMap((id, lane) => (id === 'target'
+        ? segmentsFor(core.id, (i) => (geoRT.preds[i] || geoRT.labels[i])?.label, axis, st.step)
+        : intervalSegs(core, id, axis)).map((q) => ({ ...q, lane: split ? lane : 0, fo })));
+      shadeLanes = split ? n : 1;
+    }
   }
   const T = geoRT.test;
   $('geoTestOut').textContent = T?.core === core.id ? t(T.n ? 'geo.testRes' : 'geo.testResNo', { s: t('geo.testScheme.' + T.scheme), p: T.n ? fmt((100 * T.ok) / T.n, 1) : '', n: T.n }) : '';
@@ -4237,7 +4258,7 @@ function renderGeoLogs() {
   const res = buildLogSVG({
     title: core.name, subtitle: t('geo.subtitleLogs', { n: geoRT.samples.filter((s) => s.core === core.id).length, step: st.step }),
     axisLabel: axis === 'age' ? `${t('r.age')} (${S.age.units || 'ka'})` : `${t('r.depth')} (${core.units || 'm'})`,
-    from, to, height: 700, rows, classes: [], tracks, image, images, imageWidth: image?.w || 64, records, boundaries: [], bands, bandLegend: bandLegendOf(bands), shade,
+    from, to, height: 700, rows, classes: [], tracks, image, images, imageWidth: image?.w || 64, records, boundaries: [], bands, bandLegend: bandLegendOf(bands), shade, shadeLanes,
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image') },
     colWidths: (g.view.colW ||= {}), recWidth: g.view.trackW || 120, style: g.view.style || {},
   });
@@ -4424,6 +4445,20 @@ $('geoTrackReset').addEventListener('click', () => { S.geo.view.colW = {}; S.geo
 let geoTrackT = 0;
 $('geoShowEmpty').addEventListener('change', (e) => { S.geo.view.showEmpty = e.target.checked; markDirty(); renderGeoLogs(); });
 $('geoShade').addEventListener('change', (e) => { S.geo.view.shade = e.target.checked; markDirty(); renderGeo(); });
+/** V0.34: which families colour the records, and how several are combined. */
+function renderShadeBy() {
+  const v = S.geo.view, box = $('geoShadeBy'); if (!box) return;
+  box.hidden = !v.shade;
+  const on = new Set(v.shadeBy || []), opts = [['target', t('sh.target')], ...S.geo.layers.map((l) => [l.id, l.name])];
+  box.innerHTML = `<div class="chk2">${opts.map(([id, n]) => `<label class="chk"><input type="checkbox" data-shby="${esc(id)}" ${on.has(id) ? 'checked' : ''}><span>${esc(n)}</span></label>`).join('')}</div>
+    <label class="f"><span>${t('sh.mode')}</span><select id="geoShadeMode"><option value="mix" ${v.shadeMode !== 'split' ? 'selected' : ''}>${t('sh.mix')}</option><option value="split" ${v.shadeMode === 'split' ? 'selected' : ''}>${t('sh.split')}</option></select></label>`;
+}
+$('geoShadeBy').addEventListener('change', (e) => {
+  const v = S.geo.view;
+  if (e.target.id === 'geoShadeMode') v.shadeMode = e.target.value;
+  else v.shadeBy = [...$('geoShadeBy').querySelectorAll('[data-shby]:checked')].map((i) => i.dataset.shby);
+  markDirty(); renderGeo();
+});
 $('geoTestBtn').addEventListener('click', () => busy(geoTestCore));
 
 /**

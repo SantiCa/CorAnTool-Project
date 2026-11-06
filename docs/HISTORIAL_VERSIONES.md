@@ -67,6 +67,7 @@ La descripción detallada de los algoritmos está en
 | V0.31 | 05-11-2026 | Figuras | Elegir qué icnotaxones se dibujan y representarlos apilados o cada uno en su columna |
 | V0.32 | 06-11-2026 | Figuras | Distribución de icnotaxones: un símbolo por traza o marca en su profundidad, eje propio en edad, trazas/marcas/ambas |
 | V0.33 | 06-11-2026 | Figuras | Orden de las columnas (arrastrar o flechas) y visibilidad en todos los gráficos; mostrar u ocultar familias de intervalos sin borrarlas |
+| V0.34 | 06-11-2026 | Multiproxy | Colorear registros por la familia elegida (o varias, mezcladas o en franjas); intervalos de una familia sin solape y unión de contiguos iguales |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -657,6 +658,22 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.34 — Colorear por familia e intervalos sin solape (06-11-2026)
+
+- **Qué se hizo:**
+  - «Colorear registros por clase» deja elegir la familia (o la clasificación automática) y varias a la vez, con los
+    colores mezclados o en una franja por familia.
+  - Los intervalos de una misma familia ya no se solapan en un sondeo: el que se dibuja o edita recorta o parte a los
+    otros. Dos intervalos de la misma clase que se tocan o se solapan se unen en uno. También al importar y al abrir
+    proyectos antiguos (con aviso).
+- **Cambios:** `geo.js::tidyIntervals` (nuevo), `app.js` (`tidyGeo` en `geoMarkDirty`, importaciones y carga;
+  `renderShadeBy`, sombreado por familias), `log.js` (franjas de sombreado), `index.html`, `i18n.js`.
+  `DELIVERY` = V0.34.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 72 pruebas JS (1 nueva: partir, recortar, unir, familias independientes); en Chrome con U1385I:
+  dos intervalos solapados de la misma clase quedan en uno, coloreado por familia; sin errores.
+- **Pendiente / no probado:** —
 
 ## V0.33 — Orden y visibilidad de las columnas en todos los gráficos (06-11-2026)
 

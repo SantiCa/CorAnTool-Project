@@ -762,3 +762,44 @@ export function mapBBox(points, margin = 3) {
   return [Math.min(...lon) - margin, Math.min(...lat) - margin, Math.max(...lon) + margin, Math.max(...lat) + margin];
 }
 
+
+/**
+ * V0.34: within one core and family (layer), intervals never overlap and touching intervals of the same class are
+ * joined. Intervals are grouped by core, layer, axis and automatic flag. `priority` = id of the interval just drawn or
+ * edited: where it overlaps others it wins and they are trimmed (or split in two). `newId()` names the extra pieces.
+ * Returns { list, changed }.
+ */
+export function tidyIntervals(list, { priority = null, newId = () => Math.random().toString(36).slice(2) } = {}) {
+  const eps = 1e-9, groups = new Map();
+  for (const q of list) {
+    if (!(q.to > q.from)) continue;
+    const k = `${q.core}|${q.layer}|${q.axis}|${q.auto ? 1 : 0}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(q);
+  }
+  const out = []; let changed = list.some((q) => !(q.to > q.from));
+  for (const g of groups.values()) {
+    const ord = [...g].sort((a, b) => (a.id === priority ? -1 : b.id === priority ? 1 : 0));   // the priority interval is placed first
+    const acc = [];
+    for (const q of ord) {
+      let parts = [{ from: q.from, to: q.to }];
+      for (const p of acc) {
+        parts = parts.flatMap((r) => {
+          if (r.to <= p.from + eps || r.from >= p.to - eps) return [r];
+          changed = true;
+          return [r.from < p.from - eps ? { from: r.from, to: p.from } : null, r.to > p.to + eps ? { from: p.to, to: r.to } : null].filter(Boolean);
+        });
+      }
+      parts.forEach((r, i) => acc.push({ ...q, id: i ? newId() : q.id, from: r.from, to: r.to }));
+    }
+    acc.sort((a, b) => a.from - b.from);
+    const merged = [];
+    for (const q of acc) {
+      const p = merged[merged.length - 1];
+      if (p && p.cat === q.cat && q.from <= p.to + eps) { p.to = Math.max(p.to, q.to); if (q.id === priority) p.id = q.id; changed = true; }
+      else merged.push(q);
+    }
+    out.push(...merged);
+  }
+  return { list: out, changed };
+}

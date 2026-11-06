@@ -1794,3 +1794,11 @@ Object.assign(D.es, { 'co.title': 'Orden y visibilidad de las columnas', 'co.not
 Object.assign(D.en, { 'co.title': 'Column order and visibility', 'co.note': 'Drag the rows or use the arrows to change the order from left to right. Unticking hides the column without deleting its data (interval families too).', 'co.empty': 'Columns appear here once the chart is drawn.', 'co.up': 'Move left', 'co.down': 'Move right' });
 Object.assign(D.es, { 'geo.layerShow': 'Mostrar esta familia en los gráficos', 'h.geo.layerShow': 'Oculta o muestra la columna de esta familia de intervalos en Columna, Figuras y Multiproxy. No borra los intervalos.' });
 Object.assign(D.en, { 'geo.layerShow': 'Show this family in the charts', 'h.geo.layerShow': 'Hides or shows the column of this interval family in Core column, Figures and Multiproxy. The intervals are not deleted.' });
+
+// V0.34: colour records by family
+Object.assign(D.es, { 'sh.target': 'Clasificación (objetivo o predicción)', 'sh.mode': 'Varias familias', 'sh.mix': 'Mezclar colores', 'sh.split': 'Una franja por familia',
+  'h.sh.mode': '«Mezclar» superpone los colores de las familias elegidas; «Una franja por familia» las pone una al lado de otra en cada registro.' });
+Object.assign(D.en, { 'sh.target': 'Classification (target or prediction)', 'sh.mode': 'Several families', 'sh.mix': 'Blend colours', 'sh.split': 'One strip per family',
+  'h.sh.mode': '«Blend» overlays the colours of the chosen families; «One strip per family» puts them side by side in each record.' });
+Object.assign(D.es, { 'iv.tidied': 'Se han corregido intervalos solapados de una misma familia y se han unido los contiguos de la misma clase.' });
+Object.assign(D.en, { 'iv.tidied': 'Overlapping intervals of the same family were corrected and touching intervals of the same class were joined.' });
