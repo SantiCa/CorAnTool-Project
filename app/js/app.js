@@ -8,7 +8,7 @@ import { storageAvailable, listProjects, getProject, putProject, putMeta, delete
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
 import { evalColumn, evalCells, cellName, FUNCTIONS, parseFormula, formulaRefs, fillLinear } from './sheet.js';
-import { Classifier, TaxonModel, evaluateModels, vec, FEATURES } from './learn.js';
+import { Classifier, TaxonModel, evaluateModels, finalTestMetrics, vec, FEATURES } from './learn.js';
 import { splitPieces, mergeKeeper, sameTaxonGroups, undoPixels, upgradeProject } from './edit.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
@@ -21,7 +21,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.48';
+const DELIVERY = 'V0.49';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -845,26 +845,80 @@ function clearCandidates() {
 let learnTimer = 0, learnIdle = 0;
 function scheduleLearn() { clearTimeout(learnTimer); learnTimer = setTimeout(learnNow, (S.settings.ml?.method || 'knn') === 'knn' ? 60 : 500); }
 /** Labelled examples of this project with a stable key; objects marked «not for training» (o.nt) are left out. */
-function ownExamples(cores, withExcluded = false) {
+function ownExamples(cores, withExcluded = false, withHoldout = false) {
   const ex = [];
-  for (const c of cores) for (const s of c.sections) for (const o of s.objects.values()) if (o.cls && xOf(o) && (withExcluded || !o.nt)) {
+  for (const c of cores) if (withHoldout || !c.holdout) for (const s of c.sections) for (const o of s.objects.values()) if (o.cls && xOf(o) && (withExcluded || !o.nt)) {
     const k = clsById(o.cls); if (k) ex.push({ key: `${S.id}|${c.id}|${s.id}|${o.id}`, g: `${S.id}|${c.id}|${s.id}`, y: k.name, x: xOf(o), c, s, o });
   }
   return ex;
 }
 function mlSets() {
   const grp = (k) => String(k).split('|').slice(0, 3).join('|');
-  const lib = S.library.filter((e) => e.name && Array.isArray(xOfLib(e))).map((e, i) => ({ key: e.key || `lib|${i}`, g: grp(e.key || `lib|${i}`), y: e.name, x: xOfLib(e), lib: e }));
+  // V0.49: traces of reserved cores (final test) never train nor enter model selection, wherever they come from
+  const held = new Set(S.cores.filter((c) => c.holdout).map((c) => `${S.id}|${c.id}|`)), notHeld = (e) => ![...held].some((h) => String(e.key || '').startsWith(h));
+  const lib = S.library.filter((e) => e.name && Array.isArray(xOfLib(e)) && notHeld(e)).map((e, i) => ({ key: e.key || `lib|${i}`, g: grp(e.key || `lib|${i}`), y: e.name, x: xOfLib(e), lib: e }));
   const cur = S.cores.find((c) => c.id === S.curCore), exCore = ownExamples(cur ? [cur] : []), exProj = ownExamples(S.cores);
   const keys = new Set([...exProj, ...lib].map((e) => e.key));
   // the same trace can exist in two projects (shared core, duplicated or imported project): identical descriptors are
   // used once, otherwise it would count twice and could be both trained on and tested in the evaluation
   const sig = (e) => e.x.map((v) => (+v).toFixed(3)).join(','), seen = new Set(exProj.concat(lib).map(sig));
-  const other = otherExamples.map((e) => ({ ...e, x: xOfLib(e) })).filter((e) => Array.isArray(e.x) && !mlExcluded.has(e.key) && !keys.has(e.key)).filter((e) => { const k = sig(e); if (seen.has(k)) return false; seen.add(k); return true; }).map((e) => ({ ...e, g: grp(e.key) }));
+  const other = otherExamples.map((e) => ({ ...e, x: xOfLib(e) })).filter((e) => Array.isArray(e.x) && !mlExcluded.has(e.key) && !keys.has(e.key) && notHeld(e)).filter((e) => { const k = sig(e); if (seen.has(k)) return false; seen.add(k); return true; }).map((e) => ({ ...e, g: grp(e.key) }));
   // V0.17: only vectors of the current feature set and length
   const D = exProj[0]?.x.length ?? lib[0]?.x.length ?? other[0]?.x.length, ok = (e) => e.x.length === D;
   return { core: exCore.concat(lib).filter(ok), project: exProj.concat(lib).filter(ok), all: exProj.concat(lib, other).filter(ok) };
 }
+/* ───────────── V0.49: final test on reserved cores ─────────────
+ * Cores marked as reserved (core.holdout) never train any model nor take part in choosing one (icnotaxa: example
+ * sets and evaluation; multiproxy: training and cross-validation). The final test predicts their identified traces
+ * (icnotaxa: the model in use) or described intervals (multiproxy: the trained classifier) once, and every run is
+ * logged in S.finalTests so a re-test after changes is visible. */
+const holdoutIds = () => new Set(S.cores.filter((c) => c.holdout).map((c) => c.id));
+function logFinal(entry) {
+  const prev = (S.finalTests || []).filter((q) => q.kind === entry.kind && q.target === entry.target).length;
+  (S.finalTests ||= []).push({ ...entry, at: new Date().toISOString(), delivery: DELIVERY, repeat: prev });
+  markDirty(); return prev;
+}
+function runFinalIchno() {
+  const cores = S.cores.filter((c) => c.holdout), ex = ownExamples(cores, true, true);
+  if (!cores.length) { toast(t('ft.noCores')); return; }
+  learnNow();   // the model in use, refitted now without the reserved cores if they just changed
+  if (!ex.length || !clf) { toast(t('ft.noTraces')); return; }
+  const m = finalTestMetrics(ex.map((e) => ({ y: e.y, p: clf.predict(e.x)?.y ?? null })));
+  const active = CLF_SCOPES.includes(S.settings.clfScope) ? S.settings.clfScope : 'project';
+  const prev = logFinal({ kind: 'ichno', target: 'ichnotaxa', method: S.settings.ml?.method || 'knn', scope: active, cores: cores.map((c) => c.name), nTrain: mlSets()[active].length, ...m });
+  if (prev) toast(t('ft.repeat', { n: prev + 1 }), 9000);
+  renderMl();
+}
+function runFinalGeo(c) {
+  const held = holdoutIds(); if (!held.size) { toast(t('ft.noCores')); return; }
+  const run = geoRT.runs.get(c.id); if (!run) { toast(t('gx.untrained')); return; }
+  if (run.held !== [...held].sort().join()) { toast(t('ft.retrain'), 8000); return; }   // trained with another reservation
+  for (const [lid, r] of run.byTarget) {
+    if (!r.model || !r.all) continue;
+    const pairs = [];
+    geoRT.samples.forEach((smp, i) => { const l = r.all[i]; if (held.has(smp.core) && l?.label && l.source !== 'rule') pairs.push({ y: l.label, p: r.preds[i]?.label ?? null }); });
+    if (!pairs.length) continue;
+    const m = finalTestMetrics(pairs), prev = logFinal({ kind: 'geo', target: geoLayer(lid)?.name || lid, classifier: c.name, method: c.method, cores: S.cores.filter((k) => k.holdout).map((k) => k.name), nTrain: r.model.n, ...m });
+    if (prev) toast(t('ft.repeat', { n: prev + 1 }), 9000);
+  }
+  renderGeo();
+}
+function finalTestsHTML(kind) {
+  const list = (S.finalTests || []).filter((q) => q.kind === kind).slice(-8).reverse();
+  if (!list.length) return `<p class="note">${t('ft.none')}</p>`;
+  return `<table class="tbl"><tr><th>${t('ft.when')}</th><th>${t('ft.what')}</th><th>${t('geo.bacc')}</th><th>${t('geo.acc')}</th><th>n</th></tr>${list.map((q) => `<tr><td>${esc(q.at.slice(0, 16).replace('T', ' '))}${q.repeat ? ` <span class="warn" title="${esc(t('ft.repeatTip'))}">(${q.repeat + 1}.ª)</span>` : ''}</td><td>${esc(q.target)} · ${esc(q.method)}${q.scope ? ' · ' + esc(q.scope) : ''}${q.classifier ? ' · ' + esc(q.classifier) : ''}<br><span class="note">${esc(q.cores.join(', '))}</span></td><td><b>${fmt(q.balanced * 100, 1)} %</b></td><td>${fmt(q.accuracy * 100, 1)} %</td><td>${q.n}</td></tr>`).join('')}</table>`;
+}
+function holdoutHTML() {
+  return `<div class="chk2">${S.cores.map((c) => `<label class="chk"><input type="checkbox" data-holdout="${esc(c.id)}" ${c.holdout ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>`;
+}
+document.addEventListener('change', (e) => {
+  const id = e.target?.dataset?.holdout; if (id == null) return;
+  const c = S.cores.find((k) => k.id === id); if (!c) return;
+  c.holdout = e.target.checked; markDirty(); geoRT.dirty = true; mlEval = null; scheduleLearn();
+  toast(t(c.holdout ? 'ft.reserved' : 'ft.released', { c: c.name }), 6000);
+  if ($('mlDlg')?.open) renderMl();
+});
+
 /** V0.2: signature of a training set and of the model settings; the model is refitted only when it changes. */
 function trainSig(set) {
   let h = 2166136261; const mix = (v) => { h = Math.imul(h ^ (typeof v === 'number' ? Math.round(v * 1e6) : [...String(v)].reduce((a, c) => Math.imul(a ^ c.charCodeAt(0), 16777619), 7)), 16777619); };
@@ -2438,7 +2492,7 @@ const curCore = () => S.cores.find((c) => c.id === S.curCore);
 function makeCore(q = {}) {
   const lv = defaultLogView();
   const c = {
-    id: q.id || 'c' + uid(), name: q.name || t('core.new'), lat: q.lat ?? null, lon: q.lon ?? null, waterDepth: q.waterDepth ?? null,
+    id: q.id || 'c' + uid(), name: q.name || t('core.new'), lat: q.lat ?? null, lon: q.lon ?? null, waterDepth: q.waterDepth ?? null, holdout: !!q.holdout,
     units: q.units || 'm', source: q.source || null, notes: q.notes || '',
     imp: q.imp || null, user: q.user || {}, edits: q.edits || {}, records: q.records || [], sections: [],
     logView: { ...lv, ...(q.logView || {}), tracks: { ...lv.tracks, ...(q.logView?.tracks || {}) } },
@@ -2621,10 +2675,10 @@ function serialize() {
   return {
     app: APP, kind: 'project', version: FORMAT_VERSION, appVersion: VERSION, delivery: DELIVERY, saved: new Date().toISOString(),
     id: S.id, name: S.name, notes: S.notes, comments: S.comments || [], classes: S.classes, active: S.active, settings: S.settings, library: S.library,
-    projectKind: S.kind || 'normal', multiSource: S.multiSource || null, models: projectModels(),
+    projectKind: S.kind || 'normal', multiSource: S.multiSource || null, models: projectModels(), finalTests: S.finalTests || [],
     geo, sheet: S.sheet, fig: S.fig, curCore: S.curCore, plots: S.plots || [], plotCur: S.plotCur || 0,
     cores: S.cores.map((c) => ({
-      id: c.id, name: c.name, lat: c.lat, lon: c.lon, waterDepth: c.waterDepth ?? null, units: c.units, source: c.source || null, notes: c.notes || '',
+      id: c.id, name: c.name, lat: c.lat, lon: c.lon, waterDepth: c.waterDepth ?? null, units: c.units, source: c.source || null, notes: c.notes || '', holdout: c.holdout || undefined,
       imp: c.imp, user: c.user || {}, edits: c.edits && Object.keys(c.edits).length ? c.edits : undefined, records: c.records, logView: c.logView, age: { text: c.ageModel.text, units: c.ageModel.units, bacon: c.ageModel.bacon || undefined, center: c.ageModel.center || undefined },
       sections: c.sections.map((q) => serSection(q)),
     })),
@@ -2674,7 +2728,7 @@ async function loadProject(p) {
     S.classes = p.classes || defaultClasses(); S.active = p.active || 'undet';
     Object.assign(S.settings, p.settings || {}); S.library = p.library || []; S.kind = p.projectKind || 'normal'; S.multiSource = p.multiSource || null; S.plots = p.plots || []; S.plotCur = p.plotCur || 0; S.coreModels = p.models?.cores || {};
     S.sheet = { columns: [], cells: {}, ...(p.sheet || {}) };
-    S.fig = { ...defaultFig(), ...(p.fig || {}) };
+    S.fig = { ...defaultFig(), ...(p.fig || {}) }; S.finalTests = p.finalTests || [];
     S.geo = normalizeGeo(p.geo);
     geoReset();
     S.cores = [];
@@ -2711,7 +2765,7 @@ async function loadProject(p) {
 function resetState() {
   blankStart = false; clearTimeout(saveTimer);   // V0.36: a pending save of the previous project must not run afterwards
   const maxMP = S.settings.maxMP || 8;
-  S.id = uid(); S.name = t('proj.untitled'); S.notes = ''; S.comments = [];
+  S.id = uid(); S.name = t('proj.untitled'); S.notes = ''; S.comments = []; S.finalTests = [];
   MEM.px.length = 0; MEM.mask.length = 0; pxWanted.clear();   // V0.1: pictures of the previous project can be freed
   S.undo = []; S.selected = 0; S.multi.clear(); S.library = []; S.sheet = { columns: [], cells: {} }; S.fig = defaultFig(); S.kind = 'normal'; S.multiSource = null; S.plots = []; S.plotCur = 0; S.coreModels = {};
   S.geo = defaultGeo(); geoReset();
@@ -3805,14 +3859,16 @@ function foldsFor(labels) { const cores = new Set(geoRT.samples.filter((_, i) =>
 /** Train classifier c on every family it targets; validation leaving one core out (or by blocks). tick(text) is awaited between steps. */
 async function trainClassifier(c, tick = async () => {}) {
   const g = S.geo, st = g.settings, method = c.method, params = { ...METHODS[method].defaults, ...(c.params?.[method] || {}) }, seed = c.seed ?? 42;
-  const cols = clfCols(c), run = { byTarget: new Map(), cols, at: Date.now() };
+  const cols = clfCols(c), run = { byTarget: new Map(), cols, at: Date.now(), held: [...holdoutIds()].sort().join() };
   if (!cols.length) { run.error = 'cl.noInputs'; geoRT.runs.set(c.id, run); return run; }
   const view = geoRT.samples.map((s) => ({ core: s.core, x: s.x, f: cols.map((j) => s.f[j]), t: cols.map((j) => s.t[j]) }));
   const rescale = st.scaling === 'global' ? cols.map((j) => j < geoRT.nNum) : null;   // V0.37: scaling refitted in each fold
   const scale = st.scaling === 'global' ? scaleOf(geoRT.samples, geoRT.nNum) : null;
   for (const lid of c.targets) {
     const L = geoLayer(lid); if (!L) continue;
-    const labels = labelsFor(lid, c.useRules !== false), idx = labels.map((l, i) => (l.label ? i : -1)).filter((i) => i >= 0);
+    // V0.49: intervals of reserved cores (final test) are hidden from training and cross-validation
+    const held = holdoutIds(), all = labelsFor(lid, c.useRules !== false), labels = all.map((l, i) => (held.has(view[i].core) ? { label: null, source: null } : l));
+    const idx = labels.map((l, i) => (l.label ? i : -1)).filter((i) => i >= 0);
     if (method !== 'kmeans' && new Set(idx.map((i) => labels[i].label)).size < 2) { run.byTarget.set(lid, { labels, preds: [], error: 'cl.needLabels' }); continue; }
     const X = method === 'kmeans' ? view.map((v) => v.f) : idx.map((i) => view[i].f), y = method === 'kmeans' ? null : idx.map((i) => labels[i].label);
     const fit = fitModelSteps(method, X, y, params, seed); let fr;
@@ -3826,7 +3882,7 @@ async function trainClassifier(c, tick = async () => {}) {
       const it = crossValidateSteps(view, labels.map((l) => l.label), method, params, seed, { scored: (i) => labels[i].source !== 'rule', minProb: c.minProb, rescale });
       for (let r = it.next(); ; r = it.next()) { if (r.done) { cv = r.value; break; } const v = r.value; if (await tick(t('cl.pFold', { c: c.name, f: L.name, k: v.fold + 1, n: v.folds }) + (v.epoch ? ' · ' + t('cl.pEpoch', { e: v.epoch, n: v.epochs }) : ''), v.epoch ? v.epoch / v.epochs : 0, !v.epoch)) return null; }
     }
-    run.byTarget.set(lid, { model, cv, labels, preds: [] });
+    run.byTarget.set(lid, { model, cv, labels, all, preds: [] });
   }
   geoRT.runs.set(c.id, run); predictRun(c);
   c.trained = { at: new Date().toISOString(), n: [...run.byTarget.values()].reduce((a, r) => a + (r.model?.n || 0), 0) };
@@ -5195,7 +5251,10 @@ function renderGeoModel() {
     const imp = geoRT.model.features.map((k, j) => [k, geoRT.model.importance[j]]).sort((a, b) => b[1] - a[1]);
     html += `<h3>${t('geo.importance')}</h3><div class="bars">${imp.map(([k, v]) => `<div><span>${esc(k)}<i style="width:${Math.max(2, v * 100)}%;background:var(--accent)"></i></span><em>${fmt(v * 100, 1)}%</em></div>`).join('')}</div><p class="note">${t('geo.importanceNote')}</p>`;
   }
+  html += `<details class="mini"${S.cores.some((c) => c.holdout) ? ' open' : ''}><summary>${t('ft.title')}</summary><p class="note">${t('ft.intro')}</p>${holdoutHTML()}
+    ${curC && geoRT.model?.kind !== 'kmeans' ? `<button class="btn small primary" type="button" id="geoFinalBtn">${t('ft.run')}</button>` : ''}${finalTestsHTML('geo')}</details>`;   // V0.49
   box.innerHTML = html;
+  $('geoFinalBtn') && ($('geoFinalBtn').onclick = () => { if (confirm(t('ft.confirm'))) runFinalGeo(curC); });
 }
 $('geoModelOut').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-c]'); if (!tr) return; S.geo.view.clf = tr.dataset.c; S.geo.view.clfTarget = tr.dataset.l; syncCurrent(); renderGeoPanel(); renderGeoModel(); });
 $('geoModelOut').addEventListener('change', (e) => { const g = e.target.dataset.group; if (!g) return; S.geo.groupNames[g] = e.target.value; markDirty(); scheduleLog(); });
@@ -5509,7 +5568,9 @@ function mlTrainHTML() {
   return `${feats}<h3>${t('ml.tab.train')}</h3><p class="note">${t('ml.trainIntro')}</p><div class="mlmethods">${methods}</div><div class="row" style="align-items:end;gap:12px">${params}
     <label class="f"><span>${t('l.novelty')}</span><input type="number" data-ml="novelty" min="1" max="8" step="0.5" value="${S.settings.novelty}" style="width:80px"></label></div>
     <p class="note">${t('ml.paramHelp.' + m.method)} ${t('ml.noveltyHelp')}</p>
-    <div class="row"><button class="btn primary" id="mlEvalBtn">${t('ml.eval')}</button><label class="f"><span>${t('ml.cvGroup')}</span><select data-ml="cvGroup">${['section', 'core'].map((g) => `<option value="${g}" ${(m.cvGroup || 'section') === g ? 'selected' : ''}>${t('ml.cvGroup.' + g)}</option>`).join('')}</select></label><span class="note">${t('ml.evalHint')}</span></div>${ev}`;
+    <div class="row"><button class="btn primary" id="mlEvalBtn">${t('ml.eval')}</button><label class="f"><span>${t('ml.cvGroup')}</span><select data-ml="cvGroup">${['section', 'core'].map((g) => `<option value="${g}" ${(m.cvGroup || 'section') === g ? 'selected' : ''}>${t('ml.cvGroup.' + g)}</option>`).join('')}</select></label><span class="note">${t('ml.evalHint')}</span></div>${ev}
+    <h3>${t('ft.title')}</h3><p class="note">${t('ft.intro')}</p>${holdoutHTML()}
+    <div class="row"><button class="btn primary" id="mlFinalBtn" ${S.cores.some((c) => c.holdout) ? '' : 'disabled'}>${t('ft.run')}</button><span class="note">${t('ft.ichnoHint')}</span></div>${finalTestsHTML('ichno')}`;   // V0.49
 }
 
 function runMlEval() {
@@ -5583,6 +5644,7 @@ $('mlBody').addEventListener('change', (e) => {
 $('mlBody').addEventListener('click', (e) => {
   const el = e.target;
   if (el.id === 'mlEvalBtn') { busy(async () => runMlEval()); return; }
+  if (el.id === 'mlFinalBtn') { if (confirm(t('ft.confirm'))) runFinalIchno(); return; }
   if (el.id === 'visDl') { loadVision(null, true); return; }
   if (el.id === 'visCalc') { busy(async () => { const n = await computeEmbeddings(S.cores.flatMap((c) => c.sections), (k, tot) => { $('busy').textContent = t('vis.progress', { k, n: tot }); }); $('busy').textContent = t('busy'); toast(t('vis.done', { n })); renderMl(); }); return; }
   if (el.id === 'mlUseBest' && mlEval?.best) { S.settings.clfScope = mlEval.best.scope; S.settings.ml = { ...ML_DEFAULT, ...(S.settings.ml || {}), method: mlEval.best.method }; markDirty(); learnNow(); renderMl(); toast(t('ml.applied')); return; }

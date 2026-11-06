@@ -51,3 +51,11 @@ test('V0.37: few groups give leave-one-group-out folds and the scheme is reporte
   const one = evaluateModels({ test: ex, pools: { all: ex }, methods: ['knn'], opt: { k: 1 }, group: () => 'x' });
   assert.equal(one.all.knn.scheme, 'examples');
 });
+
+test('V0.49: final-test metrics on reserved cores', async () => {
+  const { finalTestMetrics } = await import('../../app/js/learn.js');
+  const m = finalTestMetrics([{ y: 'A', p: 'A' }, { y: 'A', p: 'B' }, { y: 'A', p: 'A' }, { y: 'B', p: 'B' }, { y: 'B', p: null }]);
+  assert.equal(m.n, 5); assert.equal(m.right, 3); assert.equal(m.accuracy, 0.6); assert.ok(Math.abs(m.balanced - (2 / 3 + 1 / 2) / 2) < 1e-12);
+  assert.deepEqual(m.cm, { A: { A: 2, B: 1 }, B: { B: 1, '—': 1 } }); assert.equal(m.none, 1);
+  assert.equal(finalTestMetrics([]).accuracy, null);
+});

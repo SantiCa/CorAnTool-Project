@@ -1925,3 +1925,24 @@ Object.assign(D.en, {
   'lm.pointSize': 'Symbol size', 'lm.pointColor': 'Symbol colour', 'lm.land': 'Land', 'lm.sea': 'Sea', 'lm.coreLabelSize': 'Name size', 'lm.coreLabels': 'Core names', 'lm.coast': 'Coastline over the background',
   'lm.outT': 'Output', 'lm.fmtOut': 'Format', 'lm.scale': 'Resolution (PNG/JPEG)', 'lm.export': 'Export map',
 });
+// V0.49: final test on reserved cores
+Object.assign(D.es, {
+  'ft.title': 'Prueba final con sondeos reservados', 'ft.intro': 'Los sondeos marcados no entrenan ningún modelo ni intervienen al elegirlo (ni en la evaluación ni en la validación cruzada). Sirven para medir el acierto una sola vez, al final, sin optimismo.',
+  'ft.run': 'Hacer la prueba final', 'ft.ichnoHint': 'Predice con el modelo en uso las trazas identificadas de los sondeos reservados.',
+  'ft.confirm': 'La prueba final solo es independiente si no cambias el modelo después de ver su resultado. Cada repetición queda registrada. ¿Hacerla ahora?',
+  'ft.none': 'Todavía no hay pruebas finales.', 'ft.when': 'Fecha', 'ft.what': 'Modelo y sondeos reservados',
+  'ft.repeat': 'Es la {n}.ª prueba final de este objetivo: si has cambiado el modelo tras ver la anterior, ya no es independiente (queda anotado).', 'ft.repeatTip': 'Prueba repetida: deja de ser independiente si el modelo se cambió tras ver la anterior.',
+  'ft.noCores': 'Marca antes al menos un sondeo como reservado.', 'ft.noTraces': 'Los sondeos reservados no tienen trazas identificadas o no hay modelo entrenado.',
+  'ft.reserved': '«{c}» reservado para la prueba final: ya no entrena ni interviene al elegir el modelo.', 'ft.released': '«{c}» vuelve a usarse para entrenar.',
+});
+Object.assign(D.en, {
+  'ft.title': 'Final test on reserved cores', 'ft.intro': 'Marked cores never train a model nor take part in choosing one (neither in the evaluation nor in cross-validation). They measure accuracy once, at the end, without optimism.',
+  'ft.run': 'Run the final test', 'ft.ichnoHint': 'Predicts the identified traces of the reserved cores with the model in use.',
+  'ft.confirm': 'The final test is independent only if you do not change the model after seeing its result. Every repetition is logged. Run it now?',
+  'ft.none': 'No final tests yet.', 'ft.when': 'Date', 'ft.what': 'Model and reserved cores',
+  'ft.repeat': 'This is final test no. {n} for this target: if you changed the model after seeing the previous one, it is no longer independent (logged).', 'ft.repeatTip': 'Repeated test: no longer independent if the model was changed after seeing the previous one.',
+  'ft.noCores': 'Mark at least one core as reserved first.', 'ft.noTraces': 'The reserved cores have no identified traces or no model is trained.',
+  'ft.reserved': '«{c}» reserved for the final test: it no longer trains nor takes part in choosing the model.', 'ft.released': '«{c}» is used for training again.',
+});
+Object.assign(D.es, { 'ft.retrain': 'El clasificador se entrenó con otra reserva de sondeos: vuelve a entrenarlo antes de la prueba final.' });
+Object.assign(D.en, { 'ft.retrain': 'The classifier was trained with another core reservation: retrain it before the final test.' });

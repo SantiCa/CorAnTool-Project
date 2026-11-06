@@ -205,3 +205,16 @@ export function evaluateModels({ test, pools, methods, opt, k = 5, seed = 42, gr
   }
   return out;
 }
+
+/**
+ * V0.49: metrics of a final test on reserved cores. pairs = [{y: true class, p: predicted class or null}].
+ * accuracy = right / all (no prediction counts as wrong); balanced = mean recall over the true classes;
+ * cm[a][b] counts true a predicted b ('—' = no prediction).
+ */
+export function finalTestMetrics(pairs) {
+  const classes = [...new Set(pairs.map((q) => q.y))].sort(), cm = {}, rec = [];
+  for (const q of pairs) { const p = q.p ?? '—'; (cm[q.y] ||= {})[p] = (cm[q.y][p] || 0) + 1; }
+  for (const c of classes) { const row = cm[c] || {}, n = Object.values(row).reduce((a, v) => a + v, 0); rec.push(n ? (row[c] || 0) / n : 0); }
+  const n = pairs.length, ok = pairs.filter((q) => q.p === q.y).length;
+  return { n, right: ok, accuracy: n ? ok / n : null, balanced: rec.length ? rec.reduce((a, v) => a + v, 0) / rec.length : null, classes, cm, none: pairs.filter((q) => q.p == null).length };
+}

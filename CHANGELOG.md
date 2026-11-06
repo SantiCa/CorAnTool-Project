@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.49 — 2026-11-07
+- Final test on reserved cores: marked cores never train nor take part in model selection (ichnotaxa and multiproxy); a logged final test reports accuracy and balanced accuracy on them. Automatic web–V2 comparison: exact with the same mask (unit test) and in Chrome within the end-to-end test; the 0.56-point difference comes from the JPEG decoder, not the grey weights (documentation corrected).
+
 ## V0.48 — 2026-11-07
 - Added isolated Electron restart/save smoke tests to desktop builds and optional real DINOv2/Esri checks. Manual builds can prepare an unpublished release draft containing five installers, offline HTML, a commit manifest and SHA-256 checksums. Zenodo is deferred.
 

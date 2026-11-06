@@ -1,6 +1,7 @@
 // V0.42: end-to-end check in a headless Chrome. Needs the repository served (python3 -m http.server 8765) and
 // puppeteer-core (npm i --no-save puppeteer-core@23). CHROME = path of Chrome (default /usr/bin/google-chrome).
 // Opens the IODP test core, detects, undoes, saves, reloads and compares; fails on any page error.
+// V0.49: also compares the web analysis of the idealized 2020 core (browser JPEG decoder) with the published V2.1 CSV.
 import puppeteer from 'puppeteer-core';
 
 const URL = process.env.APP_URL || 'http://localhost:8765/app/index.html';
@@ -35,6 +36,22 @@ try {
   await p.evaluate(async () => { for (const s of window.ichantool.S.sections) void s.labels; });
   const after = await p.evaluate(sig);
   if (before !== after) fail(`saved and reloaded project differs:\n${before}\n${after}`);
+  // V0.49: web–V2 comparison with the browser's own JPEG decoder (L < 6, rowCounts, binRows of 150 px). The decoder
+  // differs from Pillow's at the edges of the painted traces, so percentages may differ slightly; BI and ii must not.
+  const v2 = await p.evaluate(async () => {
+    const { rowCounts, binRows } = await import('./js/core.js'), { parseTable } = await import('./js/log.js');
+    const img = new Image(); img.src = '../examples/data/idealized_core_0-500cm.jpg'; await img.decode();
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+    const d = x.getImageData(0, 0, c.width, c.height).data, labels = new Int32Array(c.width * c.height);
+    for (let i = 0; i < labels.length; i++) labels[i] = 0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2] < 6 ? 1 : 0;
+    const bins = binRows(rowCounts({ labels, width: c.width, roi: { x0: 0, x1: c.width, y0: 0, y1: c.height }, exclude: null, effClass: [-1, 0], nClasses: 1 }), { top: 0, bottom: 500, binPx: 150 });
+    const t = parseTable(await (await fetch('../legacy/v2.1_console/example_output.csv')).text()), k = (n) => t.headers.indexOf(n);
+    const dp = t.rows.map((r, i) => Math.abs(bins[i].pct - r[k('Bioturbation Percentage')]));
+    return { n: t.rows.length, bi: t.rows.filter((r, i) => bins[i].BI === r[k('BI')]).length, ii: t.rows.filter((r, i) => bins[i].ii === r[k('II')]).length,
+      depth: Math.max(...t.rows.map((r, i) => Math.abs(bins[i].depth - r[k('Depth')]))), max: Math.max(...dp), mean: dp.reduce((a, v) => a + v, 0) / dp.length };
+  });
+  if (v2.bi !== v2.n || v2.ii !== v2.n || v2.depth > 1e-9 || v2.max > 0.6) fail(`web–V2 in the browser: BI ${v2.bi}/${v2.n}, ii ${v2.ii}/${v2.n}, depth ${v2.depth}, max Δ% ${v2.max}`);
+  console.log(`web–V2 in the browser: ${v2.n} intervals, BI and ii identical, max Δ ${v2.max.toFixed(2)} points, mean ${v2.mean.toFixed(2)}`);
   if (errs.length) fail('page errors: ' + errs.join(' | '));
   console.log(process.exitCode ? 'E2E finished with failures' : `E2E ok (${first} traces in the first section; reload identical)`);
 } catch (e) { fail(e.message); } finally { await b.close(); }

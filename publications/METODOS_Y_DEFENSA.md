@@ -20,6 +20,9 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 - **Icnotaxones (V0.37):** la evaluación deja fuera secciones (o sondeos, a elegir) enteras: pliegues agrupados con
   ≥ 5 grupos, un grupo cada vez con 2–4 y, con uno solo, trazas sueltas con aviso de acierto muy optimista. El acierto
   mostrado es el de la evaluación que elige el método, así que es optimista hasta medirlo en un sondeo reservado.
+- **Prueba final (V0.49):** los sondeos marcados como reservados no entrenan ni intervienen al elegir el modelo (en
+  icnotaxones ni en multiproxy) y se usan una sola vez para el acierto final; cada repetición queda registrada con
+  fecha y modelo, de modo que el artículo puede declarar cuántas veces se miró el conjunto reservado.
 - **Selección de modelo:** comparar varios clasificadores con la misma validación y quedarse con el mejor **sesga el
   acierto al alza**. Un artículo debe informar de todos los modelos probados o reservar sondeos para una prueba final
   independiente (pendiente de implementar en la interfaz).
@@ -94,9 +97,9 @@ intervalos, mapas por edad y figuras, organizado en proyectos.
 - Integra en una sola herramienta las imágenes, la bioturbación y otros registros del mismo sondeo, en profundidad o en edad, con exportación vectorial (§18). Demostrado con datos públicos del IODP (sondeo de prueba U1385I-1H).
 - Reproduce exactamente los resultados publicados en 2020 (prueba de regresión, §13.1).
 - La aplicación web da los mismos BI e ii que la versión publicada en la imagen de ejemplo
-  (100 %), con una diferencia de porcentaje ≤ 0,56 puntos explicada por los pesos de gris
-  (§3.4, §13.2). Matiz (V0.37): esa comparación de la web se hizo una vez a mano; la prueba automática de regresión
-  frente a la V2 es la del paquete Python, y la web comparte con él los mismos casos calculados a mano.
+  (100 %). Con la misma máscara la reproduce exactamente; con el decodificador JPEG del navegador el porcentaje
+  difiere ≤ 0,56 puntos (media 0,13) por cómo se reconstruyen los bordes de las manchas, no por los pesos de gris
+  (corregido en V0.49, §3.4, §13.2). Desde V0.49 las dos comparaciones son pruebas automáticas.
 - Es determinista y el archivo de proyecto permite reproducir cualquier análisis (§15).
 - Tiene pruebas automáticas en integración continua (§13.1).
 - Integra en el mismo proyecto la interpretación icnológica, registros numéricos de cualquier tipo,

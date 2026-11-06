@@ -193,22 +193,13 @@ umbral sobre el gris:
 - Web: `L = 0,299 R + 0,587 G + 0,114 B` (norma ITU-R BT.601). En el ejemplo se usa el umbral
   global `L < 6`.
 
-Los dos criterios solo difieren en píxeles casi negros, que en un JPG aparecen en los bordes de
-las manchas por la compresión. Por eso la aplicación web difiere de la V2 como máximo 0,56 puntos
-porcentuales, sin cambiar ningún BI ni ii (§13). El paquete Python mantiene los pesos de la V2 y la
-reproduce exactamente.
-
-**Para el revisor.** El porcentaje es una medida directa: superficie marcada como bioturbación
-dividida por la superficie analizada, en la cara expuesta del testigo (2D). No estima la
-bioturbación en volumen. La calidad del resultado depende de la calidad de la máscara (§7–§8),
-no del cálculo, que es exacto.
-
----
-
-## 4. Índices BI e ii
-
-Implementación: `indices.py` (Python) y `core.js::BI, II, classify` (web). Cada tramo es un
-intervalo semiabierto `[mínimo, máximo)` en porcentaje.
+**Corrección V0.49:** en la imagen de ejemplo los dos criterios marcan exactamente los mismos píxeles
+(con el decodificador de Pillow: 1 795 647 px con los dos; con el de Chrome: 1 809 490 px con los dos). La
+diferencia de hasta 0,56 puntos (media 0,13) entre la web y la V2 **no viene de los pesos de gris, sino del
+decodificador JPEG**: el navegador reconstruye los bordes de las manchas de otra forma que Pillow (la librería con
+la que lee la V2 y el paquete Python), y deja 13 843 píxeles más (0,13 % de la imagen) por debajo del umbral. Con la
+misma máscara, la web reproduce la V2 exactamente (§13.1). BI e ii no cambian en ningún intervalo. Antes de V0.49 se
+atribuía la diferencia a los pesos.
 
 ### 4.1 Bioturbation Index (Reineck, 1963; Taylor y Goldring, 1993)
 
@@ -882,13 +873,18 @@ Los lectores de CorAnTool y del paquete Python ya ignoran las líneas que empiez
 ## 13. Validación realizada
 
 ### 13.1 Pruebas automáticas
-Recuento en V0.42: **18 de Python** (16 se ejecutan; 2 se omiten si faltan `onnx`/`torch`), **84 de la web** y una
+Recuento en V0.49: **18 de Python** (16 se ejecutan; 2 se omiten si faltan `onnx`/`torch`), **93 de la web** y una
 prueba de extremo a extremo.
 - **Python (`tests/test_core.py`, `tests/test_unet.py`):** tramos de índices, porcentajes e intervalos en
   casos calculados a mano, último intervalo incompleto, multiclase por colores, gris y RGB,
   profundidad y edad, imagen de ejemplo, línea de comandos, U-Net y **regresión frente al CSV publicado
-  de la V2** (coincidencia exacta en profundidad, porcentaje, BI e ii). Esta regresión automática solo existe en
-  Python; la comparación de la web con la V2 (§13.2) se hizo una vez a mano.
+  de la V2** (coincidencia exacta en profundidad, porcentaje, BI e ii).
+- **Web–V2 automática (V0.49):** `tests/app/v2.test.mjs` aplica `rowCounts` y `binRows` de la web a la máscara de la
+  imagen idealizada decodificada con Pillow (`tests/app/fixtures/v2_idealized_masks.json`, RLE de 247 kB generado por
+  `tools/make_v2_fixture.py`, que comprueba además que los dos criterios de gris dan la misma máscara) y exige
+  coincidencia exacta con el CSV publicado (110 intervalos: profundidad y porcentaje con diferencia < 10⁻⁹, BI e ii
+  iguales). La prueba de extremo a extremo repite la comparación con el decodificador de Chrome (umbral `L < 6`):
+  BI e ii iguales en todos los intervalos y diferencia máxima de porcentaje ≤ 0,6 puntos (0,56 medida).
 - **Web (`tests/app/*.test.mjs`):** `core` 13 (mismos casos de índices e intervalos que en Python,
   exclusiones, modelo de edad con coma decimal y columnas por cabecera, RLE y su validación, CSV), `log` 15
   (lectura de tablas, ejes, SVG y CSV del registro), `geo` 15 (multiproxy: catálogos, remuestreo, reglas,
@@ -896,7 +892,8 @@ prueba de extremo a extremo.
   mapa), `enhance` 9 (realce), `unet` 6, `learn` 4 (icnotaxones, pliegues agrupados y esquema de validación),
   `vision` 4, `overlap` 3 (trazas solapadas), `sheet` 3, `interp` 3, `plot` 2, `zip` 1, y desde V0.40–V0.42 `version`
   1 (versión única) y `edit` 4 (tijeras, fusión del mismo icnotaxón, deshacer y migración v2→v3 con máscaras
-  sintéticas solapadas; `app/js/edit.js`). Total en V0.42: 84.
+  sintéticas solapadas; `app/js/edit.js`). Desde V0.43–V0.49: `locmap` 4, `exportio` 3, `v2` 1 y `learn` +1
+  (métricas de la prueba final). Total en V0.49: 93.
 - **Extremo a extremo (V0.42, `tests/e2e/smoke.mjs`, `npm run e2e`):** en Chrome sin pantalla abre el sondeo de
   prueba, repite la detección (mismo número de trazas), borra y deshace una traza, guarda, recarga y compara trazas y
   píxeles por sección; falla con cualquier error de la página. Se ejecuta en el CI.
@@ -911,9 +908,10 @@ prueba de extremo a extremo.
 | Profundidad | idéntica (diferencia < 10⁻¹³ cm) |
 | BI | 100 % de intervalos iguales |
 | ii | 100 % de intervalos iguales |
-| Porcentaje | diferencia máxima 0,56 puntos, media 0,13 puntos |
+| Porcentaje | diferencia máxima 0,56 puntos, media 0,13 puntos (decodificador de Chrome); 0 con la máscara de Pillow |
 
-La diferencia del porcentaje se explica en §3.4.
+La diferencia del porcentaje viene del decodificador JPEG (§3.4). Desde V0.49 las dos comparaciones son automáticas
+(§13.1).
 
 ### 13.3 Lo que todavía no está validado
 - Calidad de la detección automática en fotografías reales de testigos.
@@ -1915,6 +1913,23 @@ proyecto con latitud y longitud.
   físico, callejero, océano) pedida con `bbox`, `bboxSR` e `imageSR` iguales al CRS del mapa, del mismo tamaño que el
   marco (×2, máx. 4096 px), así que coincide sin deformar en los tres sistemas; requiere el permiso de §21.6 bis.
 - **Salida:** SVG, PNG o JPEG a ×1–×6 (≈ 96–576 ppp).
+
+### 22.w Prueba final con sondeos reservados (desde V0.49)
+- Cada sondeo puede marcarse como **reservado** (`core.holdout`, guardado en el proyecto). Sus datos:
+  - **Icnotaxones:** no entran en ningún conjunto de ejemplos (`ownExamples` los omite; también las entradas de la
+    biblioteca y de otros proyectos cuya clave empieza por `<proyecto>|<sondeo reservado>|`), así que no entrenan ni
+    intervienen en la evaluación que elige el método.
+  - **Multiproxy:** las etiquetas de sus intervalos se ocultan al entrenar y en la validación cruzada (`labels`);
+    las completas se guardan aparte (`all`). Cada entrenamiento anota la reserva con la que se hizo (`run.held`); si
+    después cambia, la prueba final pide reentrenar.
+- **Prueba final** (botón en Modelos → Entrenar y en Multiproxy → Clasificadores, con confirmación): icnotaxones,
+  el modelo en uso (reajustado al momento) predice las trazas identificadas de los sondeos reservados; multiproxy,
+  el clasificador entrenado predice sus intervalos descritos (no los etiquetados por reglas). Métricas
+  (`learn.js::finalTestMetrics`): acierto = aciertos / total (sin predicción cuenta como fallo), acierto equilibrado =
+  media de la sensibilidad de cada clase verdadera, matriz de confusión.
+- Cada prueba se registra en `S.finalTests` (fecha, entrega, objetivo, método, ámbito o clasificador, sondeos, nº de
+  ejemplos de entrenamiento, métricas) con su número de repetición; las repeticiones se marcan, porque dejan de ser
+  independientes si el modelo se cambió tras ver la anterior.
 
 ## 23. Referencias
 

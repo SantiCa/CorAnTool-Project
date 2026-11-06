@@ -82,6 +82,7 @@ La descripción detallada de los algoritmos está en
 | V0.46 | 06-11-2026 | Integración Git | Merge de origin/master: setup-node v7 en CI y escritorio, conservando V0.45 y su historial |
 | V0.47 | 06-11-2026 | Escritorio | Electron 45.2.1 y electron-builder 26.18.0 integrados; macOS 13+ e instaladores para prueba previa mediante Desktop builds sobre master |
 | V0.48 | 07-11-2026 | Preparación de release | Prueba real de Electron con cierre/reapertura, inferencia DINOv2 y fondos Esri; borrador de release con instaladores, HTML sin conexión, manifiesto y SHA-256; Zenodo aplazado |
+| V0.49 | 07-11-2026 | Validación | Prueba final con sondeos reservados (icnotaxones y multiproxy, registrada) y comparación automática web–V2 (exacta con la misma máscara; la diferencia de 0,56 puntos viene del decodificador JPEG, no de los pesos de gris) |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -672,6 +673,32 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.49 — Prueba final con sondeos reservados y comparación automática web–V2 (07-11-2026)
+
+- **Qué se hizo:**
+  - **Sondeos reservados:** cada sondeo puede marcarse para la prueba final. No entrena ni interviene al elegir el
+    modelo (icnotaxones: conjuntos de ejemplos, biblioteca y evaluación; multiproxy: entrenamiento y validación
+    cruzada).
+  - **Prueba final** (Modelos → Entrenar; Multiproxy → Clasificadores): acierto, acierto equilibrado y n sobre las
+    trazas o intervalos de los sondeos reservados, con confirmación y registro de cada repetición en el proyecto.
+  - **Web–V2 automática:** prueba unitaria con la máscara decodificada por Pillow (coincidencia exacta con el CSV
+    publicado en 110 intervalos) y comprobación en Chrome dentro de la prueba de extremo a extremo (BI e ii iguales,
+    diferencia ≤ 0,6 puntos).
+  - **Corrección documental:** la diferencia de 0,56 puntos entre la web y la V2 se debe al decodificador JPEG del
+    navegador, no a los pesos de gris (en esta imagen los dos criterios seleccionan los mismos píxeles).
+- **Cambios:** `app/js/app.js` (`holdoutIds`, `runFinalIchno`, `runFinalGeo`, `ownExamples`, `mlSets`,
+  `trainClassifier`, paneles, guardado de `holdout` y `finalTests`), `app/js/learn.js` (`finalTestMetrics`),
+  `i18n.js`, `tests/app/v2.test.mjs`, `tests/app/fixtures/v2_idealized_masks.json`, `tools/make_v2_fixture.py`,
+  `tests/app/learn.test.mjs`, `tests/e2e/smoke.mjs`, documentación. `DELIVERY` = V0.49.
+- **Por qué:** pendiente principal 1 (petición de Santiago).
+- **Comprobación:** 93 pruebas JS (2 nuevas + la de métricas), 16 de Python y e2e correcto, con «web–V2 in the
+  browser: 110 intervals, BI and ii identical, max Δ 0.56 points, mean 0.13». En Chrome: demo multiproxy con
+  DEMO-01 reservado → validación con 14 sondeos, 0 etiquetas reservadas en el entrenamiento, prueba final con 214
+  intervalos (equilibrado 0,896); icnotaxones con un sondeo reservado → 90 trazas de prueba y 90 de entrenamiento de
+  los otros sondeos.
+- **Pendiente:** elegir los sondeos reservados con datos reales y hacer la prueba una sola vez; los proyectos con
+  sondeos compartidos en otros proyectos solo se excluyen por su clave (`<proyecto>|<sondeo>`).
 
 ## V0.48 — Release preparada y verificaciones de escritorio (07-11-2026)
 
