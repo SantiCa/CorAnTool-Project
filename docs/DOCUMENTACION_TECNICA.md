@@ -759,9 +759,12 @@ Alternativa a los 12 descriptores (§9) como entrada del clasificador (`S.settin
    convierte cada imagen en un vector. Se descarga una vez y se guarda en la caché del navegador o del programa
    (`caches`, clave = URL); también se puede cargar un `.onnx` propio con la misma interfaz. Desde V0.38 se calcula
    el SHA-256 del archivo usado, se guarda en el proyecto (`settings.ml.visionSha`) y se avisa si después se carga
-   otro distinto (sus vectores no son comparables). `VISION_MODEL.rev` (revisión de Hugging Face) sigue en `main`:
-   para fijar el archivo, poner el commit y el `sha256` esperado en `vision.js` (Hugging Face no era accesible desde
-   el entorno de esta entrega).
+   otro distinto (sus vectores no son comparables). Desde V0.45, `VISION_MODEL.rev` fija el commit
+   `8b1f705a3a7f6f062f6bdd21986c1583d3ef105d` de Hugging Face. El SHA-256 esperado de `onnx/model.onnx`
+   (88 532 934 bytes) es `f22797eabf810a75e41de68d378541ebea372122b25c4ce3ef25ff618250c20a`,
+   comprobado sobre el archivo descargado y los metadatos LFS del repositorio. La URL con commit tiene su propia
+   entrada de caché; el programa avisa si el hash descargado no coincide, sin bloquear la carga. Los archivos
+   locales siguen admitidos y se registra su hash; fijar los pesos no valida su precisión con testigos reales.
 2. **Ventana:** cuadrado centrado en el rectángulo de la traza `[x₀, y₀, x₁, y₁]`, de lado
    `L = max(16, round(max(ancho, alto)·(1 + 2·0,25)))`; centro `((x₀ + x₁ + 1)/2, (y₀ + y₁ + 1)/2)`. Incluye
    un 25 % de sedimento alrededor por cada lado (contexto). Fuera de la imagen se repite el borde.
@@ -1136,9 +1139,12 @@ o mayor que la de los intervalos.
 Implementación: `log.js::parseTable, guessAxisColumn` y `app.js` (diálogo de registros).
 
 - **Formatos:** CSV, TXT, TSV o DAT, y Excel (`.xlsx`, `.xls`, `.ods`, primera hoja, leída con la
-  librería SheetJS; la incluida es la 0.18.5, con vulnerabilidades conocidas al abrir archivos ajenos
-  (CVE-2023-30533, CVE-2024-22363): `tools/update_vendor.sh` la sustituye por la 0.20.3 oficial, que no se pudo
-  descargar desde aquí; el respaldo por internet ya apunta a `cdn.sheetjs.com/xlsx-0.20.3`).
+  librería SheetJS). Desde V0.45 se incluye la 0.20.3 oficial, descargada de `cdn.sheetjs.com/xlsx-0.20.3`,
+  con su licencia Apache-2.0. Sustituye la 0.18.5 afectada por CVE-2023-30533 y CVE-2024-22363.
+  SHA-256 del archivo incluido: `cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41`.
+  `.gitattributes` conserva los bytes de este archivo sin convertir los finales de línea en Windows.
+  El respaldo por internet usa la misma versión y comprueba SRI SHA-384. `tools/update_vendor.sh` descarga
+  la biblioteca y su licencia; al actualizarla también deben revisarse los hashes y esta documentación.
 - **Texto** (V0.38, `log.js::decodeText`): UTF-8 y, si no es UTF-8 válido (CSV de Excel en Windows), Windows-1252.
 - **Lectura** (`parseTable`):
   - separador detectado entre tabulador, punto y coma, coma o barra vertical: el primero que divide la primera
@@ -1848,7 +1854,7 @@ cambia lo que se ve en la imagen de trabajo.
   (`eslint.config.js`, solo reglas de corrección) y construcción del archivo sin conexión. Dependabot semanal.
 - **Seguridad del navegador:** `Content-Security-Policy` en `index.html` (scripts propios y de jsDelivr/SheetJS,
   WebAssembly, imágenes y conexiones solo a Esri, GEBCO, Hugging Face y jsDelivr; el archivo sin conexión permite
-  scripts en línea). Las librerías de respaldo por internet llevan SRI (`sha384`) salvo SheetJS 0.20.3.
+  scripts en línea). Las librerías de respaldo por internet llevan SRI (`sha384`), incluida SheetJS desde V0.45.
 - Comunidad: `SECURITY.md`, `CODE_OF_CONDUCT.md`, plantillas de incidencias y de PR, `CONTRIBUTING.md`,
   `THIRD_PARTY_NOTICES.md`.
 

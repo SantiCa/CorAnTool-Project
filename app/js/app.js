@@ -21,7 +21,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.44';
+const DELIVERY = 'V0.45';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -278,11 +278,11 @@ const rowAtDepth = (s, d) => s.roi.y0 + ((d - s.top) / (s.bottom - s.top)) * (s.
 /** V0.14: the libraries ship with the program (app/vendor); the internet copy is only a fallback (e.g. single offline file). */
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';   // V0.15: U-Net engine (desktop build copies it to vendor/ort)
 // V0.40: internet fallback pinned with Subresource Integrity (hashes of the npm files that jsDelivr serves; the
-// bundled copies in app/vendor are byte-identical). SheetJS 0.20.3 is not on npm: no hash until it is bundled.
+// bundled copies in app/vendor are byte-identical). V0.45: SheetJS is verified against its official CDN build.
 const VENDOR = {
   'pako.min.js': ['https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js', 'sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j'],
   'UTIF.js': ['https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js', 'sha384-RyBmXHdfZ/Uon+ud+/AqSyWpUWnKYt2tkRG/P4gWoRUGDU+qIAV3tGBPNlYTBZEF'],
-  'xlsx.full.min.js': ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', null],
+  'xlsx.full.min.js': ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT'],
   'ort/ort.wasm.min.js': [ORT_CDN + 'ort.wasm.min.js', 'sha384-tNxIwEqSlcdvKtUte98AsccPbDKM958LBXB/+3BLS42TTihXHKTWgdqPqXI/lot8'],
 };
 /** Loads a library from app/vendor, else from the internet; resolves to 'local' or 'cdn'. */

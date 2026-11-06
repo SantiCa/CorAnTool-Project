@@ -78,6 +78,7 @@ La descripción detallada de los algoritmos está en
 | V0.42 | 06-11-2026 | Pruebas | Auditoría §3: `edit.js` (tijeras, fusión, deshacer, migración) probado con máscaras solapadas; prueba de extremo a extremo en Chrome dentro del CI |
 | V0.43 | 06-11-2026 | Figuras | Mapa de localización de sondeos: capas base, encuadre y zoom, proyecciones WGS 84/Web Mercator/UTM con huso, cuadrícula, coordenadas por lado en DD/DMS o metros, escala y norte con posición, salida SVG/PNG/JPEG |
 | V0.44 | 06-11-2026 | Ingeniería | Restos de la auditoría: guardado por secciones, borrado de trazas por rectángulo, realce al abrir en el worker, exportaciones e importación de registros en módulo probado, sin estilos en línea en el HTML |
+| V0.45 | 06-11-2026 | Dependencias y reproducibilidad | SheetJS 0.20.3 oficial incluida con licencia y SRI; DINOv2 fijado a un commit y SHA-256 comprobados |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -668,6 +669,24 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.45 — SheetJS y pesos de visión reproducibles (06-11-2026)
+
+- **Qué se hizo:** sustitución de SheetJS 0.18.5 por la 0.20.3 oficial con su licencia Apache-2.0;
+  SHA-384 SRI para el respaldo por internet; revisión de DINOv2 fijada a un commit y SHA-256 de ONNX verificado.
+- **Cambios:** `app/vendor/xlsx.full.min.js`, licencia SheetJS, `.gitattributes` (preserva los bytes oficiales
+  sin conversión de finales de línea), `app/js/vision.js`, `app/js/app.js`, versiones sincronizadas,
+  `THIRD_PARTY_NOTICES.md` y documentación. `DELIVERY` = V0.45, versión interna 0.45.0.
+- **Por qué:** completar los dos pendientes de V0.38 que requerían acceso a SheetJS y Hugging Face,
+  partiendo de V0.44 de Claude sin modificar sus entregas anteriores.
+- **Comprobación:** 91 pruebas JS superadas; Python: 16 superadas y 2 omitidas por dependencias ONNX
+  opcionales no instaladas. Escritura y lectura sintéticas en XLSX, XLS y ODS, incluidos decimales, cero y
+  Unicode; comprobación del flujo SheetJS → tabla → registros. Descarga del modelo de 88 532 934 bytes con
+  SHA-256 igual al de sus metadatos LFS; versión 0.45.0 coherente, construcción del HTML sin conexión y
+  `git diff --check`. SheetJS SHA-256: `cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41`.
+- **Pendiente:** prueba interactiva de inferencia DINOv2 en navegador/escritorio; no se ha medido su precisión
+  en testigos reales. Nombre de distribución en PyPI y ramas/PR siguen pendientes de decisión de Santiago.
+  Conexión de Zenodo y publicación de release se realizan después, sin crear etiqueta en esta entrega.
 
 ## V0.44 — Restos de la auditoría (06-11-2026)
 

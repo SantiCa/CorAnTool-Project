@@ -41,10 +41,14 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 - Estado: libre.
 - Editor: ninguno.
 - Objetivo: sin tarea de implementación activa.
-- Commit base y archivos: se anotarán al tomar el turno.
+- Commit base y archivos: entrega V0.45 sobre 153fb90, preparada para sincronizar por GitHub Desktop.
 
 ### Último traspaso
 
+- **V0.45, 06-11-2026 (Codex):** SheetJS 0.20.3 incluida con licencia, SHA-256 y SRI verificados;
+  DINOv2 fijado a commit y SHA-256 comprobados sobre la descarga. 91 pruebas JS, 16 Python superadas
+  y 2 omitidas (dependencias ONNX opcionales); HTML sin conexión generado. Pendiente subir la entrega
+  desde GitHub Desktop, probar la inferencia interactiva y configurar Zenodo antes de publicar la release.
 - **V0.44, 06-11-2026 (Claude):** restos de la auditoría (guardado por secciones, dropIds, realce al abrir, exportio.js, estilos en línea).
 - **V0.43, 06-11-2026 (Claude):** mapa de localización de sondeos.
 - **V0.42, 06-11-2026 (Claude):** pruebas de edición y e2e (auditoría §3). Auditoría V0.31 completada salvo lo anotado como pendiente.

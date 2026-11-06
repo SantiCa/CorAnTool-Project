@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.45 — 2026-11-06
+- Replaced bundled SheetJS 0.18.5 with the official 0.20.3 build and licence, added SRI to its CDN fallback, and pinned DINOv2 to a verified Hugging Face commit and ONNX SHA-256.
+
 ## V0.44 — 2026-11-06
 - Saving by sections (only changed sections are rewritten; IndexedDB v5), trace deletion limited to the traces' rectangles, enhancement on opening a section in the worker, exports and record import moved to the tested module `exportio.js`, and no inline styles left in `index.html`.
 

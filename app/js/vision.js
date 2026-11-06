@@ -3,11 +3,12 @@
 // trace into a vector of numbers ("embedding"); the existing k-NN / Random Forest / Bayes learn from those vectors.
 
 /** Default model: DINOv2 ViT-S/14 (Oquab et al., 2024) exported to ONNX by the Hugging Face onnx-community. */
-// V0.38: `rev` is the Hugging Face revision (a commit hash pins the file; 'main' follows the repository) and `sha256`,
-// when set, the expected hash of model.onnx. The hash of the file actually used is stored in the project.
-const VISION_REV = 'main';
+// V0.45: the official download is pinned to a Hugging Face commit and its verified model.onnx SHA-256.
+// The hash of the file actually used is stored in the project; a mismatch raises the existing warning.
+const VISION_REV = '8b1f705a3a7f6f062f6bdd21986c1583d3ef105d';
 export const VISION_MODEL = {
-  id: 'dinov2-small', name: 'DINOv2 ViT-S/14', size: 224, dim: 384, mb: 88, rev: VISION_REV, sha256: null,
+  id: 'dinov2-small', name: 'DINOv2 ViT-S/14', size: 224, dim: 384, mb: 88, rev: VISION_REV,
+  sha256: 'f22797eabf810a75e41de68d378541ebea372122b25c4ce3ef25ff618250c20a',
   url: `https://huggingface.co/onnx-community/dinov2-small/resolve/${VISION_REV}/onnx/model.onnx`,
   mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225], pad: 0.25,
 };
