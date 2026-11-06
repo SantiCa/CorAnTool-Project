@@ -72,6 +72,7 @@ La descripción detallada de los algoritmos está en
 | V0.36 | 06-11-2026 | Datos seguros | Auditoría §1: formato 5 y solo lectura, RLE comprobado, carga fallida sin guardar, guardado al cerrar, procedencia en CSV, copia previa al reemplazar, rotación del historial, cuota, avisos de error, deshacer agrupado |
 | V0.37 | 06-11-2026 | Ciencia | Auditoría §2: modelo de edad (coma decimal, cabeceras, aviso Bacon), evaluación de icnotaxones agrupada y marcada optimista, multiproxy sin fugas (familias emparentadas, escalado por pliegue, margen), criterio de realce con coherencia espacial |
 | V0.38 | 06-11-2026 | Datos | Auditoría §6: lector CSV robusto (comillas, miles, Latin-1, aviso de celdas perdidas), permiso antes de enviar la zona a Esri/GEBCO, SHA-256 del modelo de visión, copia automática de todos los proyectos con reintento y aviso, script para SheetJS 0.20.3 |
+| V0.39 | 06-11-2026 | Interfaz | Auditoría §5: nombres accesibles, patrón ARIA de pestañas, avisos anunciados, atajos desactivables, contrastes AA, CSS duplicado unido, objetivos táctiles |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -662,6 +663,22 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.39 — Accesibilidad y CSS (auditoría, sección 5) (06-11-2026)
+
+- **Qué se hizo:** nombres accesibles en los 24 deslizadores; pestañas con el patrón ARIA (flechas, tabulación
+  itinerante, paneles); avisos, guardado y detección anunciados; la ayuda emergente ya no sustituye al texto visible;
+  opción en Ayuda para desactivar los atajos de una tecla; contrastes AA (botón de borrar en oscuro, etiquetas de
+  columna en Datos, `--warn` definido, bordes en oscuro); textos traducidos (`core`, `color`, `name`, `delete`, título
+  de la marca); botón de tema con `aria-pressed`; 13 reglas CSS duplicadas unidas (sin cambio visible en 6 capturas
+  comparadas píxel a píxel); objetivos táctiles mayores.
+- **Cambios:** `index.html` (CSS y marcado), `app.js` (`slider`, `nameSliders`, `tabsA11y`, atajos, tema),
+  `i18n.js` (`data-i18n-aria`, `title` como nombre solo en iconos). `DELIVERY` = V0.39.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 5.
+- **Comprobación:** 78 pruebas JS. En Chrome: 0 deslizadores sin nombre, → cambia de pestaña, paneles `tabpanel`;
+  contrastes calculados (texto 4,7–9,4:1; bordes 3,9:1).
+- **Pendiente:** los 49 estilos en línea y la unión de los bloques para móvil siguen; revisión con lector de
+  pantalla real.
 
 ## V0.38 — Importación, copias y privacidad (auditoría, sección 6 y punto 7) (06-11-2026)
 

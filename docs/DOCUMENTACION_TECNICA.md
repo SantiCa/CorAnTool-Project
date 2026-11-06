@@ -1789,6 +1789,22 @@ cambia lo que se ve en la imagen de trabajo.
 
 ---
 
+### 22.x Accesibilidad (desde V0.39)
+- Objetivo WCAG 2.1 AA. Todos los deslizadores tienen nombre accesible (`aria-labelledby` en los de los formularios,
+  `aria-label` con el texto visible en los demás: `nameSliders`).
+- Pestañas (`[role=tablist]`: lateral, multiproxy, inicio, modelos): `aria-selected`, tabulación itinerante (solo la
+  activa recibe el foco con Tab) y ←/→/Inicio/Fin para cambiar (`tabsA11y`); los paneles laterales son `tabpanel`
+  con `aria-labelledby`/`aria-controls`.
+- Avisos (`#toast`), estado del guardado y de la detección son regiones `role=status` (`aria-live=polite`).
+- La ayuda emergente (`title`) solo se usa como nombre accesible en botones sin texto (iconos, ☾, ✕); en los demás,
+  el nombre es el texto visible (criterio 2.5.3).
+- Atajos de una tecla: se pueden desactivar en Ayuda (`localStorage ichantool.keys`, criterio 2.1.4); Ctrl/⌘+Z,
+  Esc, Supr y las flechas siguen activos.
+- Colores (contraste ≥ 4,5:1 para texto y ≥ 3:1 para bordes de controles, en los dos temas): `--warn`,
+  `--danger-ink`, `--tag-imp|img|calc|rec|lay` (etiquetas de tipo de columna en Datos), `--line-strong` oscuro
+  `#6f7a75`.
+- Pantallas táctiles (`pointer: coarse`): botones y pestañas de ≥ 36 px, casillas de 20 px.
+
 ## 23. Referencias
 
 - Casanova-Arenillas, S., Rodríguez-Tovar, F.J., Martínez-Ruiz, F. (2020). Applied ichnology in

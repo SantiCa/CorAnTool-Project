@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.39 — 2026-11-06
+- Accessibility (audit §5): accessible names for all sliders, ARIA tab pattern with arrow keys, live regions for toasts and save/detection status, tooltips no longer override visible names, option to turn off single-key shortcuts, AA colour contrast in both themes, translated labels, duplicate CSS rules merged, larger touch targets.
+
 ## V0.38 — 2026-11-06
 - Import, backups and privacy (audit §6): CSV reader handles quotes, thousands separators and Windows-1252 files and reports cells read as empty; consent before map backgrounds send the study area to Esri/GEBCO; SHA-256 of the vision model stored in the project; automatic folder copy covers every modified project, retries and warns when stale; `tools/update_vendor.sh` to move SheetJS to 0.20.3 (CDN fallback already 0.20.3).
 

@@ -915,8 +915,9 @@ export function t(key, vars) {
 export function applyI18n(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   root.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = t(el.dataset.i18nHtml); });
-  root.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); el.setAttribute('aria-label', el.title); });
+  root.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); if (!/[\p{L}\p{N}]/u.test(el.textContent) && !el.querySelector('img[alt]')) el.setAttribute('aria-label', el.title); else el.removeAttribute('aria-label'); });   // V0.39: the visible text stays the accessible name (WCAG 2.5.3)
   root.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+  root.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });   // V0.39
   document.documentElement.lang = current;
 }
 
@@ -1879,3 +1880,5 @@ Object.assign(D.en, {
 });
 Object.assign(D.es, { 'bk.old': 'La copia automática en carpeta no se hace desde hace {d} días y hay cambios: reactívala en Copias de seguridad.' });
 Object.assign(D.en, { 'bk.old': 'The automatic folder copy has not run for {d} days and there are changes: reactivate it in Backups.' });
+Object.assign(D.es, { 'a11y.core': 'Sondeo', 'a11y.color': 'Color', 'a11y.name': 'Nombre', 'a11y.delete': 'Borrar', 'brand.tip': 'CorAnTool (antes IchAnTool)', 'a11y.keys': 'Atajos de una tecla', 'a11y.keysOn': 'Activados', 'a11y.keysOff': 'Desactivados (solo con Ctrl/⌘ o desde los botones)', 'a11y.keysNote': 'Los atajos de una sola tecla (B, E, S…) pueden interferir con lectores de pantalla o control por voz (WCAG 2.1.4).' });
+Object.assign(D.en, { 'a11y.core': 'Core', 'a11y.color': 'Colour', 'a11y.name': 'Name', 'a11y.delete': 'Delete', 'brand.tip': 'CorAnTool (formerly IchAnTool)', 'a11y.keys': 'Single-key shortcuts', 'a11y.keysOn': 'On', 'a11y.keysOff': 'Off (only with Ctrl/⌘ or from the buttons)', 'a11y.keysNote': 'Single-key shortcuts (B, E, S…) may interfere with screen readers or voice control (WCAG 2.1.4).' });

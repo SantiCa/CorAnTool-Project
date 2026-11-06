@@ -15,6 +15,7 @@
   --accent: #94500f; --accent-ink: #ffffff; --accent-soft: #f1e3d2; --accent-text: #7a410e; --focus: #2f6fb0;
   --line-strong: #8a8d86; --paper: #ffffff; --tip-bg: #fbf3d5; --tip-ink: #3a3320; --tip-line: #e3cf7a;
   --viewer: #161a19; --viewer-ink: #e6e1d6; --danger: #b3261e; --ok: #2e7d4f;
+  --danger-ink: #ffffff; --warn: #8a4b00; --tag-imp: #1f5fb8; --tag-img: #2e7d4f; --tag-calc: #8a5410; --tag-rec: #6b3fa3; --tag-lay: #7a3594;
   --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-head: "IBM Plex Sans Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -24,15 +25,17 @@
   :root:not([data-theme="light"]) {
     --bg: #101413; --panel: #171c1b; --ink: #e2e7e5; --muted: #95a39e; --line: #2a3331; --field: #0f1312;
     --accent: #e09a5b; --accent-ink: #1a1208; --accent-soft: #3a2a1b; --accent-text: #e09a5b; --focus: #7fb2e5;
-    --line-strong: #5e6863; --paper: #ffffff; --tip-bg: #2e2a1a; --tip-ink: #efe6c4; --tip-line: #5a5030;
+    --line-strong: #6f7a75; --paper: #ffffff; --tip-bg: #2e2a1a; --tip-ink: #efe6c4; --tip-line: #5a5030;
     --viewer: #0c0f0e; --viewer-ink: #e6e1d6; --danger: #ff8a80; --ok: #7bd6a0; color-scheme: dark;
+    --danger-ink: #2a0d0a; --warn: #f0b45c; --tag-imp: #8db8f2; --tag-img: #7bd6a0; --tag-calc: #e8b26a; --tag-rec: #c4a6ee; --tag-lay: #d79be8;
   }
 }
 :root[data-theme="dark"] {
   --bg: #101413; --panel: #171c1b; --ink: #e2e7e5; --muted: #95a39e; --line: #2a3331; --field: #0f1312;
   --accent: #e09a5b; --accent-ink: #1a1208; --accent-soft: #3a2a1b; --accent-text: #e09a5b; --focus: #7fb2e5;
-  --line-strong: #5e6863; --paper: #ffffff; --tip-bg: #2e2a1a; --tip-ink: #efe6c4; --tip-line: #5a5030;
+  --line-strong: #6f7a75; --paper: #ffffff; --tip-bg: #2e2a1a; --tip-ink: #efe6c4; --tip-line: #5a5030;
   --viewer: #0c0f0e; --viewer-ink: #e6e1d6; --danger: #ff8a80; --ok: #7bd6a0; color-scheme: dark;
+    --danger-ink: #2a0d0a; --warn: #f0b45c; --tag-imp: #8db8f2; --tag-img: #7bd6a0; --tag-calc: #e8b26a; --tag-rec: #c4a6ee; --tag-lay: #d79be8;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -50,7 +53,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand b i { font-style: normal; color: var(--accent); }
 .brand span { color: var(--muted); font-size: 12px; }
 .top .grow { flex: 1; }
-.top .acts { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .btn { border: 1px solid var(--line); background: var(--field); border-radius: var(--r); padding: 5px 10px; cursor: pointer; white-space: nowrap; }
 .btn:hover { border-color: var(--muted); }
@@ -150,7 +152,6 @@ input[type=number] { font-family: var(--font-data); font-variant-numeric: tabula
 .tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .tabs button { flex: 1 1 auto; border: 0; background: transparent; padding: 10px 6px; cursor: pointer; font: 600 12.5px var(--font-head); color: var(--muted); border-bottom: 2px solid transparent; }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
-.pane { padding: 12px 14px; display: grid; gap: 12px; align-content: start; overflow: auto; min-height: 0; flex: 1; }
 
 .clist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .clist li { display: grid; grid-template-columns: 22px 18px 22px minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: var(--r); border: 1px solid transparent; cursor: pointer; }
@@ -164,7 +165,6 @@ input[type=number] { font-family: var(--font-data); font-variant-numeric: tabula
 .clist .cnt { font: 11px var(--font-data); color: var(--muted); white-space: nowrap; }
 .obj-list-items { display: grid; gap: 3px; max-height: 240px; overflow: auto; margin-top: 6px; }
 .obj-list-items button { text-align: left; white-space: normal; }
-.clist .del { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0; font-size: 15px; line-height: 1; }
 
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
 .kv dt { color: var(--muted); }
@@ -205,7 +205,6 @@ dialog ol { padding-left: 20px; display: grid; gap: 6px; }
 .btn.proj b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .btn.proj .lbl { color: var(--muted); font-size: 11.5px; }
 .btn.danger { border-color: var(--danger); color: var(--danger); }
-.savestate { font-size: 11.5px; color: var(--muted); align-self: center; min-width: 7em; }
 .savestate[data-state="saved"] { color: var(--ok); }
 .savestate[data-state="error"], .savestate[data-state="off"] { color: var(--danger); }
 .plist { max-height: 46vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--r); }
@@ -216,7 +215,6 @@ dialog ol { padding-left: 20px; display: grid; gap: 6px; }
 .reccols { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 4px; max-height: 30vh; overflow: auto; }
 .rec { border: 1px solid var(--line); border-radius: var(--r); padding: 8px; display: grid; gap: 4px; }
 .rec .srow { flex-wrap: nowrap; justify-content: space-between; }
-.rec .srow .chk { min-width: 0; }
 .rec .srow input[type=color] { width: 22px; height: 20px; padding: 0; border: 1px solid var(--line); border-radius: 4px; }
 #logPanel, #logStage { display: none; }
 .work.log { grid-template-columns: var(--lw, 300px) minmax(0, 1fr); }
@@ -225,7 +223,7 @@ dialog ol { padding-left: 20px; display: grid; gap: 6px; }
 .work.log > #logStage { display: block; min-width: 0; min-height: 0; overflow: auto; padding: 16px; }
 #logPanel .body { grid-template-columns: minmax(0, 1fr); }
 #logPanel .body > *, .rec, .rec .srow > * { min-width: 0; }
-.rec .srow .chk { overflow: hidden; }
+.rec .srow .chk { min-width: 0; overflow: hidden; }
 .rec .srow .chk span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .rec .srow .chk.note { flex: none; }
 #logSvg { display: inline-block; background: #ffffff; border: 1px solid var(--line); border-radius: var(--r); }
@@ -238,7 +236,6 @@ dialog ol { padding-left: 20px; display: grid; gap: 6px; }
 #geoStage .gpane { flex: 1; overflow: auto; padding: 14px 16px; min-height: 0; }
 #geoStage .gctl { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin-bottom: 10px; }
 #geoStage .gctl .f { min-width: 90px; }
-.tipcard { position: fixed; left: 16px; bottom: 16px; z-index: 40; max-width: 380px; background: var(--tip-bg); color: var(--tip-ink); border: 1px solid var(--tip-line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
 .tipcard[hidden] { display: none; }
 #tour { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
 #tour[hidden] { display: none; }
@@ -287,15 +284,11 @@ dialog.wide { max-width: min(1100px, calc(100vw - 32px)); width: 100%; }
 .zmap.dragging svg { cursor: grabbing; }
 #geoLogSvg, #geoMapSvg { display: inline-block; background: #ffffff; border: 1px solid var(--line); border-radius: var(--r); max-width: 100%; }
 #geoLogSvg svg { display: block; }
-#geoMapSvg { display: block; width: 100%; }
 #geoMapSvg svg { display: block; width: 100%; max-width: 100%; height: auto; }
 .work.geo.mapwide { grid-template-columns: minmax(0, 1fr); }
 .work.geo.mapwide > #geoPanel { display: none; }
 #geoMapSvg:fullscreen { background: #fff; overflow: auto; display: grid; place-items: center; }
 #geoMapSvg:fullscreen svg { width: auto; height: 100vh; max-width: 100vw; }
-
-.glogwrap { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
-.glogside { flex: 1; min-width: 220px; display: grid; gap: 6px; }
 .ivrow { flex-wrap: nowrap; gap: 6px; font-size: 12px; }
 .ivrow .note { flex: 0 0 auto; font-size: 11px; }
 .ivrow select { min-width: 70px; flex: 1 1 auto; }
@@ -303,10 +296,8 @@ dialog.wide { max-width: min(1100px, calc(100vw - 32px)); width: 100%; }
 .ivrow.auto { opacity: .7; font-style: italic; }
 .ivhead { margin-top: 6px; font-size: 12.5px; }
 .warn { color: var(--danger); cursor: help; }
-.glogside { max-width: 520px; }
 div.gcore { border: 1px solid var(--line); border-radius: var(--r); padding: 6px 8px; display: grid; gap: 4px; cursor: pointer; }
 div.gcore.current { border-color: var(--accent); background: var(--accent-soft); }
-.gcores { display: grid; gap: 6px; max-height: 32vh; overflow: auto; }
 .gparams { display: grid; gap: 4px; }
 .gparams .note { margin: -2px 0 6px; }
 #geoPanel .body > *, .rule .row > * { min-width: 0; }
@@ -345,7 +336,7 @@ dialog input[type=text] { min-width: 0; }
 /* V0.35: Data as a spreadsheet */
 .dsbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
 .dsbar .chk.on { color: var(--accent-text); font-weight: 600; }
-.dsmod { color: var(--warn-text, #8a4b00); font-size: 12px; }
+.dsmod { color: var(--warn); font-size: 12px; }
 .dswarn { margin: 0 0 8px; padding: 6px 10px; border-left: 3px solid #c77c02; background: color-mix(in srgb, #c77c02 12%, var(--panel)); font-size: 12px; max-width: 80ch; }
 .dsform { display: grid; gap: 6px; max-width: 900px; padding: 10px; margin-bottom: 10px; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--panel); }
 .dsform .row { align-items: flex-end; gap: 8px; }
@@ -367,7 +358,7 @@ dialog input[type=text] { min-width: 0; }
 .dtable th, .dtable td { border: 1px solid var(--line); padding: 2px 6px; text-align: right; white-space: nowrap; }
 .dtable thead th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
 .dtable th .tag { display: block; font: 600 10px var(--font-body); color: var(--muted); }
-.dtable th.src-imp .tag { color: #3b7dd8; } .dtable th.src-img .tag, .dtable th.src-man .tag { color: #2e7d4f; } .dtable th.src-calc .tag { color: #b8742a; } .dtable th.src-rec .tag { color: #7a4fb2; } .dtable th.src-lay .tag { color: #8e44ad; }
+.dtable th.src-imp .tag { color: var(--tag-imp); } .dtable th.src-img .tag, .dtable th.src-man .tag { color: var(--tag-img); } .dtable th.src-calc .tag { color: var(--tag-calc); } .dtable th.src-rec .tag { color: var(--tag-rec); } .dtable th.src-lay .tag { color: var(--tag-lay); }   /* V0.39: AA contrast in both themes */
 .dtable td[contenteditable] { background: var(--accent-soft); }
 .dtable td.txt { text-align: left; }
 .cells td { min-width: 90px; text-align: left; } .cells td input { width: 100%; border: 0; background: transparent; font: inherit; color: var(--ink); }
@@ -375,7 +366,6 @@ dialog input[type=text] { min-width: 0; }
 .colrow { display: grid; grid-template-columns: 160px minmax(0, 1fr) 140px auto; gap: 6px; align-items: center; }
 #home { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow: auto; padding: 20px max(16px, 3vw); }
 #home[hidden] { display: none; }
-#home .hgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; max-width: 1500px; margin: 0 auto; }
 #home .htabs { display: flex; gap: 6px; max-width: 1500px; margin: 0 auto 12px; }
 .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 #home .mpbox { border: 1px solid var(--line); border-radius: var(--r); padding: 10px; display: grid; gap: 6px; }
@@ -413,11 +403,11 @@ body.viewonly .top .seg, body.viewonly .corebar, body.viewonly #projBtn { displa
 
 /* V22 council review */
 details.bk > summary { cursor: pointer; font-weight: 600; }
-.pane { grid-template-columns: minmax(0, 1fr); }
+.pane { padding: 12px 14px; display: grid; gap: 12px; align-content: start; overflow: auto; min-height: 0; flex: 1; grid-template-columns: minmax(0, 1fr); }
 .pane table, .clfscope table { display: block; overflow-x: auto; max-width: 100%; }
 .mlbody table { display: block; overflow-x: auto; max-width: 100%; }
 #sideTabs button { flex: 1 1 0; min-width: 0; padding: 10px 2px; }
-.tipcard { left: auto; right: 16px; bottom: 16px; max-width: 340px; }
+.tipcard { position: fixed; left: 16px; bottom: 16px; z-index: 40; max-width: 380px; background: var(--tip-bg); color: var(--tip-ink); border: 1px solid var(--tip-line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.18); left: auto; right: 16px; bottom: 16px; max-width: 340px; }
 #ageStatus.warn { color: var(--danger); }
 #figOut:empty, #figOut > .note:only-child { background: var(--panel); }
 /* V0.27: empty figure = blank sheet in the middle of the stage */
@@ -426,10 +416,10 @@ details.bk > summary { cursor: pointer; font-weight: 600; }
 .figempty p { margin: 0; max-width: 34ch; }
 /* V0.27: the top bar stays on one row; below 1500 px the labels give way to icons and the project name shortens */
 .top { flex-wrap: nowrap; gap: 12px; }
-.top .acts { flex-wrap: nowrap; align-items: center; }
+.top .acts { display: flex; gap: 6px; flex-wrap: wrap; flex-wrap: nowrap; align-items: center; }
 #helpBtn .ico { display: none; font-weight: 600; }
 .btn.proj #projName { max-width: 26vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.savestate { white-space: nowrap; }
+.savestate { font-size: 11.5px; color: var(--muted); align-self: center; min-width: 7em; white-space: nowrap; }
 @media (max-width: 1500px) {
   .btn.proj .lbl, .corebar .lbl, #helpBtn .lbl { display: none; }
   #helpBtn .ico { display: inline; }
@@ -464,7 +454,7 @@ details.bk > summary { cursor: pointer; font-weight: 600; }
 #home .hbar input[type=search] { max-width: 280px; border: 1px solid var(--line-strong); border-radius: var(--r); padding: 6px 9px; background: var(--field); }
 #home .count { font: 600 11px/1 var(--font-data); padding: 2px 6px; border-radius: 9px; background: var(--bg); color: var(--muted); }
 #home .btn[aria-pressed="true"] .count { background: color-mix(in srgb, var(--accent-ink) 22%, transparent); color: inherit; }
-#home .hgrid { padding: 0 max(16px, 3vw); }
+#home .hgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; max-width: 1500px; margin: 0 auto; padding: 0 max(16px, 3vw); }
 #home .hpane { display: grid; gap: 14px; }
 .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .mpsaved { margin: 8px 0 14px; }
@@ -507,7 +497,7 @@ details.bk > summary { cursor: pointer; font-weight: 600; }
 .work.lcollapsed > aside.side.left, .work.rcollapsed > aside.side.right { visibility: hidden; overflow: hidden; border: 0; }
 .mapframe { position: relative; width: var(--fw, 100%); max-width: none; }
 .mapframe > .zmap { width: 100%; }
-#geoMapSvg { width: 100%; }
+#geoMapSvg { display: block; width: 100%; width: 100%; }
 .rszh { position: absolute; top: 0; right: -6px; bottom: 0; width: 12px; cursor: ew-resize; touch-action: none; }
 .rszv { position: absolute; left: 0; right: 0; bottom: -6px; height: 12px; cursor: ns-resize; touch-action: none; }
 .rszh::after { content: ""; position: absolute; right: 4px; top: 50%; width: 4px; height: 44px; margin-top: -22px; border-radius: 2px; background: var(--line-strong); }
@@ -521,9 +511,9 @@ details.bk > summary { cursor: pointer; font-weight: 600; }
 #geoIntervals .ivrow.sel { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; background: var(--accent-soft); }
 .markpick { display: inline-flex; gap: 4px; align-items: center; }
 .markpick select { max-width: 150px; }
-.clist .del { width: 22px; height: 22px; border-radius: 4px; }
+.clist .del { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0; font-size: 15px; line-height: 1; width: 22px; height: 22px; border-radius: 4px; }
 .clist .del:hover, .clist .del:focus-visible { color: var(--danger, #b3261e); background: var(--bg); }
-.clist .del.danger { width: auto; padding: 0 6px; font-size: 11px; color: #fff; background: var(--danger, #b3261e); }
+.clist .del.danger { width: auto; padding: 0 6px; font-size: 11px; color: var(--danger-ink); background: var(--danger); }
 /* V25: Multiproxy — compact panel, summaries, toolbar, hover readout, resizable tracks */
 .ssum { margin-left: auto; padding-left: 8px; font-weight: 400; font-size: 11.5px; color: var(--muted); text-transform: none; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48%; }
 .flabel { font-size: 12px; color: var(--muted); }
@@ -533,16 +523,15 @@ details.mini > summary { font-size: 12px; color: var(--accent-text); cursor: poi
 details.mini[open] { display: grid; gap: 6px; }
 .gctab { width: 100%; border-collapse: collapse; font: 12.5px var(--font-body); table-layout: fixed; }
 .gctab th:nth-child(1) { width: 30%; } .gctab th:nth-child(4) { width: 46px; } .gctab th:nth-child(5) { width: 30px; }
-.gctab input { font-size: 11.5px; }
 .gctab th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11.5px; padding: 2px 4px; }
 .gctab td { padding: 2px 3px; border-top: 1px solid var(--line); border-bottom: 0; vertical-align: middle; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gctab tr.current td { background: var(--accent-soft); }
-.gctab input { width: 100%; min-width: 0; padding: 3px 4px; font-size: 12px; }
+.gctab input { font-size: 11.5px; width: 100%; min-width: 0; padding: 3px 4px; font-size: 12px; }
 .gctab .gcname { background: none; border: 0; padding: 2px 0; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; text-align: left; }
 .gctab .gcname:hover { color: var(--accent-text); text-decoration: underline; }
 .gctab .gcn { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; cursor: help; }
-.gctab .gcn.warn { color: var(--warn, #9a5b00); }
-.gcores { max-height: 34vh; }
+.gctab .gcn.warn { color: var(--warn); }
+.gcores { display: grid; gap: 6px; max-height: 32vh; overflow: auto; max-height: 34vh; }
 .trainbar { position: sticky; bottom: 0; display: flex; gap: 10px; align-items: center; padding: 10px 14px; background: var(--panel); border-top: 1px solid var(--line); z-index: 2; }
 .trainbar .note { flex: 1; min-width: 0; }
 .gtool { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 4px; }
@@ -552,9 +541,9 @@ details.mini[open] { display: grid; gap: 6px; }
 .gtool .f.inl { display: flex; gap: 6px; align-items: center; flex-direction: row; }
 .gtool .f.inl input { width: 90px; }
 .gtip { margin: 0 0 8px; }
-.glogwrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 14px; align-items: start; }
+.glogwrap { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 14px; align-items: start; }
 @media (max-width: 1180px) { .glogwrap { grid-template-columns: minmax(0, 1fr); } }
-.glogside { max-width: none; position: sticky; top: 0; max-height: calc(100vh - 170px); overflow: auto; }
+.glogside { flex: 1; min-width: 220px; display: grid; gap: 6px; max-width: 520px; max-width: none; position: sticky; top: 0; max-height: calc(100vh - 170px); overflow: auto; }
 #geoLogSvg, #logSvg { overflow: auto; max-width: 100%; max-height: calc(100vh - 170px); }
 .loghover { position: relative; }
 .lgx { position: absolute; pointer-events: none; }
@@ -563,8 +552,7 @@ details.mini[open] { display: grid; gap: 6px; }
 .lgcard { z-index: 4; min-width: 180px; max-width: 300px; background: var(--tip-bg); color: var(--tip-ink); border: 1px solid var(--tip-line); border-radius: 8px; padding: 7px 9px; font-size: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.16); }
 .lgcard h4 { margin: 0 0 4px; font-size: 12.5px; }
 .lgcard table { border-collapse: collapse; width: 100%; }
-.lgcard td { padding: 1px 0; vertical-align: top; }
-.lgcard td { text-align: left; font-family: var(--font-body); font-size: 12px; border: 0; white-space: nowrap; }
+.lgcard td { padding: 1px 0; vertical-align: top; text-align: left; font-family: var(--font-body); font-size: 12px; border: 0; white-space: nowrap; }
 .lgcard td + td { text-align: right; padding-left: 10px; font-variant-numeric: tabular-nums; font-weight: 600; }
 .lgcard tr.on td { color: var(--accent-text); }
 .lgcard .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
@@ -585,7 +573,7 @@ details.mini[open] { display: grid; gap: 6px; }
 .clf > header b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .clf > header .clfstate { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
 .clf > header .clfstate.ok { color: var(--ok, #2e7d4f); }
-.clf > header .clfstate.warn { color: var(--warn, #9a5b00); }
+.clf > header .clfstate.warn { color: var(--warn); }
 .clfbody { display: grid; gap: 8px; padding: 2px 10px 10px; border-top: 1px solid var(--line); }
 .clfbody .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .clfbody .chips label { display: inline-flex; gap: 4px; align-items: center; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; cursor: pointer; }
@@ -638,22 +626,29 @@ details.mini[open] { display: grid; gap: 6px; }
 .clist .eye { background: none; border: 0; cursor: pointer; padding: 0 4px; font-size: 14px; color: var(--ink, inherit); opacity: .8; }
 .clist .eye.off { opacity: .25; }
 .clist li.hid .name { opacity: .5; }
+/* V0.39: touch screens — targets of at least 32 px (WCAG 2.5.8 asks for 24 px) */
+@media (pointer: coarse) {
+  .btn, .btn.small, .tool, .seg button, .tabs [role=tab], .htabs .btn { min-height: 36px; min-width: 36px; }
+  .clist .del { min-width: 32px; min-height: 32px; }
+  .chk input, input[type=checkbox], input[type=radio] { width: 20px; height: 20px; }
+  input[type=range] { min-height: 32px; }
+}
 </style>
 </head>
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand" title="CorAnTool (antes IchAnTool)"><b>Cor<i>An</i>Tool</b><span class="vtag" data-version data-i18n-title="ver.tip"></span></div>
+    <div class="brand" data-i18n-title="brand.tip"><b>Cor<i>An</i>Tool</b><span class="vtag" data-version data-i18n-title="ver.tip"></span></div>
     <button class="btn proj" id="projBtn" data-i18n-title="home.title"><span aria-hidden="true">⌂</span><span class="lbl" data-i18n="proj.label"></span><b id="projName"></b></button>
     <div class="corebar"><span class="lbl" data-i18n="core.label"></span><select id="coreSel"></select><button class="btn small" id="coreAdd" data-i18n-title="core.add">+</button><button class="btn small ghost" id="coreEdit" data-i18n-title="core.edit">✎</button></div>
     <div class="seg" role="group"><button id="modeSection" data-i18n-title="mode.hint.section" aria-pressed="true" data-i18n="mode.section"></button><button id="modeLog" data-i18n-title="mode.hint.log" aria-pressed="false" data-i18n="mode.log"></button><button id="modeData" data-i18n-title="mode.hint.data" aria-pressed="false" data-i18n="mode.data"></button><button id="modeGeo" data-i18n-title="mode.hint.geo" aria-pressed="false" data-i18n="mode.geo"></button><button id="modeFig" data-i18n-title="mode.hint.fig" aria-pressed="false" data-i18n="mode.fig"></button></div>
     <div class="grow"></div>
     <div class="acts">
-      <span class="savestate" id="saveState"></span>
+      <span class="savestate" id="saveState" role="status" aria-live="polite"></span>
       <button class="btn small danger" id="bkReactivateTop" hidden data-i18n="bk.reactivate"></button>
       <button class="btn ghost" id="cmtBtn" data-i18n-title="cmt.title">💬</button>
       <button class="btn ghost" id="helpBtn" data-i18n-title="top.help"><span class="ico" aria-hidden="true">?</span><span class="lbl" data-i18n="top.help"></span></button>
-      <button class="btn ghost" id="themeBtn" data-i18n-title="top.theme">☾</button>
+      <button class="btn ghost" id="themeBtn" data-i18n-title="top.theme" aria-pressed="false">☾</button>
       <button class="btn ghost" id="langBtn" data-i18n-title="top.lang">EN</button>
     </div>
   </header>
@@ -725,7 +720,7 @@ details.mini[open] { display: grid; gap: 6px; }
           <div id="detectCtl" style="display:grid;gap:8px"></div>
           <label class="chk"><input type="checkbox" id="dFill"><span data-i18n="d.fill"></span></label>
           <div class="row"><button class="btn primary" id="detectBtn" data-i18n="d.run"></button><button class="btn" id="clearCand" data-i18n="d.clear"></button></div>
-          <p class="status-line" id="detectStatus"></p>
+          <p class="status-line" id="detectStatus" role="status" aria-live="polite"></p>
           <p class="note" data-i18n="d.note"></p>
         </div>
       </details>
@@ -971,7 +966,7 @@ details.mini[open] { display: grid; gap: 6px; }
       </div>
       <div class="gpane" data-pane="logs">
         <div class="gtool">
-          <div class="grp" role="group" data-i18n-title="gx.tip.core"><button class="btn small" id="geoCorePrev" data-i18n-title="gx.prevCore">◀</button><select id="geoCoreSel" aria-label="core"></select><button class="btn small" id="geoCoreNext" data-i18n-title="gx.nextCore">▶</button></div>
+          <div class="grp" role="group" data-i18n-title="gx.tip.core"><button class="btn small" id="geoCorePrev" data-i18n-title="gx.prevCore">◀</button><select id="geoCoreSel" data-i18n-aria="a11y.core"></select><button class="btn small" id="geoCoreNext" data-i18n-title="gx.nextCore">▶</button></div>
           <div class="grp"><label class="chk" data-i18n-title="cl.tip.showEmpty"><input type="checkbox" id="geoShowEmpty"><span data-i18n="cl.showEmpty"></span></label></div>
           <div class="grp"><label class="chk" data-i18n-title="gx.tip.shade"><input type="checkbox" id="geoShade"><span data-i18n="geo.shade"></span></label><div id="geoShadeBy" class="shadeby" hidden></div>
             <label class="f inl" data-i18n-title="gx.tip.trackW"><span data-i18n="gx.trackW"></span><input type="range" id="geoTrackW" min="60" max="260" step="10"></label>
@@ -1023,6 +1018,7 @@ details.mini[open] { display: grid; gap: 6px; }
 <dialog id="help">
   <h2><span data-i18n="help.title"></span> <span class="vtag" data-version></span></h2>
   <div class="row" style="gap:10px;margin-bottom:8px"><button class="btn primary small" id="tourBtn" data-i18n="tour.start"></button><label class="chk"><input type="checkbox" id="tipsToggle"><span data-i18n="tip.toggle"></span></label><label class="chk"><input type="checkbox" id="hoverHelpToggle"><span data-i18n="hh.toggle"></span></label></div>
+  <div class="row" style="gap:10px;margin-bottom:8px"><label class="chk" data-i18n-title="a11y.keysNote"><input type="checkbox" id="keysToggle"><span data-i18n="a11y.keys"></span></label></div>
   <div data-i18n-html="help.structure"></div>
   <div data-i18n-html="help.body"></div>
   <div class="row" style="justify-content:flex-end"><button class="btn" id="helpClose" data-i18n="help.close"></button></div>
@@ -1129,7 +1125,7 @@ details.mini[open] { display: grid; gap: 6px; }
 <div id="tour" hidden><div class="tourhl"></div><div class="tourbox"></div></div>
 <dialog id="mlDlg" class="wide">
   <div class="row" style="justify-content:space-between;align-items:center"><h2 data-i18n="ml.title" style="margin:0"></h2><button class="btn small" id="mlClose" data-i18n="help.close"></button></div>
-  <div class="htabs" id="mlTabs"><button class="btn small" data-mltab="guide" data-i18n="ml.tab.guide"></button><button class="btn small" data-mltab="train" data-i18n="ml.tab.train"></button><button class="btn small" data-mltab="examples" data-i18n="ml.tab.examples"></button><button class="btn small" data-mltab="others" data-i18n="ml.tab.others"></button></div>
+  <div class="htabs" id="mlTabs" role="tablist"><button class="btn small" role="tab" data-mltab="guide" data-i18n="ml.tab.guide"></button><button class="btn small" role="tab" data-mltab="train" data-i18n="ml.tab.train"></button><button class="btn small" role="tab" data-mltab="examples" data-i18n="ml.tab.examples"></button><button class="btn small" role="tab" data-mltab="others" data-i18n="ml.tab.others"></button></div>
   <div id="mlBody" class="mlbody"></div>
 </dialog>
 <dialog id="trainDlg" class="wide">
@@ -1148,7 +1144,7 @@ details.mini[open] { display: grid; gap: 6px; }
   <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn danger" id="cdDel"></button><span><button class="btn" id="cdCancel" data-i18n="confirm.no"></button> <button class="btn primary" id="cdOk" data-i18n="geo.r.ok"></button></span></div>
 </dialog>
 <div class="float" id="float" hidden><header id="floatHead"><span id="floatTitle"></span><span style="flex:1"></span><button class="btn small ghost" id="floatClose">✕</button></header><div class="fbody" id="floatBody"></div></div>
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script type="module" src="js/app.js"></script>
 </body>

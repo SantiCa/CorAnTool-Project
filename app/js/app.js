@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.38';
+const DELIVERY = 'V0.39';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -1617,6 +1617,7 @@ document.addEventListener('keydown', (e) => {
   if (mode !== 'section' || !$('home').hidden || tourStep >= 0 || (e.target.closest('button, a, summary, [role=tab], label') && (e.key === ' ' || e.key === 'Enter'))) return;
   const k = e.key, s = sec();
   if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+  if (!singleKeys && k.length === 1 && k !== ' ' && !e.ctrlKey && !e.metaKey) return;   // V0.39: single-character shortcuts can be turned off (WCAG 2.1.4)
   if (k === ' ') { spaceDown = true; view.classList.add('pan'); e.preventDefault(); return; }
   const tools = { v: 'select', w: 'wand', b: 'brush', l: 'lasso', c: 'cut', e: 'erase', x: 'exclude', h: 'pan', m: 'mark' };
   if (tools[k.toLowerCase()] && !e.ctrlKey && !e.metaKey) { setTool(tools[k.toLowerCase()]); return; }
@@ -1711,8 +1712,8 @@ function renderClasses() {
     <li data-id="${c.id}" class="${c.id === S.active ? 'active' : ''} ${c.plain ? 'plain' : ''} ${hid.has(c.id) ? 'hid' : ''}">
       <button class="eye ${hid.has(c.id) ? 'off' : ''}" title="${esc(t(hid.has(c.id) ? 'cls.show' : 'cls.hide'))}" aria-label="${esc(t(hid.has(c.id) ? 'cls.show' : 'cls.hide'))}">👁</button>
       <kbd>${keyOf(c)}</kbd>
-      <input type="color" value="${c.color}" aria-label="color">
-      <input class="name" type="text" value="${esc(c.name)}" aria-label="name">
+      <input type="color" value="${c.color}" aria-label="${t('a11y.color')}">
+      <input class="name" type="text" value="${esc(c.name)}" aria-label="${t('a11y.name')}">
       <span class="cnt">${idMode() ? t('id.count', { n: S.sections.reduce((a, x) => a + (x.marks || []).filter((m) => m.cls === c.id).length, 0) }) : t('cls.counts', { n: nObj[c.id] || 0, e: nEx[c.id] || 0 })}</span>
       ${c.fixed ? `<span title="${esc(t('gx.fixedCls'))}"></span>` : `<button class="del" title="${esc(t('gx.delCls'))}" aria-label="${esc(t('gx.delCls'))}">✕</button>`}
     </li>`).join('');
@@ -1998,7 +1999,7 @@ const FILTER_SLIDERS = [['blackPoint', 0, 254, 1], ['whitePoint', 1, 255, 1], ['
 const BUILTIN_PRESETS = ['none', 'dorador2014', 'clahe2019', 'levels', 'local', 'strong'];
 const DETECT_SLIDERS = [['offset', 1, 80, 1, 'adaptive'], ['radius', 3, 200, 1, 'adaptive'], ['threshold', 0, 255, 1, 'global'], ['pThr', 0.05, 0.95, 0.05, 'unet'], ['minArea', 1, 2000, 1], ['smooth', 0, 4, 1]];
 let userPresets = [];
-const slider = (prefix, [k, min, max, step]) => `<div class="slider" data-only="${''}"><span data-i18n="${prefix}.${k}">${t(prefix + '.' + k)}</span><output id="${prefix}o-${k}"></output><input type="range" id="${prefix}-${k}" data-k="${k}" min="${min}" max="${max}" step="${step}"></div>`;
+const slider = (prefix, [k, min, max, step]) => `<div class="slider" data-only="${''}"><span data-i18n="${prefix}.${k}" id="${prefix}l-${k}">${t(prefix + '.' + k)}</span><output id="${prefix}o-${k}" for="${prefix}-${k}"></output><input type="range" id="${prefix}-${k}" data-k="${k}" min="${min}" max="${max}" step="${step}" aria-labelledby="${prefix}l-${k}"></div>`;   // V0.39: accessible name
 
 function buildForms() {
   $('filterCtl').innerHTML = FILTER_SLIDERS.map((d) => slider('f', d)).join('');
@@ -3577,10 +3578,10 @@ function addRecordFromTable(name, tab, xCol, axis, yCols) {
 function renderRecList() {
   $('recList').innerHTML = S.records.map((r) => `
     <div class="rec" data-id="${r.id}">
-      <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>${esc(r.name)}</b><button class="btn small ghost" data-del="1" aria-label="delete">✕</button></div>
+      <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>${esc(r.name)}</b><button class="btn small ghost" data-del="1" aria-label="${t('a11y.delete')}">✕</button></div>
       <span class="note">${t(r.axis === 'age' ? 'log.age' : 'log.depth')} · ${r.series[0]?.x.length || 0} ${t('log.points')}</span>
       ${r.series.map((s, i) => `<div class="row srow"><label class="chk"><input type="checkbox" data-s="${i}" data-k="show" ${s.show ? 'checked' : ''}><span>${esc(s.name)}</span></label>
-        <input type="color" data-s="${i}" data-k="color" value="${s.color}" aria-label="color">
+        <input type="color" data-s="${i}" data-k="color" value="${s.color}" aria-label="${t('a11y.color')}">
         <label class="chk note"><input type="checkbox" data-s="${i}" data-k="reverse" ${s.reverse ? 'checked' : ''}>${t('log.reverse')}</label></div>`).join('')}
     </div>`).join('') || `<p class="note">${t('log.noRecords')}</p>`;
 }
@@ -5431,7 +5432,7 @@ $('mlClose').addEventListener('click', () => $('mlDlg').close());
 $('mlTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-mltab]'); if (b) { mlTab = b.dataset.mltab; renderMl(); } });
 
 function renderMl() {
-  for (const b of document.querySelectorAll('[data-mltab]')) b.setAttribute('aria-pressed', String(b.dataset.mltab === mlTab));
+  for (const b of document.querySelectorAll('[data-mltab]')) b.setAttribute('aria-selected', String(b.dataset.mltab === mlTab));
   const box = $('mlBody');
   if (mlTab === 'guide') box.innerHTML = t('ml.guide') + mlRecommendation();
   else if (mlTab === 'train') box.innerHTML = mlTrainHTML();
@@ -5664,7 +5665,7 @@ $('mpCreate').addEventListener('click', async () => {
 // tabs of the start screen
 for (const b of document.querySelectorAll('[data-htab]')) b.addEventListener('click', () => setHomeTab(b.dataset.htab));
 function setHomeTab(tab) {
-  for (const b of document.querySelectorAll('[data-htab]')) { b.setAttribute('aria-pressed', String(b.dataset.htab === tab)); b.setAttribute('aria-selected', String(b.dataset.htab === tab)); }
+  for (const b of document.querySelectorAll('[data-htab]')) b.setAttribute('aria-selected', String(b.dataset.htab === tab));
   for (const p of document.querySelectorAll('[data-hpane]')) p.hidden = p.dataset.hpane !== tab;
   try { localStorage.setItem('ichantool.homeTab', tab); } catch { /* storage blocked */ }
   if (tab === 'all') requestAnimationFrame(() => redrawAllMap());
@@ -6620,7 +6621,7 @@ $('figPng').addEventListener('click', () => busy(async () => {
 const currentTheme = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 function applyTheme(th) {
   if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th; else delete document.documentElement.dataset.theme;
-  $('themeBtn').textContent = currentTheme() === 'dark' ? '☀' : '☾';
+  $('themeBtn').textContent = currentTheme() === 'dark' ? '☀' : '☾'; $('themeBtn').setAttribute('aria-pressed', String(currentTheme() === 'dark'));
 }
 $('themeBtn').addEventListener('click', () => { const th = currentTheme() === 'dark' ? 'light' : 'dark'; applyTheme(th); try { localStorage.setItem('ichantool.theme', th); } catch { /* storage blocked */ } });
 try { applyTheme(localStorage.getItem('ichantool.theme')); } catch { applyTheme(null); }
@@ -6666,13 +6667,40 @@ function syncSettingsForm() {
   renderBinNote();
 }
 
+/* ───────────── V0.39: accessibility helpers ───────────── */
+/** Names for range inputs that are not inside a <label>: the text of the sibling <span> of their .slider. */
+function nameSliders(root = document) {
+  for (const inp of root.querySelectorAll('input[type=range]')) {
+    if (inp.closest('label') || inp.hasAttribute('aria-labelledby')) continue;
+    const sp = inp.closest('.slider')?.querySelector('span'); if (sp?.textContent) inp.setAttribute('aria-label', sp.textContent.trim());
+  }
+}
+/** ARIA tab pattern for every [role=tablist]: roving tabindex and ←/→/Home/End to move between tabs. */
+function tabsA11y() {
+  const sync = (list) => { const tabs = [...list.querySelectorAll('[role=tab]')], on = tabs.find((b) => b.getAttribute('aria-selected') === 'true') || tabs[0]; tabs.forEach((b) => (b.tabIndex = b === on ? 0 : -1)); };
+  for (const list of document.querySelectorAll('[role=tablist]')) {
+    if (list.dataset.a11y) { sync(list); continue; }
+    list.dataset.a11y = '1'; sync(list);
+    new MutationObserver(() => sync(list)).observe(list, { subtree: true, attributes: true, attributeFilter: ['aria-selected'] });
+    list.addEventListener('keydown', (e) => {
+      const tabs = [...list.querySelectorAll('[role=tab]')].filter((b) => !b.hidden && !b.disabled), i = tabs.indexOf(document.activeElement); if (i < 0) return;
+      const j = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: tabs.length - 1 }[e.key]; if (j == null) return;
+      e.preventDefault(); const b = tabs[(j + tabs.length) % tabs.length]; b.focus(); b.click();
+    });
+  }
+  for (const p of document.querySelectorAll('.pane[data-pane]')) { p.setAttribute('role', 'tabpanel'); const b = document.querySelector(`#sideTabs [data-tab="${p.dataset.pane}"]`); if (b) { b.id ||= 'tab-' + p.dataset.pane; p.setAttribute('aria-labelledby', b.id); p.id ||= 'pane-' + p.dataset.pane; b.setAttribute('aria-controls', p.id); } }
+}
+
 function applyLanguage() {
-  applyI18n(); buildForms(); renderSectionForm(); renderClasses(); renderObject(); renderLearn(); renderResults(); setAge();
+  applyI18n(); buildForms(); nameSliders(); tabsA11y(); renderSectionForm(); renderClasses(); renderObject(); renderLearn(); renderResults(); setAge();
   $('langBtn').textContent = lang() === 'es' ? 'EN' : 'ES';
   renderRecList(); updateProjHeader(); scheduleLog(0); scheduleGeo(0);
   requestRender();
 }
 $('langBtn').addEventListener('click', () => { setLang(lang() === 'es' ? 'en' : 'es'); applyLanguage(); });
+let singleKeys = true; try { singleKeys = localStorage.getItem('ichantool.keys') !== 'off'; } catch { /* storage blocked */ }
+$('keysToggle').checked = singleKeys;
+$('keysToggle').addEventListener('change', (e) => { singleKeys = e.target.checked; try { localStorage.setItem('ichantool.keys', singleKeys ? 'on' : 'off'); } catch { /* storage blocked */ } });
 $('helpBtn').addEventListener('click', () => $('help').showModal());
 $('helpClose').addEventListener('click', () => $('help').close());
 
