@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.32 — 2026-11-06
+- Ichnotaxa distribution figure: one symbol per identified trace or hand-placed mark at its own depth or age; its own depth/age axis; choose traces, marks or both (hollow symbols for marks).
+
 ## V0.31 — 2026-11-05
 - Charts: choose which ichnotaxa are drawn and show them stacked or each in its own column with its own scale.
 

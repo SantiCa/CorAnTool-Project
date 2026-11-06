@@ -1781,6 +1781,10 @@ foto por defecto (`style.imgAspect = 'keep'`: ancho = alto del gráfico / (alto/
 secciones; × `imgStretch`) o fijo (`imgW`). Flechas (`fig.arrowSrc` = todas / solo marcas a mano / solo trazas,
 `arrowExcl` grupos excluidos, `objScale` tamaño de las de cada traza, `markScale`, `markStroke(W)`, `labelSize`,
 `labelColor`, `labelHalo`), compartidas por Secciones y la Columna.
+Desde V0.32, la figura de distribución dibuja un símbolo por cada traza identificada (centroide del objeto, con la
+clase efectiva) y por cada marca puesta a mano, en su profundidad o edad (`app.js::figPoints`), en vez de uno por
+intervalo; `fig.rangeSrc` = `all` / `objects` / `marks`, `fig.rangeHollow` (marcas huecas), `fig.rangeAxis` = eje propio
+de la figura (profundidad o edad, independiente de Columna).
 Desde V0.31: `style.speciesHide` (nombres de icnotaxones que no se dibujan en «Por icnotaxón», la distribución y la
 columna lateral) y `style.speciesMode` (`stack` apilados en una columna, `separate` una columna por icnotaxón con su
 escala, editable en la tabla de ejes como `sp:<nombre>`).

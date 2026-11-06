@@ -1780,3 +1780,11 @@ Object.assign(D.en, { 'tool.overlap': 'Overlap traces (S)', 'ov.on': 'Overlap on
 // V0.31: ichnotaxa in charts
 Object.assign(D.es, { 'sp.title': 'Icnotaxones en los gráficos', 'sp.mode': 'Representación', 'sp.stack': 'Apilados en una columna', 'sp.separate': 'Cada uno en su columna' });
 Object.assign(D.en, { 'sp.title': 'Ichnotaxa in the charts', 'sp.mode': 'Display', 'sp.stack': 'Stacked in one column', 'sp.separate': 'Each in its own column' });
+
+// V0.32: ichnotaxon distribution
+Object.assign(D.es, { 'fig.axisFig': 'Eje vertical', 'fig.ptsSrc': 'Qué se representa', 'fig.ptsSrc.all': 'Trazas y marcas', 'fig.ptsSrc.objects': 'Trazas identificadas en la imagen', 'fig.ptsSrc.marks': 'Marcas puestas a mano',
+  'fig.ptsHollow': 'Marcas a mano con símbolo hueco (para distinguirlas)', 'fig.rangeSubPts': 'Icnotaxones identificados, cada uno en su profundidad' });
+Object.assign(D.en, { 'fig.axisFig': 'Vertical axis', 'fig.ptsSrc': 'What is shown', 'fig.ptsSrc.all': 'Traces and marks', 'fig.ptsSrc.objects': 'Traces identified on the image', 'fig.ptsSrc.marks': 'Marks placed by hand',
+  'fig.ptsHollow': 'Hand-placed marks with a hollow symbol (to tell them apart)', 'fig.rangeSubPts': 'Identified ichnotaxa, each at its own depth' });
+Object.assign(D.es, { 'fig.rangeNote': 'Un símbolo por cada traza identificada en la imagen (en el centro de la traza) y por cada marca puesta a mano, en su profundidad o edad. Elige qué representar y, con las dos, distingue las marcas con símbolo hueco. «Barras» muestra la abundancia por intervalo. El símbolo de cada icnotaxón se guarda y se usa también en la imagen y la columna.' });
+Object.assign(D.en, { 'fig.rangeNote': 'One symbol per trace identified on the image (at the trace centre) and per hand-placed mark, at its depth or age. Choose what to show and, with both, tell marks apart with a hollow symbol. «Bars» shows abundance per interval. Each ichnotaxon symbol is saved and also used in the image and core column.' });

@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.31';
+const DELIVERY = 'V0.32';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -3110,12 +3110,12 @@ $('modeFig').addEventListener('click', () => setMode('fig'));
 
 function scheduleLog(ms = 200) { if (mode !== 'log') return; clearTimeout(logTimer); logTimer = setTimeout(() => busy(renderLog), ms); }
 
-function compositeData() {
+function compositeData(axisPref = S.logView.axis) {   // V0.32: a figure may ask for its own axis
   const secs = [...S.sections].sort((a, b) => a.top * UNIT_TO_CM[a.units] - b.top * UNIT_TO_CM[b.units]);
   const base = secs[0]?.units || 'cm';
   const f = (s) => UNIT_TO_CM[s.units] / UNIT_TO_CM[base];
   for (const s of secs) analyze(s);
-  const model = S.age.model, axis = S.logView.axis === 'age' && model ? 'age' : 'depth';
+  const model = S.age.model, axis = axisPref === 'age' && model ? 'age' : 'depth';
   const rows = compositeRows(secs.map((s) => ({ name: s.name, bins: s.bins.map((b) => ({ ...b, dTop: b.dTop * f(s), dBottom: b.dBottom * f(s), depth: b.depth * f(s) })) })), { axis, model });
   return { secs, base, f, model, axis, rows };
 }
@@ -6043,14 +6043,31 @@ function sectionsSVG() {
   out.push('</svg>');
   return out.join('');
 }
+/**
+ * V0.32: positions of identified ichnotaxa for the distribution figure, on the figure axis (depth or age).
+ * src: 'objects' = traces identified on the image (centroid of each object), 'marks' = identification marks placed by
+ * hand, 'all' = both. Each point: { a, index (class), kind: 'obj' | 'mark' }.
+ */
+function figPoints(D, src = 'all') {
+  const out = [], idx = new Map(S.classes.map((c, i) => [c.id, i]));
+  const put = (s, y, cid, kind) => {
+    const c = clsById(cid); if (!c || c.id === 'artifact' || y < s.roi.y0 || y >= s.roi.y1) return;
+    const d = depthAtRow(s, y) * D.f(s), a = D.axis === 'age' ? interpAge(D.model, d) : d;
+    if (a != null) out.push({ a, index: idx.get(c.id), kind });
+  };
+  for (const s of D.secs) {
+    if (src !== 'marks') for (const o of s.objects.values()) { const cid = effClassId(o); if (cid && o.stats?.n) put(s, o.stats.sy / o.stats.n, cid, 'obj'); }
+    if (src !== 'objects') for (const m of s.marks || []) put(s, m.y, m.cls, 'mark');
+  }
+  return out.sort((p, q) => p.a - q.a);
+}
 function rangeSVG() {
   if (!S.sections.length) return null;
-  const F = S.fig, D = compositeData(), [from, to] = figAxisWin(D), marks = compositeMarks(D);
+  const F = S.fig, D = compositeData(F.rangeAxis || S.logView.axis), [from, to] = figAxisWin(D);
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, plain: !!c.plain })).filter((c) => S.classes[c.index].id !== 'artifact');
-  const presence = [];
-  for (const r of D.rows) for (const m of marks) if (m.a >= r.a0 && m.a < r.a1) { const index = S.classes.findIndex((c) => c.id === m.cls); if (!presence.some((p) => p.index === index && p.a0 === r.a0)) presence.push({ a0: r.a0, a1: r.a1, index }); }
-  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(F.rangeDisplay === 'bars' ? 'fig.rangeSub' : F.rangeDisplay === 'both' ? 'fig.rangeSubBoth' : 'fig.rangeSubId'), axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
-    from, to, height: F.rangeH, rows: D.rows, classes, presence, display: F.rangeDisplay || 'symbols', total: F.rangeTotal, totalLabel: t('log.total') }).svg;
+  const points = figPoints(D, F.rangeSrc || 'all');
+  return buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(F.rangeDisplay === 'bars' ? 'fig.rangeSub' : F.rangeDisplay === 'both' ? 'fig.rangeSubBoth' : 'fig.rangeSubPts'), axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
+    from, to, height: F.rangeH, rows: D.rows, classes, points, markHollow: F.rangeSrc === 'all' && F.rangeHollow !== false, display: F.rangeDisplay || 'symbols', total: F.rangeTotal, totalLabel: t('log.total') }).svg;
 }
 
 /** Adds title and caption around any figure SVG. */
@@ -6121,6 +6138,9 @@ function renderFigPanel() {
     syncSecFigSize();
   } else if (F.type === 'range') {
     box.innerHTML = `${figWinHTML()}<label class="f"><span>${t('log.height')}</span><input type="number" id="figRangeH" min="300" max="6000" step="50" value="${F.rangeH}"></label>
+      <div class="grid2"><label class="f"><span>${t('fig.axisFig')}</span><select id="figRangeAxis"><option value="depth" ${(F.rangeAxis || S.logView.axis) !== 'age' ? 'selected' : ''}>${t('log.depth')}</option><option value="age" ${(F.rangeAxis || S.logView.axis) === 'age' ? 'selected' : ''} ${S.age.model ? '' : 'disabled'}>${t('log.age')}</option></select></label>
+      <label class="f"><span>${t('fig.ptsSrc')}</span><select id="figRangeSrc">${['all', 'objects', 'marks'].map((v) => `<option value="${v}" ${(F.rangeSrc || 'all') === v ? 'selected' : ''}>${t('fig.ptsSrc.' + v)}</option>`).join('')}</select></label></div>
+      ${(F.rangeSrc || 'all') === 'all' ? `<label class="chk"><input type="checkbox" id="figRangeHollow" ${F.rangeHollow !== false ? 'checked' : ''}><span>${t('fig.ptsHollow')}</span></label>` : ''}
       <label class="f"><span>${t('fig.rangeDisplay')}</span><select id="figRangeDisplay">${['symbols', 'bars', 'both'].map((v) => `<option value="${v}" ${(F.rangeDisplay || 'symbols') === v ? 'selected' : ''}>${t('fig.rangeDisplay.' + v)}</option>`).join('')}</select></label>
       <details class="mini"><summary>${t('fig.taxonSymbols')}</summary>${S.classes.filter((c) => c.id !== 'artifact').map((c) => `<label class="f"><span>${esc(c.name)}</span><select data-taxon-symbol="${esc(c.id)}">${['triDown','tri','circle','square','diamond','star','cross'].map((v) => `<option value="${v}" ${(c.symbol || 'triDown') === v ? 'selected' : ''}>${t('fig.ms.' + v)}</option>`).join('')}</select></label>`).join('')}</details>
       <label class="chk"><input type="checkbox" id="figRangeTotal" ${F.rangeTotal ? 'checked' : ''}><span>${t('log.total')}</span></label><p class="note">${t('fig.rangeNote')}</p>`;
@@ -6238,6 +6258,9 @@ $('figPanel').addEventListener('change', (e) => {
   else if (el.dataset.panel) { const set = new Set(F.panels); if (el.checked) set.add(el.dataset.panel); else set.delete(el.dataset.panel); F.panels = FIG_PANELS.filter((p) => set.has(p)); }
   else if (el.id === 'figAlpha') F.alpha = +el.value; else if (el.id === 'figMinArea') F.minArea = Math.max(0, +el.value || 0); else if (el.id === 'figHideExcl') F.hideExcl = el.checked;
   else if (el.id === 'figRangeDisplay') { F.rangeDisplay = el.value; renderFigPanel(); }
+  else if (el.id === 'figRangeAxis') { F.rangeAxis = el.value; renderFigPanel(); }   // V0.32
+  else if (el.id === 'figRangeSrc') { F.rangeSrc = el.value; renderFigPanel(); }
+  else if (el.id === 'figRangeHollow') F.rangeHollow = el.checked;
   else if (el.dataset.taxonSymbol) { const c = clsById(el.dataset.taxonSymbol); if (c) c.symbol = el.value; requestRender(); scheduleLog(); }
   else if (el.id === 'figRangeH') F.rangeH = Math.max(300, +el.value || 900); else if (el.id === 'figRangeTotal') F.rangeTotal = el.checked;
   else if (el.dataset.key) {

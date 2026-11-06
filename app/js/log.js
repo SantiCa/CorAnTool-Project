@@ -407,7 +407,8 @@ export function buildRangeSVG(o) {
   const y = (v) => f2(top + ((v - from) / span) * H);
   const rows = (o.rows || []).filter((r) => r.a1 > from && r.a0 < to), display = o.display || 'symbols';
   const spHide = new Set(o.style?.speciesHide || []);   // V0.31
-  const cols = o.classes.filter((c) => !spHide.has(c.name)).filter((c) => rows.some((r) => (r.classPct?.[c.index] || 0) > 0) || (o.presence || []).some((p) => p.index === c.index && p.a1 > from && p.a0 < to));
+  const inWin = (p) => (p.a != null ? p.a >= from && p.a <= to : p.a1 > from && p.a0 < to);
+  const cols = o.classes.filter((c) => !spHide.has(c.name)).filter((c) => rows.some((r) => (r.classPct?.[c.index] || 0) > 0) || [...(o.presence || []), ...(o.points || [])].some((p) => p.index === c.index && inWin(p)));
   const totW = o.total ? 90 : 0, W = x0 + totW + (o.total ? 14 : 0) + cols.length * colW + 20 + Math.min(110, longest * 5.2 * 0.5), Htot = top + H + 26;
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`,
     `<rect width="${W}" height="${Htot}" fill="#ffffff"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`];
@@ -459,8 +460,17 @@ export function buildRangeSVG(o) {
       const w = custom ? Math.abs(sx(v) - sx.base) : Math.max(2, (v / max) * (colW - 6));
       out.push(`<rect x="${f2(custom ? Math.min(sx(v), sx.base) : cx - w / 2)}" y="${y(r.a0)}" width="${f2(w)}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="${c.color}"/>`);
     }
-    const presence = [...(o.presence || []).filter((q) => q.index === c.index)];
-    for (const r of rows) if ((r.classPct?.[c.index] || 0) > 0 && !presence.some((p) => p.a0 === r.a0 && p.a1 === r.a1)) presence.push({a0:r.a0,a1:r.a1});
+    if (o.points && display !== 'bars') {   // V0.32: one symbol per identified trace or mark, at its own depth or age
+      let lastY = -1e9, lastK = '';
+      for (const p of o.points) {
+        if (p.index !== c.index || p.a < from || p.a > to) continue;
+        const yy = y(p.a) + 4; if (Math.abs(yy - lastY) < 0.6 && lastK === p.kind) continue;   // symbols are drawn above their origin: +4 centres them on the depth
+        lastY = yy; lastK = p.kind;
+        out.push(o.markHollow && p.kind === 'mark' ? traceSymbol(cx, yy, '#ffffff', c.symbol).replace(/stroke="[^"]*"/, `stroke="${c.color}"`).replace(/stroke-width="[^"]*"/, 'stroke-width="1.4"') : traceSymbol(cx, yy, c.color, c.symbol));
+      }
+    }
+    const presence = o.points ? [] : [...(o.presence || []).filter((q) => q.index === c.index)];
+    if (!o.points) for (const r of rows) if ((r.classPct?.[c.index] || 0) > 0 && !presence.some((p) => p.a0 === r.a0 && p.a1 === r.a1)) presence.push({a0:r.a0,a1:r.a1});
     if (display !== 'bars') for (const p of presence) {
       if (p.a1 <= from || p.a0 >= to) continue;
       const mid = (Math.max(from, p.a0) + Math.min(to, p.a1)) / 2;

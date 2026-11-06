@@ -65,6 +65,7 @@ La descripción detallada de los algoritmos está en
 | V0.29 | 05-11-2026 | Edición de trazas | «Superponer trazas» activado por defecto, más visible, tecla S y aviso cuando una traza sustituye a otra |
 | V0.30 | 05-11-2026 | Edición de trazas | Solape solo entre icnotaxones distintos; trazas del mismo icnotaxón que se solapan se unen al reasignar |
 | V0.31 | 05-11-2026 | Figuras | Elegir qué icnotaxones se dibujan y representarlos apilados o cada uno en su columna |
+| V0.32 | 06-11-2026 | Figuras | Distribución de icnotaxones: un símbolo por traza o marca en su profundidad, eje propio en edad, trazas/marcas/ambas |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -655,6 +656,19 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.32 — Distribución de icnotaxones en su profundidad, en edad y por origen (06-11-2026)
+
+- **Qué se hizo:** en Figuras › Distribución de icnotaxones, (1) cada traza identificada en la imagen y cada marca
+  puesta a mano se dibuja con su símbolo en su propia profundidad (antes, un símbolo en el centro de cada intervalo
+  donde había presencia); (2) la figura tiene su propio eje vertical, profundidad o edad, sin depender de Columna;
+  (3) se elige qué representar: trazas, marcas o ambas, y con ambas las marcas pueden ir con símbolo hueco.
+- **Cambios:** `app.js` (`figPoints`, `rangeSVG`, `compositeData(axisPref)`, controles), `log.js::buildRangeSVG`
+  (`points`, `markHollow`), `i18n.js`. `DELIVERY` = V0.32.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 70 pruebas JS; en Chrome con U1385I: 766 símbolos (uno por traza), cambio a edad (eje «Age (ka)»)
+  y a solo marcas (0, el sondeo de prueba no tiene marcas); sin errores.
+- **Pendiente / no probado:** con un proyecto con marcas a mano.
 
 ## V0.31 — Icnotaxones elegibles y en columnas separadas (05-11-2026)
 
