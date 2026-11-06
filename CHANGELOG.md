@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.37 — 2026-11-06
+- Science fixes (audit §2): age model reads decimal commas and header columns, warns on pasted Bacon tables; ichnotaxon evaluation always leaves whole sections (or cores) out, reports the scheme and flags accuracy as optimistic; multiproxy classifiers exclude parent/child families of the target, refit global scaling per fold and leave a gap between blocks; enhancement ranking without traces uses Fisher × spatial coherence and falls back to no enhancement; unused idwGrid removed; variogram citation fixed.
+
 ## V0.36 — 2026-11-06
 - Safer data (audit §1): project format 5, newer files open read-only; RLE masks validated on import/open; a failed load saves nothing; pending changes saved on page hide/close; provenance header in every CSV; replacing on import keeps the local copy; daily backup history rotated; storage quota warning; uncaught errors shown; one-step undo after class merges. Fixed an empty project with no id being saved on first start.
 

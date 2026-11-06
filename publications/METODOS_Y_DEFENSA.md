@@ -14,7 +14,12 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 - **Multiproxy (V26–V27):** familias de intervalos (p. ej. periodo frío/cálido; baja oxigenación con sapropel/ORL)
   que se clasifican a mano en cualquier sondeo, y **clasificadores definidos por el usuario** (qué familias, con qué
   variables y familias de entrada, qué modelo: bosque aleatorio, red neuronal MLP, k-NN, Bayes, k-medias), validados
-  dejando un sondeo fuera (§21.4–§21.5). Solo se puntúan intervalos descritos, no los etiquetados por reglas.
+  dejando un sondeo fuera (§21.4–§21.5). Solo se puntúan intervalos descritos, no los etiquetados por reglas. Desde
+  V0.37 las familias madre e hijas de la familia objetivo se excluyen de las entradas y el escalado global se ajusta
+  en cada pliegue con el entrenamiento.
+- **Icnotaxones (V0.37):** la evaluación deja fuera secciones (o sondeos, a elegir) enteras: pliegues agrupados con
+  ≥ 5 grupos, un grupo cada vez con 2–4 y, con uno solo, trazas sueltas con aviso de acierto muy optimista. El acierto
+  mostrado es el de la evaluación que elige el método, así que es optimista hasta medirlo en un sondeo reservado.
 - **Selección de modelo:** comparar varios clasificadores con la misma validación y quedarse con el mejor **sesga el
   acierto al alza**. Un artículo debe informar de todos los modelos probados o reservar sondeos para una prueba final
   independiente (pendiente de implementar en la interfaz).
@@ -37,7 +42,9 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
   sobre la tabla de Bacon; citar Bacon (Blaauw y Christen, 2011) y la curva de calibración usada.
 - **Elección del realce (V0.28):** con trazas identificadas, el criterio es la separación (2·AUC − 1) entre esas trazas
   y la matriz; si las mismas trazas se usan después para evaluar la detección, la evaluación es optimista: elegir el
-  ajuste con unas secciones y evaluar con otras.
+  ajuste con unas secciones y evaluar con otras. Sin trazas identificadas (V0.37) la puntuación es el cociente de
+  Fisher en el umbral de Otsu multiplicado por la coherencia espacial κ de la separación, de modo que el ruido sin
+  estructura puntúa ≈ 0 con cualquier realce; no es un método publicado y se presenta como propuesta inicial.
 - **Trazas solapadas (V0.20):** una traza puede estar dentro de otra. La bioturbación total cuenta el solape una vez
   (≤ 100 %), pero cada icnotaxón cuenta su superficie completa, así que la suma de los porcentajes por icnotaxón puede
   superar al total (y a 100 %). Hay que decirlo en los métodos y no presentar los porcentajes por icnotaxón como
@@ -88,7 +95,8 @@ intervalos, mapas por edad y figuras, organizado en proyectos.
 - Reproduce exactamente los resultados publicados en 2020 (prueba de regresión, §13.1).
 - La aplicación web da los mismos BI e ii que la versión publicada en la imagen de ejemplo
   (100 %), con una diferencia de porcentaje ≤ 0,56 puntos explicada por los pesos de gris
-  (§3.4, §13.2).
+  (§3.4, §13.2). Matiz (V0.37): esa comparación de la web se hizo una vez a mano; la prueba automática de regresión
+  frente a la V2 es la del paquete Python, y la web comparte con él los mismos casos calculados a mano.
 - Es determinista y el archivo de proyecto permite reproducir cualquier análisis (§15).
 - Tiene pruebas automáticas en integración continua (§13.1).
 - Integra en el mismo proyecto la interpretación icnológica, registros numéricos de cualquier tipo,
@@ -117,7 +125,8 @@ Pruebas con casos calculados a mano y prueba de regresión frente a los resultad
 
 **¿Cómo se eligen los parámetros de realce?**
 Con los ajustes publicados (Dorador et al., 2014; Miguez-Salas et al., 2019) o con la propuesta
-automática por separabilidad de Otsu (§6), que es propia y se presenta como punto de partida. No hay
+automática (§6: separación de las trazas identificadas o, sin ellas, Fisher × coherencia espacial; antes de V0.28,
+separabilidad de Otsu), que es propia y se presenta como punto de partida. No hay
 en la bibliografía un método publicado de preselección automática (revisión V12).
 
 **¿Los ajustes «de artículo» reproducen fielmente los protocolos publicados?**
@@ -349,8 +358,12 @@ la icnología (bioturbación, BI, ii, icnotaxones) como variables.
 
 ### Preguntas probables de revisores
 **¿El acierto no está inflado por la autocorrelación de las series?**
-Por eso la validación deja sondeos enteros fuera (o bloques contiguos si solo hay uno) y nunca
-mezcla muestras vecinas entre entrenamiento y prueba (§21.5).
+Lo limita: la validación deja sondeos enteros fuera o, si solo hay uno, bloques contiguos con un margen (desde V0.37,
+el 5 % del intervalo etiquetado a cada lado del bloque de prueba se quita del entrenamiento). Desde V0.37 el escalado
+global se recalcula en cada pliegue solo con el entrenamiento y una familia objetivo nunca usa como entrada a sus
+familias madre ni hijas (p. ej. «sapropel» no usa «baja oxigenación»). Con un único sondeo la autocorrelación más
+allá del margen sigue pudiendo inflar el acierto; con el escalado por sondeo, cada sondeo de prueba se tipifica con
+sus propias medias (sin usar etiquetas). Lo fiable es el acierto en sondeos reservados (§21.5).
 
 **Si las etiquetas salen de reglas, ¿el modelo no aprende solo las reglas?**
 Sí, y así se declara (§21.8). Para la evaluación se usan intervalos con interpretación

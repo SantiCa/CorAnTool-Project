@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseTable } from '../../app/js/log.js';
 import { coresFromLongTable, applyCatalogue, buildSamples, labelSamples, ruleMatches, resample, coreConvert,
-  fitModel, predictLabel, crossValidate, kmeansFit, mapSummary, idwGrid, buildMapSVG, mapBBox, seededRandom, crossValidateSteps, fitModelSteps, fitBBoxAspect, mapGeometry } from '../../app/js/geo.js';
+  fitModel, predictLabel, crossValidate, kmeansFit, mapSummary, buildMapSVG, mapBBox, seededRandom, crossValidateSteps, fitModelSteps, fitBBoxAspect, mapGeometry } from '../../app/js/geo.js';
 
 const tab = parseTable(readFileSync(new URL('../../examples/geochem_demo/demo_long.csv', import.meta.url), 'utf8'));
 const H = tab.headers, col = (n) => H.indexOf(n);
@@ -62,14 +62,13 @@ test('k-means and seeded reproducibility', () => {
   const r1 = seededRandom(3), r2 = seededRandom(3); assert.equal(r1(), r2());
 });
 
-test('map summary, IDW and SVG', () => {
+test('map summary and SVG', () => {
   const preds = samples.map((s) => ({ label: truthOf(s) }));
   const pts = mapSummary(samples, preds, cores, { a0: 6, a1: 10, mode: 'class' });
   const east = pts.find((p) => p.name === 'DEMO-15'), west = pts.find((p) => p.name === 'DEMO-01');
   assert.equal(east.dominant, 'low_oxygenation'); assert.equal(west.dominant, 'background');
   const vals = mapSummary(samples, preds, cores, { a0: 6, a1: 10, mode: 'value', feature: 2 });
-  const grid = idwGrid(vals, mapBBox(vals), 20, 10, 2);
-  assert.equal(grid.length, 200); assert.ok(grid.every((v) => v != null));
+  assert.ok(vals.some((v) => v.value != null));
   const svg = buildMapSVG({ land: [[0, 35, 10, 35, 10, 40, 0, 40]], bbox: mapBBox(vals), points: pts, mode: 'class', colors: { low_oxygenation: '#000' }, title: 'T' });
   assert.ok(svg.startsWith('<svg') && svg.includes('DEMO-15'));
 });
@@ -187,4 +186,14 @@ test('V0.34: intervals of a family do not overlap and equal neighbours merge', a
   // other families and cores are independent
   const r2 = tidyIntervals([{ ...base, id: 'A', from: 0, to: 10, cat: 'x' }, { ...base, layer: 'M', id: 'D', from: 2, to: 5, cat: 'x' }]);
   assert.equal(r2.list.length, 2); assert.ok(!r2.changed);
+});
+
+test('V0.37: blocked folds leave a gap and rescale with training statistics only', () => {
+  const samples = Array.from({ length: 100 }, (_, i) => ({ core: 'A', x: i, t: [i < 50 ? 0 : 10], f: [0] }));
+  const labels = samples.map((_, i) => (i < 50 ? 'lo' : 'hi'));
+  const cv = crossValidate(samples, labels, 'nb', {}, 1, { rescale: [true] });
+  assert.equal(cv.scheme, 'blocked-5-fold'); assert.ok(Math.abs(cv.gap - 4.95) < 1e-9); assert.ok(cv.rescaled);
+  assert.ok(cv.total > 0);
+  const noGap = crossValidate(samples, labels, 'nb', {}, 1, { gap: 0 });
+  assert.equal(noGap.gap, 0); assert.equal(noGap.rescaled, false);
 });

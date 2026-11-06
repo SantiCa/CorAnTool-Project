@@ -129,18 +129,37 @@ export function binRows(counts, { top, bottom, binPx, minValid = 0 }) {
   return out;
 }
 
-/** Age model "depth,age" per line; header and invalid lines ignored. */
+/**
+ * Age model "depth, age[, min, max]" per line; comment (#) and invalid lines ignored.
+ * V0.37: decimal comma when the separator is ";" or tab ("10,5;3,2"); a header line picks the columns by name
+ * (depth/prof…, age/edad/median/mean, min/lower, max/upper); without a header the 3rd and 4th columns are an age
+ * range only if every row has min ≤ age ≤ max. m.bacon flags a pasted Bacon table (depth, min, max, median, mean).
+ */
 export function parseAgeModel(text) {
+  const lines = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  const split = (l) => (/[;\t]/.test(l) ? l.split(/\s*[;\t]\s*/).map((x) => x.replace(/\s+/g, '').replace(',', '.')) : l.split(/[,\s]+/));
+  let iD = 0, iA = 1, iMin = 2, iMax = 3, named = false, bacon = false;
+  const first = lines.length ? split(lines[0]).map((x) => x.replace(/"/g, '').toLowerCase()) : [];
+  if (first.length >= 2 && first.some((x) => x && !Number.isFinite(Number(x)))) {   // header line
+    const find = (re) => first.findIndex((x) => re.test(x));
+    bacon = ['depth', 'min', 'max', 'median', 'mean'].every((k) => first.includes(k));
+    const d = find(/^(depth|prof|mcd|mbsf|cmcd|ccsf|z)/), a = find(/^(age|edad|median|mean|cal)/);
+    iD = d >= 0 ? d : 0; iA = a >= 0 ? a : (iD === 0 ? 1 : 0);
+    iMin = find(/^(min|lower|low|age_?min|2\.5)/); iMax = find(/^(max|upper|high|age_?max|97\.5)/); named = true;
+    lines.shift();
+  }
   const pts = [];
-  for (const line of String(text || '').split(/\r?\n/)) {
-    const p = line.trim().split(/[,;\t ]+/).map(Number);
-    if (p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1])) pts.push([p[0], p[1], p[2], p[3]]);
+  for (const line of lines) {
+    const p = split(line).map(Number);
+    if (Number.isFinite(p[iD]) && Number.isFinite(p[iA])) pts.push([p[iD], p[iA], iMin >= 0 ? p[iMin] : NaN, iMax >= 0 ? p[iMax] : NaN]);
   }
   pts.sort((a, b) => a[0] - b[0]);
   if (pts.length < 2) return null;
   const m = { depth: pts.map((p) => p[0]), age: pts.map((p) => p[1]) };
-  // V0.28: optional third and fourth columns = age range (e.g. the 95 % interval of a Bacon model), only if every row has them
-  if (pts.every((p) => Number.isFinite(p[2]) && Number.isFinite(p[3]))) { m.min = pts.map((p) => Math.min(p[2], p[3])); m.max = pts.map((p) => Math.max(p[2], p[3])); }
+  // V0.28: age range (e.g. the 95 % interval of a Bacon model), only if every row has one that contains the age
+  const lo = (p) => Math.min(p[2], p[3]), hi = (p) => Math.max(p[2], p[3]);
+  if (pts.every((p) => Number.isFinite(p[2]) && Number.isFinite(p[3]) && (named || (lo(p) <= p[1] && p[1] <= hi(p))))) { m.min = pts.map(lo); m.max = pts.map(hi); }
+  if (bacon) m.bacon = true;
   // reversals (age decreasing downwards) make depth↔age conversion ambiguous: flagged for the interface
   m.reversals = m.age.reduce((k, a, i) => k + (i && a < m.age[i - 1] ? 1 : 0), 0);
   return m;

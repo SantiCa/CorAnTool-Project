@@ -476,9 +476,12 @@ export function traceSeparation(rgba, w, h, roi, cls, { local = true, radius = 4
 /**
  * V0.28: separability without reviewed traces, computed in tiles of `tile` px (so slow colour changes along the core
  * and large cracks weigh less than with one histogram of the whole area). In each tile not flat (std ≥ 4 grey levels)
- * the grey levels are split at Otsu's threshold and Fisher's ratio J = (μ₁ − μ₂)² / (σ₁² + σ₂²) is measured; it does not
- * change with a contrast stretch and is 6 for a uniform histogram, so equalising alone does not raise it. Result:
- * mean of J / (J + 6) over the tiles (0–1; 0.5 = no more separated than a uniform spread).
+ * the grey levels are split at Otsu's threshold and Fisher's ratio J = (μ₁ − μ₂)² / (σ₁² + σ₂²) is measured (invariant
+ * only to linear stretches; equalisation or local contrast can raise it on pure noise).
+ * V0.37: J/(J + 6) is multiplied by the spatial coherence of the split: κ = (A − E)/(1 − E), with A the share of
+ * horizontal and vertical neighbour pairs on the same side of the threshold and E = p₀² + p₁² the share expected if
+ * the pixels were scattered at random (κ ≤ 0 → 0). Noise gives κ ≈ 0 whatever the enhancement; compact traces give κ
+ * near 1. Result: mean over the tiles (0–1).
  */
 export function localSeparability(rgba, w, h, roi, tile = 48) {
   let sum = 0, n = 0;
@@ -494,7 +497,15 @@ export function localSeparability(rgba, w, h, roi, tile = 48) {
     for (let v = 0; v < 256; v++) { const c = hist[v]; if (v <= thr) { n0 += c; a0 += c * v; b0 += c * v * v; } else { n1 += c; a1 += c * v; b1 += c * v * v; } }
     if (!n0 || !n1) continue;
     const m0 = a0 / n0, m1 = a1 / n1, v0 = b0 / n0 - m0 * m0, v1 = b1 / n1 - m1 * m1, J = (m1 - m0) ** 2 / Math.max(1e-6, v0 + v1);
-    sum += J / (J + 6); n++;
+    let agree = 0, pairs = 0;
+    const g = (x, y) => { const j = (y * w + x) * 4; return 0.299 * rgba[j] + 0.587 * rgba[j + 1] + 0.114 * rgba[j + 2] > thr + 0.5; };
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const c = g(x, y);
+      if (x + 1 < x1) { pairs++; if (g(x + 1, y) === c) agree++; }
+      if (y + 1 < y1) { pairs++; if (g(x, y + 1) === c) agree++; }
+    }
+    const p0 = n0 / k, E = p0 * p0 + (1 - p0) ** 2, kappa = E < 1 ? Math.max(0, (agree / pairs - E) / (1 - E)) : 0;
+    sum += (J / (J + 6)) * kappa; n++;
   }
   return n ? sum / n : 0;
 }

@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.36';
+const DELIVERY = 'V0.37';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2068,20 +2068,28 @@ function rankPresets(s) {
   // pixels of the downsampled image: 1 = trace identified by hand (a class that counts), 2 = matrix (no trace, or artefact), 0 = unused
   const cls = new Uint8Array(sm.w * sm.h), countable = new Set(S.classes.filter((c) => c.counts).map((c) => c.id));
   const own = new Set([...s.objects.values()].filter((o) => o.cls && countable.has(o.cls)).map((o) => o.id));
+  // V0.37: each downsampled pixel takes the majority of its k×k block (mixed or mostly excluded blocks are not used)
   let nT = 0;
   if (own.size) for (let y = roi.y0; y < roi.y1; y++) for (let x = roi.x0; x < roi.x1; x++) {
-    const i = Math.min(s.h - 1, y * k) * s.w + Math.min(s.w - 1, x * k); if (s.exclude[i]) continue;
-    const v = s.labels[i], id = v ? topAt(v, s.stacks) : 0, o = id && s.objects.get(id);
-    if (!id || (o && o.cls && !countable.has(o.cls))) cls[y * sm.w + x] = 2; else if (own.has(id)) { cls[y * sm.w + x] = 1; nT++; }
+    let nt = 0, nm = 0, nb = 0;
+    for (let yy = y * k; yy < Math.min(s.h, (y + 1) * k); yy++) for (let xx = x * k; xx < Math.min(s.w, (x + 1) * k); xx++) {
+      const i = yy * s.w + xx; nb++; if (s.exclude[i]) continue;
+      const v = s.labels[i], id = v ? topAt(v, s.stacks) : 0, o = id && s.objects.get(id);
+      if (!id || (o && o.cls && !countable.has(o.cls))) nm++; else if (own.has(id)) nt++;
+    }
+    if (nt * 2 > nb) { cls[y * sm.w + x] = 1; nT++; } else if (nm * 2 > nb) cls[y * sm.w + x] = 2;
   }
   const supervised = nT >= 50, dp = s.detect || DEFAULT_DETECT;
-  const opt = { local: dp.method !== 'global', radius: (dp.radius || 40) / k, polarity: dp.polarity || 'dark' };
+  const opt = { local: dp.method === 'adaptive', radius: (dp.radius || 40) / k, polarity: dp.polarity || 'dark' };   // V0.37: k-means and U-Net are not local
   const out = cands.map((c) => {
     const tmp = { filters: c.filters, orig: sm.rgba, w: sm.w, h: sm.h, roi };
     const enh = applyFilters(sm.rgba, sm.w, sm.h, effectiveFilters(tmp));
     return { ...c, eta: supervised ? traceSeparation(enh, sm.w, sm.h, roi, cls, opt).score : localSeparability(enh, sm.w, sm.h, roi, Math.max(16, Math.round(96 / k))) };
   }).sort((a, b) => b.eta - a.eta);
-  out.mode = supervised ? 'traces' : 'local'; out.nTraces = own.size;
+  // V0.37: without traces, a preset must beat the image without enhancement clearly, or no enhancement is proposed
+  const ref = out.find((c) => c.id === 'none');
+  if (!supervised && ref && out[0] !== ref && out[0].eta - ref.eta < Math.max(0.005, 0.05 * ref.eta)) { out.splice(out.indexOf(ref), 1); out.unshift(ref); out.noGain = true; }
+  out.mode = supervised ? 'traces' : 'local'; out.nTraces = own.size; out.ref = ref?.eta ?? null;
   return out;
 }
 $('presetBest').addEventListener('click', () => busy(() => {
@@ -2089,7 +2097,7 @@ $('presetBest').addEventListener('click', () => busy(() => {
   const r = rankPresets(s), best = r[0];
   s.preset = best.id; s.filters = { ...best.filters }; if (best.detect) s.detect = { ...DEFAULT_DETECT, ...best.detect };
   renderFilterForm(); renderDetectForm(); refilter();
-  $('presetRank').textContent = t(r.mode === 'traces' ? 'f.rankT' : 'f.rankL', { n: r.nTraces, list: r.slice(0, 4).map((c) => `${c.name} ${c.eta.toFixed(2)}`).join('; ') });
+  $('presetRank').textContent = t(r.mode === 'traces' ? 'f.rankT' : 'f.rankL', { n: r.nTraces, list: r.slice(0, 4).map((c) => `${c.name} ${c.eta.toFixed(3)}`).join('; ') }) + (r.noGain ? ' ' + t('f.rankNoGain') : '');
 }));
 $('fAuto').addEventListener('change', (e) => { const s = sec(); if (!s) return; s.filters.autoLevels = e.target.checked; s.preset = 'custom'; renderFilterForm(); refilter(); });
 $('fAutoG').addEventListener('change', (e) => { const s = sec(); if (!s) return; s.filters.autoGamma = e.target.checked; s.preset = 'custom'; renderFilterForm(); refilter(); });
@@ -2218,8 +2226,8 @@ for (const [id, dir] of [['rotL', -1], ['rotR', 1]]) $(id).addEventListener('cli
 function setAge() {
   S.age.text = $('ageText').value; S.age.units = $('ageUnits').value; S.age.model = parseAgeModel(S.age.text);
   const m = S.age.model;
-  $('ageStatus').textContent = m ? t('age.ok', { n: m.depth.length, a: fmt(Math.min(...m.age), 3), b: fmt(Math.max(...m.age), 3), u: S.age.units }) + (m.reversals ? ' ' + t('age.reversal', { n: m.reversals }) : '') : t('age.none');
-  $('ageStatus').classList.toggle('warn', !!m?.reversals);
+  $('ageStatus').textContent = m ? t('age.ok', { n: m.depth.length, a: fmt(Math.min(...m.age), 3), b: fmt(Math.max(...m.age), 3), u: S.age.units }) + (m.reversals ? ' ' + t('age.reversal', { n: m.reversals }) : '') + (m.bacon ? ' ' + t('age.baconPasted') : '') : t('age.none');
+  $('ageStatus').classList.toggle('warn', !!(m?.reversals || m?.bacon));
   const c = curCore(); if (c) c.ageText = S.age.text;
   scheduleAnalysis(); markDirty(); scheduleLog(); if (geoRT) geoRT.dirty = true;
   $('logAxis').querySelector('[value=age]').disabled = !m;
@@ -3711,9 +3719,19 @@ const curClf = () => S.geo.classifiers.find((c) => c.id === S.geo.view.clf) || S
 /** Column indices of the sample matrix used by classifier c: its variables (default all of step 2) and the 0/1 columns of its input families. */
 function clfCols(c) {
   const st = S.geo.settings, F = st.features, num = (c.features ?? F).map((k) => F.indexOf(k)).filter((j) => j >= 0);
-  const inputs = (c.layers ?? featLayers().map((l) => l.id)).filter((id) => !c.targets.includes(id));
+  // V0.37: a target family never uses itself, its ancestors (e.g. "low oxygen" for "sapropel") or its descendants as input
+  const rel = new Set(c.targets.flatMap(relatedLayers));
+  const inputs = (c.layers ?? featLayers().map((l) => l.id)).filter((id) => !rel.has(id));
   return [...num, ...inputs.flatMap((id) => geoRT.layerCols?.get(id) || [])];
 }
+/** V0.37: the family itself, its ancestors and its descendants. */
+function relatedLayers(id) {
+  const L = S.geo.layers, out = new Set([id]);
+  for (let p = L.find((l) => l.id === id)?.parent, n = 0; p && !out.has(p) && n < 50; p = L.find((l) => l.id === p)?.parent, n++) out.add(p);
+  for (const l of L) if (isBelow(l.id, id)) out.add(l.id);
+  return [...out];
+}
+function isBelow(a, b) { const L = S.geo.layers; for (let p = L.find((l) => l.id === a)?.parent, n = 0; p && n < 50; p = L.find((l) => l.id === p)?.parent, n++) if (p === b) return true; return false; }
 /** Current position of the columns a model was trained on (by name, so adding families or variables does not invalidate it); null if one is gone. */
 function modelIdx(m) {
   if (m.axis !== S.geo.settings.axis || m.scaling !== S.geo.settings.scaling) return null;
@@ -3741,7 +3759,8 @@ async function trainClassifier(c, tick = async () => {}) {
   const g = S.geo, st = g.settings, method = c.method, params = { ...METHODS[method].defaults, ...(c.params?.[method] || {}) }, seed = c.seed ?? 42;
   const cols = clfCols(c), run = { byTarget: new Map(), cols, at: Date.now() };
   if (!cols.length) { run.error = 'cl.noInputs'; geoRT.runs.set(c.id, run); return run; }
-  const view = geoRT.samples.map((s) => ({ core: s.core, x: s.x, f: cols.map((j) => s.f[j]) }));
+  const view = geoRT.samples.map((s) => ({ core: s.core, x: s.x, f: cols.map((j) => s.f[j]), t: cols.map((j) => s.t[j]) }));
+  const rescale = st.scaling === 'global' ? cols.map((j) => j < geoRT.nNum) : null;   // V0.37: scaling refitted in each fold
   const scale = st.scaling === 'global' ? scaleOf(geoRT.samples, geoRT.nNum) : null;
   for (const lid of c.targets) {
     const L = geoLayer(lid); if (!L) continue;
@@ -3756,7 +3775,7 @@ async function trainClassifier(c, tick = async () => {}) {
       scaling: st.scaling, axis: st.axis, target: lid, features: cols.map((j) => geoRT.featNames[j]), n: X.length });
     let cv = null;
     if (method !== 'kmeans') {
-      const it = crossValidateSteps(view, labels.map((l) => l.label), method, params, seed, { scored: (i) => labels[i].source !== 'rule', minProb: c.minProb });
+      const it = crossValidateSteps(view, labels.map((l) => l.label), method, params, seed, { scored: (i) => labels[i].source !== 'rule', minProb: c.minProb, rescale });
       for (let r = it.next(); ; r = it.next()) { if (r.done) { cv = r.value; break; } const v = r.value; if (await tick(t('cl.pFold', { c: c.name, f: L.name, k: v.fold + 1, n: v.folds }) + (v.epoch ? ' · ' + t('cl.pEpoch', { e: v.epoch, n: v.epochs }) : ''), v.epoch ? v.epoch / v.epochs : 0, !v.epoch)) return null; }
     }
     run.byTarget.set(lid, { model, cv, labels, preds: [] });
@@ -5418,7 +5437,9 @@ function mlTrainHTML() {
   if (mlEval) {
     const r = mlEval.res, cell = (sc, me) => { const v = r[sc]?.[me]; const on = mlEval.best && mlEval.best.scope === sc && mlEval.best.method === me; return `<td class="${on ? 'on' : ''}">${v?.balanced == null ? '—' : `${Math.round(v.balanced * 100)}% <span class="note">(${Math.round(v.accuracy * 100)}%)</span>`}</td>`; };
     const b = mlEval.best, cm = b ? r[b.scope][b.method] : null;
+    const r0 = Object.values(r)[0]?.knn || {};   // V0.37: validation scheme and optimism warning
     ev = `<h3>${t('ml.evalTitle')}</h3><p class="note">${t('ml.evalNote', { n: mlEval.nTest, w: t(mlEval.on === 'core' ? 'ml.onCore' : 'ml.onProject') })}</p>
+      <p class="note ${r0.scheme === 'examples' ? 'warn' : ''}">${t('ml.scheme.' + (r0.scheme || 'groups'), { g: r0.nGroups ?? '?', f: r0.folds ?? '?', u: t('ml.cvGroup.' + (S.settings.ml?.cvGroup || 'section')).toLowerCase() })} ${t('ml.optimistic')}</p>
       <table class="dtable mtab"><thead><tr><th></th>${['knn', 'rf', 'nb'].map((me) => `<th>${t('ml.m.' + me)}</th>`).join('')}</tr></thead><tbody>${CLF_SCOPES.map((sc) => `<tr><td class="txt">${t('l.scope.' + sc)}</td>${['knn', 'rf', 'nb'].map((me) => cell(sc, me)).join('')}</tr>`).join('')}</tbody></table>
       ${b ? `<p>${t('ml.recBest', { s: t('l.scope.' + b.scope), m: t('ml.m.' + b.method), v: Math.round(b.balanced * 100) })} ${b.close ? t('ml.recClose') : ''} <button class="btn small primary" id="mlUseBest">${t('ml.useBest')}</button></p>
       <details><summary>${t('ml.cm')}</summary><p class="note">${t('ml.cmNote')}</p><div class="tablewrap"><table class="dtable mtab"><thead><tr><th>${t('ml.real')} \\ ${t('ml.pred')}</th>${cm.classes.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${cm.classes.map((c, i) => `<tr><td class="txt">${esc(c)}</td>${cm.cm[i].map((v, j) => `<td class="${i === j ? 'on' : ''}">${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : ''}`;
@@ -5429,7 +5450,7 @@ function mlTrainHTML() {
   return `${feats}<h3>${t('ml.tab.train')}</h3><p class="note">${t('ml.trainIntro')}</p><div class="mlmethods">${methods}</div><div class="row" style="align-items:end;gap:12px">${params}
     <label class="f"><span>${t('l.novelty')}</span><input type="number" data-ml="novelty" min="1" max="8" step="0.5" value="${S.settings.novelty}" style="width:80px"></label></div>
     <p class="note">${t('ml.paramHelp.' + m.method)} ${t('ml.noveltyHelp')}</p>
-    <div class="row"><button class="btn primary" id="mlEvalBtn">${t('ml.eval')}</button><span class="note">${t('ml.evalHint')}</span></div>${ev}`;
+    <div class="row"><button class="btn primary" id="mlEvalBtn">${t('ml.eval')}</button><label class="f"><span>${t('ml.cvGroup')}</span><select data-ml="cvGroup">${['section', 'core'].map((g) => `<option value="${g}" ${(m.cvGroup || 'section') === g ? 'selected' : ''}>${t('ml.cvGroup.' + g)}</option>`).join('')}</select></label><span class="note">${t('ml.evalHint')}</span></div>${ev}`;
 }
 
 function runMlEval() {
@@ -5437,7 +5458,8 @@ function runMlEval() {
   const coreTest = ownExamples(cur ? [cur] : []), on = coreTest.length >= 10 && new Set(coreTest.map((e) => e.y)).size >= 2 ? 'core' : 'project';
   const test = on === 'core' ? coreTest : sets.project;
   if (test.length < 6 || new Set(test.map((e) => e.y)).size < 2) { toast(t('ml.evalNeed')); return; }
-  const res = evaluateModels({ test, pools: sets, methods: ['knn', 'rf', 'nb'], opt: mlOpt(), k: 5, seed: 42 });
+  const byCore = (S.settings.ml?.cvGroup || 'section') === 'core', group = (e) => (e.g == null ? null : byCore ? String(e.g).split('|').slice(0, 2).join('|') : e.g);   // V0.37
+  const res = evaluateModels({ test, pools: sets, methods: ['knn', 'rf', 'nb'], opt: mlOpt(), k: 5, seed: 42, group });
   // best = highest balanced accuracy; when another option is within 3 points, the simpler one is preferred (k-NN, then naive Bayes, then RF; this core, then project)
   const order = { knn: 0, nb: 1, rf: 2 }, list = [];
   for (const sc of CLF_SCOPES) for (const me of ['knn', 'rf', 'nb']) if (res[sc][me].balanced != null) list.push({ scope: sc, method: me, balanced: res[sc][me].balanced });
@@ -5483,6 +5505,7 @@ $('mlBody').addEventListener('change', (e) => {
     if (k === 'novelty') { S.settings.novelty = v; $('novelty').value = v; $('novOut').textContent = '×' + v; }
     else S.settings.ml = { ...ML_DEFAULT, ...(S.settings.ml || {}), [k]: v };
     if (k === 'method') mlEval = mlEval && { ...mlEval };
+    if (k === 'cvGroup') mlEval = null;
     if (k === 'features') { mlEval = null; for (const x of S.cores.flatMap((c) => c.sections)) for (const o of x.objects.values()) o._pv = 0; if (v === 'vision' && !VIS) loadVision(); }
     markDirty(); learnNow(); renderMl(); return;
   }

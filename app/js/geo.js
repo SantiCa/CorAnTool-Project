@@ -469,6 +469,10 @@ export function predictLabel(model, x, minProb = 0) {
 /**
  * Cross-validation. With ≥2 labelled cores: leave-one-core-out (no core is both trained and tested).
  * Otherwise: 5 folds of contiguous blocks along the axis within each core (limits autocorrelation leakage).
+ * V0.37: in blocked folds, training leaves out the samples closer than opt.gap to the test block (default 5 % of the
+ * labelled range, reported as `gap`); with opt.rescale (one flag per column: numeric?) the numeric columns are z-scored
+ * in each fold with the mean and SD of its training samples only (from sample.t), so the test core does not enter the
+ * scaling.
  */
 /** Same as crossValidateSteps, run to the end. */
 export function crossValidate(samples, labels, method, params, seed = 42, opt = {}) {
@@ -482,24 +486,34 @@ export function* crossValidateSteps(samples, labels, method, params, seed = 42, 
   // all labelled samples may still be used for training. opt.minProb: threshold used in practice (coverage reported).
   const idx = samples.map((_, i) => i).filter((i) => labels[i] != null), scored = opt.scored || (() => true);
   const cores = [...new Set(idx.map((i) => samples[i].core))];
-  let folds;
+  let folds, gap = 0;
   if (cores.length >= 2) folds = cores.map((c) => idx.filter((i) => samples[i].core === c));
   else {
     const sorted = [...idx].sort((a, b) => samples[a].x - samples[b].x), k = Math.min(5, sorted.length);
     folds = Array.from({ length: k }, (_, f) => sorted.slice(Math.floor((f * sorted.length) / k), Math.floor(((f + 1) * sorted.length) / k)));
+    gap = opt.gap ?? (sorted.length ? (samples[sorted.at(-1)].x - samples[sorted[0]].x) * 0.05 : 0);
   }
+  const resc = opt.rescale && samples.length && samples[0].t ? opt.rescale : null;
+  const zf = (train) => {   // per-fold z-score of the numeric columns (training statistics only)
+    if (!resc) return (i) => samples[i].f;
+    const mu = resc.map((on, j) => (on ? mean(train.map((i) => samples[i].t[j]).filter((v) => v != null)) : 0));
+    const sd = resc.map((on, j) => { if (!on) return 1; const v = train.map((i) => samples[i].t[j]).filter((x) => x != null); const m = mu[j]; const q = v.length > 1 ? Math.sqrt(v.reduce((a, x) => a + (x - m) ** 2, 0) / (v.length - 1)) : 0; return q || 1; });
+    return (i) => samples[i].f.map((v, j) => (resc[j] ? (samples[i].t[j] == null ? 0 : (samples[i].t[j] - mu[j]) / sd[j]) : v));
+  };
   const classes = [...new Set(idx.map((i) => labels[i]))].sort(), cm = classes.map(() => classes.map(() => 0));
   const perFold = []; let nScored = 0, nCovered = 0, nCovOk = 0;
   for (const [fi, test] of folds.entries()) {
     yield { fold: fi, folds: folds.length };
-    const tset = new Set(test), train = idx.filter((i) => !tset.has(i)), tst = test.filter(scored);
+    const tset = new Set(test), lo = Math.min(...test.map((i) => samples[i].x)) - gap, hi = Math.max(...test.map((i) => samples[i].x)) + gap;
+    const train = idx.filter((i) => !tset.has(i) && !(gap > 0 && samples[i].x > lo && samples[i].x < hi)), tst = test.filter(scored);
     if (new Set(train.map((i) => labels[i])).size < 2 || !tst.length) continue;
-    const fit = fitModelSteps(method, train.map((i) => samples[i].f), train.map((i) => labels[i]), params, seed);
+    const X = zf(train);
+    const fit = fitModelSteps(method, train.map(X), train.map((i) => labels[i]), params, seed);
     let fr; while (!(fr = fit.next()).done) yield { fold: fi, folds: folds.length, ...fr.value };
     const m = fr.value;
     const rc = {};
     for (const i of tst) {
-      const pr = predictLabel(m, samples[i].f), a = classes.indexOf(labels[i]), b = classes.indexOf(pr.label); nScored++;
+      const pr = predictLabel(m, X(i)), a = classes.indexOf(labels[i]), b = classes.indexOf(pr.label); nScored++;
       if (a >= 0 && b >= 0) cm[a][b]++;
       (rc[labels[i]] ||= [0, 0])[1]++; if (pr.label === labels[i]) rc[labels[i]][0]++;
       if (opt.minProb != null && pr.prob >= opt.minProb) { nCovered++; if (pr.label === labels[i]) nCovOk++; }
@@ -514,7 +528,7 @@ export function* crossValidateSteps(samples, labels, method, params, seed = 42, 
   });
   const rec = perClass.filter((q) => q.recall != null);
   const sdF = perFold.length > 1 ? Math.sqrt(perFold.reduce((a, v) => a + (v - mean(perFold)) ** 2, 0) / (perFold.length - 1)) : null;
-  return { scheme: cores.length >= 2 ? 'leave-one-core-out' : 'blocked-5-fold', folds: folds.length, classes, cm, total, nScored,
+  return { scheme: cores.length >= 2 ? 'leave-one-core-out' : 'blocked-5-fold', folds: folds.length, gap, rescaled: !!resc, classes, cm, total, nScored,
     accuracy: total ? correct / total : null, balancedAccuracy: rec.length ? mean(rec.map((q) => q.recall)) : null, perClass,
     foldBalanced: { mean: perFold.length ? mean(perFold) : null, sd: sdF, n: perFold.length },
     coverage: opt.minProb != null && nScored ? { minProb: opt.minProb, share: nCovered / nScored, accuracy: nCovered ? nCovOk / nCovered : null } : null };
@@ -548,26 +562,6 @@ export function mapSummary(samples, preds, cores, { a0, a1, mode, feature = 0, r
     }
     return { core: id, name: c.name, lat: c.lat, lon: c.lon, n: real.length, value: v };
   });
-}
-
-/** Inverse-distance-weighted grid (exploratory). Distances in degrees with longitude scaled by cos(lat). */
-export function idwGrid(points, bbox, nx, ny, power = 2, maxDist = Infinity) {
-  const pts = points.filter((p) => p.value != null), cosl = Math.cos((((bbox[1] + bbox[3]) / 2) * Math.PI) / 180), out = [];
-  for (let iy = 0; iy < ny; iy++) {
-    const lat = bbox[3] - ((iy + 0.5) / ny) * (bbox[3] - bbox[1]);
-    for (let ix = 0; ix < nx; ix++) {
-      const lon = bbox[0] + ((ix + 0.5) / nx) * (bbox[2] - bbox[0]);
-      let sw = 0, sv = 0, hit = null;
-      for (const p of pts) {
-        const d = Math.hypot((p.lon - lon) * cosl, p.lat - lat);
-        if (d < 1e-9) { hit = p.value; break; }
-        if (d > maxDist) continue;
-        const w = 1 / d ** power; sw += w; sv += w * p.value;
-      }
-      out.push(hit ?? (sw ? sv / sw : null));
-    }
-  }
-  return out;
 }
 
 const esc2 = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[m]);

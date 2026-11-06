@@ -236,6 +236,11 @@ intervalo semiabierto `[mínimo, máximo)` en porcentaje.
 Son los mismos tramos de la V2. En Python se pueden definir otros esquemas con `IndexScheme`,
 sin tocar el código.
 
+**Sin dato o fuera de los tramos** (intervalo sin píxeles válidos, porcentaje no numérico): Python devuelve `−1`
+(los arrays de NumPy son enteros, como en la V2) y la web `null`, que se exporta como celda vacía. Significan lo
+mismo; al comparar salidas de ambos, tratar `−1` como vacío (V0.37). La edad fuera del modelo es `NaN` en Python y
+vacía en la web.
+
 ### 4.3 Índices manuales (aplicación web)
 En la tabla de resultados el usuario puede anotar su propio BI e ii visual en cada intervalo. Se
 guarda como un tramo de profundidad `[desde, hasta)`. Si se cambia el tamaño del intervalo, cada
@@ -262,9 +267,17 @@ Implementación: `depth.py::depth_to_age` (Python) y `core.js::parseAgeModel, in
 - **Bacon** (V0.28; `core.js::baconToAgeText`): la tabla `*_ages.txt` de rbacon (`depth min max median mean`,
   profundidad en cm, edad en años cal BP) se convierte a las unidades de profundidad del sondeo (÷ cm por unidad) y de
   edad elegidas (÷ 1, 1000 o 10⁶), con la mediana (o la media, a elegir) como edad central. El programa no ejecuta
-  Bacon ni usa las iteraciones del MCMC; el paquete Python todavía no lee las columnas de intervalo.
+  Bacon ni usa las iteraciones del MCMC; el paquete Python todavía no lee las columnas de intervalo. La edad y el
+  intervalo de cada profundidad se **interpolan linealmente entre las filas** de la tabla de Bacon (no se recalculan
+  desde el MCMC), así que entre filas el intervalo es una aproximación.
 - Entrada: pares `(profundidad, edad)`, ordenados por profundidad. Los separadores pueden ser
-  coma, punto y coma, tabulador o espacio, y se ignoran las líneas no numéricas.
+  coma, punto y coma, tabulador o espacio, y se ignoran las líneas no numéricas y las que empiezan por `#`.
+- **Desde V0.37:** si la línea usa `;` o tabulador, la coma es decimal (`10,5;3,2`), como en los registros. Si la
+  primera línea es una cabecera, las columnas se eligen por nombre (profundidad: `depth`, `prof…`, `mcd`, `mbsf`,
+  `ccsf`; edad: `age`, `edad`, `median`, `mean`, `cal…`; intervalo: `min`/`lower`/`2.5`, `max`/`upper`/`97.5`). Sin
+  cabecera, la 3.ª y 4.ª columna solo se toman como intervalo si en todas las filas contienen a la edad (antes se
+  tomaba cualquier par, p. ej. sigma y un código). Si la cabecera es la de Bacon (`depth min max median mean`) se avisa
+  de que hay que abrirla con el botón de archivo para convertir unidades.
 - Edad de cada intervalo: **interpolación lineal** entre los dos puntos del modelo que rodean la
   profundidad del centro del intervalo.
 - Fuera del rango del modelo:
@@ -367,7 +380,15 @@ claras o ambas: máx(AUC, 1 − AUC)), con AUC = P(matriz > traza) + ½ P(igual)
 (`imageproc.js::traceSeparation`). (2) Sin trazas identificadas, separabilidad local: en cuadros de ~96 px de la
 imagen completa con desviación ≥ 4 niveles se separa en el umbral de Otsu y se calcula el cociente de Fisher
 `J = (μ₁ − μ₂)² / (σ₁² + σ₂²)`, que no cambia con un estiramiento de contraste y vale 6 para un histograma uniforme;
-puntuación = media de `J / (J + 6)` (0,5 = como un reparto uniforme; `imageproc.js::localSeparability`). Una η alta indica dos
+puntuación = media de `J / (J + 6)` (0,5 = como un reparto uniforme; `imageproc.js::localSeparability`). **Corrección
+V0.37:** J solo es invariante a estiramientos lineales; con ruido sin estructura «Ecualizado + contraste local» daba
+0,71 frente a 0,50 sin realce. Desde V0.37 cada cuadro puntúa `J/(J + 6) · κ`, con `κ = máx(0, (A − E)/(1 − E))`,
+`A` = fracción de pares de vecinos horizontales y verticales al mismo lado del umbral y `E = p₀² + p₁²` la esperada
+si los píxeles estuvieran repartidos al azar. Con ruido κ ≈ 0 sea cual sea el realce (0,003–0,005 en imágenes
+sintéticas de 400×300) y las trazas compactas dan κ alto. Además, sin trazas, si el mejor ajuste no supera a «Sin
+realce» en al menos `máx(0,005; 5 %)` se propone «Sin realce». La copia reducida de las trazas toma la mayoría de
+cada bloque k×k (los bloques mixtos no se usan) y la media local solo se usa con el umbral adaptativo (no con
+k-medias ni U-Net). Una η alta indica dos
 grupos de grises bien separados (relleno y matriz), en la línea de la comparación de valores de
 píxel de Rodríguez-Tovar y Dorador (2015). Limitación: η premia cualquier bimodalidad (también
 grietas o cambios de color de fondo), y un histograma uniforme da 0,75; por eso es una propuesta
@@ -702,9 +723,14 @@ parámetros, evaluación, galería de ejemplos usados y ejemplos de otros proyec
 - **Evaluación** (`evaluateModels`): conjunto de prueba = trazas etiquetadas del sondeo abierto si hay
   ≥ 10 de ≥ 2 taxones; si no, las del proyecto. Desde V22 se reparten en 5 grupos **por imagen (sección)**
   (`groupedFolds`: todas las trazas de una sección van al mismo grupo; secciones barajadas con semilla 42 y
-  asignadas al grupo con menos trazas de su taxón principal); con menos de 5 secciones, grupos estratificados
-  por taxón (`stratifiedFolds`). Para cada grupo y cada modelo (sondeo, proyecto, todos)
-  se entrena con su conjunto de ejemplos **sin las trazas de ese grupo** y se predicen (sin prueba de
+  asignadas al grupo con menos trazas de su taxón principal). **Desde V0.37:** con 2–4 grupos, un pliegue por
+  grupo (dejar uno fuera); solo con un grupo, pliegues estratificados por taxón (`stratifiedFolds`, esquema
+  `examples`, con aviso de acierto muy optimista); antes, con menos de 5 secciones se usaban siempre los
+  estratificados. El grupo puede ser la sección o el sondeo («Dejar fuera», `settings.ml.cvGroup`). El esquema
+  (`scheme`: `groups`, `logo`, `examples`), el nº de grupos y de pliegues se muestran con la nota de que el acierto
+  es optimista (la misma evaluación elige el método). Para cada grupo y cada modelo (sondeo, proyecto, todos)
+  se entrena con su conjunto de ejemplos **sin las trazas de ese grupo** (desde V0.37 también sin las demás trazas
+  de los grupos de prueba presentes en ese conjunto) y se predicen (sin prueba de
   novedad). Así los 9 casos (3 métodos × 3 modelos) se juzgan con las mismas trazas. Se dan acierto
   total, acierto equilibrado (media de la sensibilidad de cada taxón) y matriz de confusión. Desde V22 las
   predicciones de un taxón que no está entre los de prueba cuentan como error (columna «otro»), los
@@ -838,22 +864,18 @@ Los lectores de CorAnTool y del paquete Python ya ignoran las líneas que empiez
 ## 13. Validación realizada
 
 ### 13.1 Pruebas automáticas
-- **Python (9 pruebas, `tests/test_core.py`):** tramos de índices, porcentajes e intervalos en
+Recuento en V0.37: **18 de Python** (16 se ejecutan; 2 se omiten si faltan `onnx`/`torch`) y **77 de la web**.
+- **Python (`tests/test_core.py`, `tests/test_unet.py`):** tramos de índices, porcentajes e intervalos en
   casos calculados a mano, último intervalo incompleto, multiclase por colores, gris y RGB,
-  profundidad y edad, imagen de ejemplo, línea de comandos y **regresión frente al CSV publicado
-  de la V2** (coincidencia exacta en profundidad, porcentaje, BI e ii).
-- **Web (13 pruebas, `tests/app/*.test.mjs`):** en `log.test.mjs`, lectura de tablas (coma, punto y coma con coma decimal, espacios, comentarios), elección de la columna de profundidad o edad, marcas de eje, cambio profundidad↔edad, filas compuestas, SVG y CSV con interpolación, y reducción por bloques. En `core.test.mjs`: los mismos casos de índices e intervalos que en
-  Python, exclusiones, modelo de edad, RLE y CSV, detección de una madriguera vertical sintética
-  (verticalidad > 0,9 y alargamiento > 3), varita, lazo, giro, realce, y un clasificador que
-  aprende dos clases (acierto 100 %) y rechaza un objeto lejano.
-- **Multiproxy (`geo.test.mjs`, 8 pruebas):** tabla larga y catálogo, conversión
-  profundidad↔edad, remuestreo con huecos, razones, escalado por sondeo, reglas con z-score
-  (precisión > 0,8 frente a la verdad sintética), prioridad intervalo > regla y conversión de
-  intervalos entre ejes, Random Forest, k-NN y Bayes entrenados con 3 sondeos y probados en los
-  otros 12 (acierto > 0,8), validación dejando un sondeo fuera, reproducibilidad con semilla,
-  k-medias, resumen por ventana, IDW y SVG del mapa; desde V10, importación de intervalos en formato
-ancho y largo, columnas 0/1 de capas (con conversión de eje), capa objetivo y comprobación de
-intervalos fuera de la capa madre. Total de la web: 28 pruebas.
+  profundidad y edad, imagen de ejemplo, línea de comandos, U-Net y **regresión frente al CSV publicado
+  de la V2** (coincidencia exacta en profundidad, porcentaje, BI e ii). Esta regresión automática solo existe en
+  Python; la comparación de la web con la V2 (§13.2) se hizo una vez a mano.
+- **Web (`tests/app/*.test.mjs`, 77 pruebas):** `core` 13 (mismos casos de índices e intervalos que en Python,
+  exclusiones, modelo de edad con coma decimal y columnas por cabecera, RLE y su validación, CSV), `log` 15
+  (lectura de tablas, ejes, SVG y CSV del registro), `geo` 15 (multiproxy: catálogos, remuestreo, reglas,
+  clasificadores, validación dejando un sondeo fuera y por bloques con margen y escalado por pliegue, k-medias,
+  mapa), `enhance` 9 (realce), `unet` 6, `learn` 4 (icnotaxones, pliegues agrupados y esquema de validación),
+  `vision` 4, `overlap` 3 (trazas solapadas), `sheet` 3, `interp` 2, `plot` 2, `zip` 1.
 - Se ejecutan automáticamente en GitHub en cada cambio (`.github/workflows/tests.yml`).
 
 ### 13.2 Comparación de la aplicación web con la V2 publicada
@@ -1303,7 +1325,8 @@ defecto 42): el mismo proyecto da el mismo resultado. Parámetros por defecto en
 ### 21.4 ter Clasificadores definidos por el usuario (desde V26)
 - `S.geo.classifiers = [{id, name, targets: [familias], features: null | [variables], layers: null | [familias de
   entrada], method, params: {método: {…}}, minProb, seed, useRules, trained}]`. `features` null = todas las variables del
-  paso 2; `layers` null = todas las demás familias con intervalos descritos (las objetivo nunca son entrada).
+  paso 2; `layers` null = todas las demás familias con intervalos descritos (las objetivo nunca son entrada; desde
+  V0.37 tampoco sus familias madre, abuela…, ni sus hijas: `relatedLayers`).
 - Las muestras se construyen una vez con todas las variables del paso 2 y una columna 0/1 por clase de **cada**
   familia con intervalos descritos (`featLayers`); cada clasificador usa el subconjunto de columnas que le
   corresponde (`clfCols`).
@@ -1338,9 +1361,14 @@ defecto 42): el mismo proyecto da el mismo resultado. Parámetros por defecto en
 `crossValidate`:
 - Con muestras etiquetadas en **dos o más sondeos: dejando un sondeo fuera** (cada sondeo se
   predice con un modelo entrenado sin él).
-- Con un solo sondeo: **5 bloques contiguos** a lo largo del eje.
-- Ambos esquemas evitan que muestras vecinas (autocorrelacionadas) estén a la vez en
-  entrenamiento y prueba, lo que inflaría el acierto.
+- Con un solo sondeo: **5 bloques contiguos** a lo largo del eje. Desde V0.37 se quitan del entrenamiento las
+  muestras a menos de `gap` del bloque de prueba (por defecto el 5 % del intervalo etiquetado; `cv.gap`).
+- Desde V0.37, con escalado `global`, las columnas numéricas se tipifican en cada pliegue con la media y la
+  desviación del entrenamiento (`opt.rescale`); antes, con las de todas las muestras, incluido el sondeo de prueba.
+  Con escalado por sondeo cada sondeo usa sus propias estadísticas (sin etiquetas).
+- Ambos esquemas limitan que muestras vecinas (autocorrelacionadas) estén a la vez en
+  entrenamiento y prueba, lo que inflaría el acierto; con un solo sondeo, la autocorrelación de mayor alcance que el
+  margen puede seguir inflándolo.
 - Se informa: matriz de confusión, acierto, **acierto equilibrado** (media de la sensibilidad de
   cada clase, que no se deja engañar por una clase mayoritaria como el fondo), precisión,
   sensibilidad y F1 por clase. En validación se usa probabilidad mínima 0.
@@ -1372,10 +1400,8 @@ entrenado. «Colorear registros por clase» rellena el fondo de cada columna de 
 - **Valor de un proxy** (modo `value`): media de `zc` de la variable en la ventana; opcionalmente
   menos su media en una ventana de referencia (anomalía). Escala divergente azul–beige–rojo
   saturada en ±2.
-- **Interpolación IDW** (`idwGrid`, solo modo valor, ≥ 3 sondeos con dato): malla de 90 columnas;
-  `v = Σ w_i v_i / Σ w_i`, `w_i = 1 / d_i^p` (p por defecto 2), con `d` en grados y la longitud
-  multiplicada por `cos(latitud central)`. Es exploratoria: no estima incertidumbre ni respeta
-  barreras de tierra.
+- **Interpolación** (solo modo valor, ≥ 3 sondeos con dato): `interp.js`, §21.6 ter (desde V0.37 se retira la
+  antigua `geo.js::idwGrid`, que ya no se usaba y medía en grados).
 - **Proyección** equirectangular con la longitud escalada por `cos(latitud central)`. Costa:
   Natural Earth 1:50 m (dominio público), 1223 anillos en `examples/data/land-50m.json`.
 - Exportación SVG y CSV (`core, lat, lon, n_samples, dominant_class, fraction, value`).
@@ -1425,7 +1451,7 @@ interpolado en su centro.
   de cada celda son `A⁻¹·[γ(dᵢ), 1]`. Variogramas esférico, exponencial (`1 − e^(−3h/a)`), gaussiano
   (`1 − e^(−3(h/a)²)`) y lineal con pepita y meseta. Ajuste automático: semivariograma empírico en 8 clases de
   distancia hasta la mitad de la distancia máxima; meseta = varianza de los valores; alcance (30 valores hasta la
-  distancia máxima) y pepita (0–50 % de la meseta) por mínimos cuadrados ponderados por `n_h / h²` (Cressie, 1985; desde V22, antes `n_h`). Con menos de 15 sondeos se avisa de que el
+  distancia máxima) y pepita (0–50 % de la meseta) por mínimos cuadrados ponderados por `n_h / h²` (el `fit.method = 7` de gstat, Pebesma, 2004; Cressie, 1985, propuso `n_h / γ(h)²`; desde V22, antes `n_h`). Con menos de 15 sondeos se avisa de que el
   variograma es poco fiable. El pivote mínimo de la eliminación gaussiana es relativo: `10⁻¹² · max|A|`.
 - **Media móvil:** media de los sondeos a menos del radio (500 km si no se indica).
 - **Valores por defecto desde V22:** solo dentro del contorno de los sondeos (`hull`) y solo mar (`mask: 'sea'`), para
@@ -1750,6 +1776,8 @@ cambia lo que se ve en la imagen de trabajo.
 - Casanova-Arenillas, S., Rodríguez-Tovar, F.J., Martínez-Ruiz, F. (2020). Applied ichnology in
   sedimentary geology: Python scripts as a method to automatize ichnofabric analysis in marine core
   images. *Computers & Geosciences* 136, 104407. https://doi.org/10.1016/j.cageo.2020.104407
+- Cressie, N. (1985). Fitting variogram models by weighted least squares. *Mathematical Geology*, 17,
+  563–586.
 - Dorador, J., Rodríguez-Tovar, F.J. (2014). Quantitative estimation of bioturbation based on
   digital image analysis. *Marine Geology* 349, 55–60.
 - Dorador, J., Rodríguez-Tovar, F.J. (2018). High-resolution image treatment in ichnological core
@@ -1770,6 +1798,8 @@ cambia lo que se ve en la imagen de trabajo.
 - Miguez-Salas, O., Dorador, J., Rodríguez-Tovar, F.J. (2019). Introducing Fiji and ICY image
   processing techniques in ichnological research as a tool for sedimentary basin analysis.
   *Marine Geology* 413, 1–9. https://doi.org/10.1016/j.margeo.2019.03.013
+- Pebesma, E.J. (2004). Multivariable geostatistics in S: the gstat package. *Computers & Geosciences*,
+  30, 683–691.
 - Reineck, H.-E. (1963). Sedimentgefüge im Bereich der südlichen Nordsee. *Abhandlungen der
   Senckenbergischen Naturforschenden Gesellschaft* 505, 1–138.
 - Rodríguez-Tovar, F.J., Miguez-Salas, O., Dorador, J. (2020). Image processing techniques to improve

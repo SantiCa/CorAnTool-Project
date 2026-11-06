@@ -70,6 +70,7 @@ La descripción detallada de los algoritmos está en
 | V0.34 | 06-11-2026 | Multiproxy | Colorear registros por la familia elegida (o varias, mezcladas o en franjas); intervalos de una familia sin solape y unión de contiguos iguales |
 | V0.35 | 06-11-2026 | Datos | Hoja de datos tipo Excel: valores editables con aviso, celdas modificadas marcadas y reversibles, columnas calculadas con interpolación |
 | V0.36 | 06-11-2026 | Datos seguros | Auditoría §1: formato 5 y solo lectura, RLE comprobado, carga fallida sin guardar, guardado al cerrar, procedencia en CSV, copia previa al reemplazar, rotación del historial, cuota, avisos de error, deshacer agrupado |
+| V0.37 | 06-11-2026 | Ciencia | Auditoría §2: modelo de edad (coma decimal, cabeceras, aviso Bacon), evaluación de icnotaxones agrupada y marcada optimista, multiproxy sin fugas (familias emparentadas, escalado por pliegue, margen), criterio de realce con coherencia espacial |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -660,6 +661,31 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.37 — Correcciones científicas (auditoría, sección 2) (06-11-2026)
+
+- **Qué se hizo:**
+  - Modelo de edad: coma decimal con `;` o tabulador; columnas por cabecera; sin cabecera, la 3.ª y 4.ª columna
+    solo son intervalo si contienen a la edad; aviso si se pega una tabla de Bacon; líneas `#` ignoradas.
+  - Icnotaxones: con 2–4 secciones se deja una fuera cada vez (antes, pliegues sin agrupar); opción de agrupar por
+    sondeo; las demás trazas del grupo de prueba no entran en el entrenamiento; se muestra el esquema y que el
+    acierto es optimista.
+  - Multiproxy: la familia objetivo no usa como entrada a sus madres ni hijas; con escalado global la tipificación se
+    recalcula en cada pliegue con el entrenamiento; con un solo sondeo, margen del 5 % entre bloques.
+  - Realce sin trazas: Fisher × coherencia espacial κ (el ruido puntúa ≈ 0 con cualquier realce: antes ganaba el
+    ecualizado, 0,71 frente a 0,50); si nada supera a «Sin realce», se propone «Sin realce». Con trazas: mayoría por
+    bloque en la copia reducida y media local solo con umbral adaptativo.
+  - Retirada `geo.js::idwGrid` (sin uso). Cita del ajuste del variograma corregida (gstat, Pebesma 2004).
+  - Documentado: −1 (Python) = vacío (web) fuera de tramos; interpolación entre filas de Bacon; recuento de pruebas;
+    la comparación web–V2 fue manual; criterio de realce actualizado en METODOS.
+- **Cambios:** `core.js::parseAgeModel`, `learn.js` (`groupedFolds`, `evaluateModels`), `geo.js`
+  (`crossValidateSteps`), `imageproc.js::localSeparability`, `app.js` (`clfCols`, `relatedLayers`,
+  `trainClassifier`, `rankPresets`, evaluación), `interp.js` (comentario), `i18n.js`. `DELIVERY` = V0.37.
+- **Por qué:** informe `docs/AUDITORIA_V0.31.md`, sección 2.
+- **Comprobación:** 77 pruebas JS (3 nuevas: edad, esquema de validación, margen y reescalado) y 16 de Python. Imagen
+  sintética de ruido: 0,003–0,005 con todos los ajustes. En Chrome: U1385I propone «Sin realce» (0,298); demo
+  multiproxy entrenada dejando un sondeo fuera con reescalado por pliegue (acierto equilibrado 0,976); sin errores.
+- **Pendiente:** prueba final con sondeos reservados en la interfaz; comparación automática web–V2.
 
 ## V0.36 — Datos seguros (auditoría, sección 1) (06-11-2026)
 

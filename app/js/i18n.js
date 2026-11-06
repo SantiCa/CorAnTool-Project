@@ -643,10 +643,10 @@ Object.assign(D.es, {
   'ml.paramHelp.rf': 'Más árboles = más estable pero más lento (100 suele bastar). Menos profundidad y más ejemplos por hoja = menos riesgo de memorizar los ejemplos. «Compensar» evita que el taxón más abundante se lo coma todo.',
   'ml.paramHelp.nb': '«Igual para todos» no favorece al taxón más frecuente; «según ejemplos» acierta más en total pero menos en los raros.',
   'ml.noveltyHelp': 'La tolerancia a formas nuevas decide cuándo el programa dice «no se parece a nada» (más baja = más prudente).',
-  'ml.eval': 'Evaluar y comparar', 'ml.evalHint': 'Prueba los 3 métodos con los 3 modelos (validación cruzada de 5 grupos, semilla 42).',
+  'ml.eval': 'Evaluar y comparar', 'ml.evalHint': 'Prueba los 3 métodos con los 3 modelos (validación cruzada agrupada, semilla 42).',
   'ml.evalNeed': 'Hacen falta al menos 6 ejemplos de 2 taxones para evaluar.',
   'ml.evalTitle': 'Resultado de la evaluación', 'ml.onCore': 'las trazas etiquetadas de este sondeo', 'ml.onProject': 'las trazas etiquetadas del proyecto',
-  'ml.evalNote': 'Se predicen {n} trazas ({w}) que el modelo no ha visto (5 grupos; cada traza se predice una vez, entrenando sin su grupo). Primera cifra: acierto equilibrado (media del acierto de cada taxón, no se deja engañar por un taxón muy abundante). Entre paréntesis: acierto total.',
+  'ml.evalNote': 'Se predicen {n} trazas ({w}) que el modelo no ha visto (cada traza se predice una vez, entrenando sin su grupo). Primera cifra: acierto equilibrado (media del acierto de cada taxón, no se deja engañar por un taxón muy abundante). Entre paréntesis: acierto total.',
   'ml.useBest': 'Usar esta combinación', 'ml.applied': 'Método y modelo aplicados.',
   'ml.cm': 'Matriz de confusión de la mejor combinación', 'ml.cmNote': 'Filas: taxón real; columnas: taxón predicho. La diagonal son los aciertos; fuera de ella, qué se confunde con qué.', 'ml.real': 'Real', 'ml.pred': 'Predicho',
   'ml.rec': 'Recomendación para tus datos', 'ml.recNone': 'Aún no hay trazas etiquetadas: etiqueta algunas (al menos 10 por taxón) y vuelve aquí.',
@@ -692,9 +692,9 @@ Object.assign(D.en, {
   'ml.paramHelp.knn': 'Small k (3–5) follows individual examples; large k (9–15) smooths but may swallow rare ichnotaxa.',
   'ml.paramHelp.rf': 'More trees = more stable, slower (100 is usually enough). Less depth and more examples per leaf = less memorising.',
   'ml.paramHelp.nb': '“Equal” does not favour the most frequent ichnotaxon.', 'ml.noveltyHelp': 'Novelty tolerance decides when the program says “unlike anything seen”.',
-  'ml.eval': 'Evaluate and compare', 'ml.evalHint': 'Tests the 3 methods with the 3 models (5-fold cross-validation, seed 42).', 'ml.evalNeed': 'At least 6 examples of 2 ichnotaxa are needed.',
+  'ml.eval': 'Evaluate and compare', 'ml.evalHint': 'Tests the 3 methods with the 3 models (grouped cross-validation, seed 42).', 'ml.evalNeed': 'At least 6 examples of 2 ichnotaxa are needed.',
   'ml.evalTitle': 'Evaluation result', 'ml.onCore': 'the labelled traces of this core', 'ml.onProject': 'the labelled traces of the project',
-  'ml.evalNote': '{n} traces ({w}) predicted without having been seen (5 folds). First figure: balanced accuracy (mean per-ichnotaxon accuracy); in brackets: overall accuracy.',
+  'ml.evalNote': '{n} traces ({w}) predicted without having been seen (each once, training without its group). First figure: balanced accuracy (mean per-ichnotaxon accuracy); in brackets: overall accuracy.',
   'ml.useBest': 'Use this combination', 'ml.applied': 'Method and model applied.',
   'ml.cm': 'Confusion matrix of the best combination', 'ml.cmNote': 'Rows: true ichnotaxon; columns: predicted.', 'ml.real': 'True', 'ml.pred': 'Predicted',
   'ml.rec': 'Recommendation for your data', 'ml.recNone': 'No labelled traces yet: label some (at least 10 per ichnotaxon).', 'ml.recCounts': 'Examples: {c} in this core, {p} in the project, {a} in all projects.',
@@ -1746,12 +1746,12 @@ Object.assign(D.en, { 'logs.win': 'Axis and window', 'logs.img': 'Core image', '
 // V0.28: choose the enhancement setting
 Object.assign(D.es, {
   'f.rankT': 'Separación entre tus {n} trazas identificadas y la matriz (0–1, como la ve la detección): {list}. Revisa el resultado a ojo.',
-  'f.rankL': 'Sin trazas identificadas en esta sección: separación local de grises por zonas (Fisher en el umbral de Otsu; 0,5 = como un reparto uniforme): {list}. Identifica unas cuantas trazas y vuelve a pulsar para un resultado mejor.',
+  'f.rankL': 'Sin trazas identificadas en esta sección: separación local de grises por zonas (Fisher en el umbral de Otsu por la coherencia espacial κ; 0 = como ruido): {list}. Identifica unas cuantas trazas y vuelve a pulsar para un resultado mejor.',
   'h.f.best': 'Prueba los ajustes y cada canal de color. Si en esta sección hay trazas identificadas a mano, elige el que mejor las separa de la matriz tal como las detecta el método elegido; si no, el que más contraste local da.',
 });
 Object.assign(D.en, {
   'f.rankT': 'Separation between your {n} identified traces and the matrix (0–1, as the detection sees it): {list}. Check the result by eye.',
-  'f.rankL': 'No identified traces in this section: local grey-level separation by tiles (Fisher at the Otsu threshold; 0.5 = like a uniform spread): {list}. Identify a few traces and press again for a better result.',
+  'f.rankL': 'No identified traces in this section: local grey-level separation by tiles (Fisher at the Otsu threshold times spatial coherence κ; 0 = like noise): {list}. Identify a few traces and press again for a better result.',
   'h.f.best': 'Tries the settings and each colour channel. With traces identified by hand in this section, picks the one that best separates them from the matrix as the chosen method detects them; otherwise the one with most local contrast.',
 });
 Object.assign(D.es, {
@@ -1844,3 +1844,23 @@ Object.assign(D.en, {
   'bk.previous': 'previous', 'err.generic': 'Error: {e}',
   'quota.use': 'Browser storage: {u} MB of {q} MB ({p} %)', 'quota.high': 'Browser storage is {p} % full. Export or delete projects you do not use to avoid losing changes.',
 });
+
+// V0.37
+Object.assign(D.es, { 'age.baconPasted': '⚠ Parece una tabla de Bacon pegada tal cual (profundidad en cm y edades en años cal BP): ábrela con el botón de archivo para convertir unidades.' });
+Object.assign(D.en, { 'age.baconPasted': '⚠ This looks like a Bacon table pasted as is (depth in cm, ages in cal yr BP): open it with the file button to convert units.' });
+Object.assign(D.es, {
+  'ml.cvGroup': 'Dejar fuera', 'ml.cvGroup.section': 'Sección', 'ml.cvGroup.core': 'Sondeo',
+  'ml.scheme.groups': 'Esquema: {f} pliegues por {u} ({g} grupos); las trazas de un mismo grupo nunca están a la vez en entrenamiento y prueba.',
+  'ml.scheme.logo': 'Esquema: dejar fuera una {u} cada vez ({g} grupos, {f} pliegues).',
+  'ml.scheme.examples': '⚠ Solo hay un grupo: se dejan fuera trazas sueltas de la misma {u}, que se parecen a las de entrenamiento. El acierto será muy optimista.',
+  'ml.optimistic': 'El acierto mostrado es optimista: es la misma evaluación que elige el método; confírmalo con un sondeo reservado que no se use para elegir.',
+});
+Object.assign(D.en, {
+  'ml.cvGroup': 'Leave out', 'ml.cvGroup.section': 'Section', 'ml.cvGroup.core': 'Core',
+  'ml.scheme.groups': 'Scheme: {f} folds by {u} ({g} groups); traces of one group are never in training and test at once.',
+  'ml.scheme.logo': 'Scheme: leave one {u} out at a time ({g} groups, {f} folds).',
+  'ml.scheme.examples': '⚠ There is a single group: single traces of the same {u} are left out, and they resemble the training ones. Accuracy will be very optimistic.',
+  'ml.optimistic': 'The accuracy shown is optimistic: the same evaluation picks the method; confirm it on a held-out core not used for the choice.',
+});
+Object.assign(D.es, { 'f.rankNoGain': 'Ningún realce supera con claridad a la imagen sin realce: se deja sin realce.' });
+Object.assign(D.en, { 'f.rankNoGain': 'No enhancement clearly beats the image without enhancement: none is applied.' });

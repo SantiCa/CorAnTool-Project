@@ -103,10 +103,12 @@ export function rng(seed = 42) { let a = seed >>> 0; return () => { a = (a + 0x6
 /**
  * Grouped folds: whole groups (image sections) go to one fold, so traces of the same section are never both trained
  * and tested. Groups are shuffled (seeded) and each one goes to the fold with fewest examples of its main class.
- * Falls back to stratifiedFolds when there are fewer than k groups.
+ * V0.37: with 2…k−1 groups, one fold per group (leave one group out); stratifiedFolds only with a single group.
  */
 export function groupedFolds(y, groups, k = 5, seed = 42) {
-  const ids = [...new Set(groups)]; if (ids.length < k) return stratifiedFolds(y, k, seed);
+  const ids = [...new Set(groups)];
+  if (ids.length < 2) return stratifiedFolds(y, k, seed);
+  if (ids.length < k) return ids.map((g) => groups.reduce((o, x, i) => (x === g && o.push(i), o), []));
   const r = rng(seed), by = new Map(ids.map((g) => [g, []]));
   groups.forEach((g, i) => by.get(g).push(i));
   for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
@@ -173,8 +175,11 @@ export class TaxonModel {
  * test examples (by key) from every pool, so all scopes are judged on the same traces.
  * Returns {scope: {method: {accuracy, balanced, classes, cm, n}}}.
  */
-export function evaluateModels({ test, pools, methods, opt, k = 5, seed = 42 }) {
-  const kk = Math.min(k, test.length), folds = test.some((e) => e.g != null) ? groupedFolds(test.map((e) => e.y), test.map((e) => e.g ?? e.key), kk, seed) : stratifiedFolds(test.map((e) => e.y), kk, seed), out = {};
+export function evaluateModels({ test, pools, methods, opt, k = 5, seed = 42, group = (e) => e.g }) {
+  // V0.37: scheme = 'groups' (k grouped folds), 'logo' (one fold per group) or 'examples' (single group: optimistic)
+  const gs = test.map((e) => group(e) ?? null), nGroups = new Set(gs.filter((g) => g != null)).size;
+  const kk = Math.min(k, test.length), folds = nGroups >= 2 ? groupedFolds(test.map((e) => e.y), gs.map((g, i) => g ?? test[i].key), kk, seed) : stratifiedFolds(test.map((e) => e.y), kk, seed), out = {};
+  const scheme = nGroups >= kk && nGroups >= 2 ? 'groups' : nGroups >= 2 ? 'logo' : 'examples';
   // rows = true classes of the test traces; columns add every class the models can predict, so a prediction of a class
   // absent from the test set still counts as an error (column «other»)
   const classes = [...new Set(test.map((e) => e.y))].sort();
@@ -183,7 +188,9 @@ export function evaluateModels({ test, pools, methods, opt, k = 5, seed = 42 }) 
     for (const m of methods) {
       const cm = classes.map(() => classes.map(() => 0)), other = classes.map(() => 0), none = classes.map(() => 0);
       for (const f of folds) {
-        const keys = new Set(f.map((i) => test[i].key)), train = pools[sc].filter((e) => !keys.has(e.key));
+        // the test traces and every other trace of their groups (same section or core) are left out of training
+        const keys = new Set(f.map((i) => test[i].key)), held = new Set(f.map((i) => gs[i]).filter((g) => g != null));
+        const train = pools[sc].filter((e) => !keys.has(e.key) && !(scheme !== 'examples' && held.has(group(e))));
         const trainable = new Set(train.map((e) => e.y)).size >= 2, model = trainable ? new TaxonModel({ ...opt, method: m }).fit(train) : null;
         for (const i of f) {
           const a = classes.indexOf(test[i].y), p = model?.predict(test[i].x, { ignoreNovelty: true }), b = classes.indexOf(p?.y);
@@ -193,7 +200,7 @@ export function evaluateModels({ test, pools, methods, opt, k = 5, seed = 42 }) 
       const n = test.length, okc = classes.reduce((s, _, i) => s + cm[i][i], 0);
       const rows = classes.map((_, i) => cm[i].reduce((a, b) => a + b, 0) + other[i] + none[i]);
       const rec = classes.map((_, i) => (rows[i] ? cm[i][i] / rows[i] : null)).filter((v) => v != null);
-      out[sc][m] = { accuracy: n ? okc / n : null, balanced: rec.length ? rec.reduce((a, b) => a + b, 0) / rec.length : null, classes, cm, other, none, n };
+      out[sc][m] = { accuracy: n ? okc / n : null, balanced: rec.length ? rec.reduce((a, b) => a + b, 0) / rec.length : null, classes, cm, other, none, n, scheme, nGroups, folds: folds.length };
     }
   }
   return out;

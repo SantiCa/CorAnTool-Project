@@ -105,3 +105,14 @@ test('V0.36: RLE validation', async () => {
   assert.ok(rleValid(rleEncode(new Int32Array([0, 0, 3, 3, 3])), 5));
   assert.ok(!rleValid([0, 4], 5)); assert.ok(!rleValid([0, 2, 1], 3)); assert.ok(!rleValid([0, -1, 1, 6], 5)); assert.ok(!rleValid(null, 1));
 });
+
+test('V0.37: age model with decimal comma, header columns and Bacon flag', () => {
+  const m = parseAgeModel('10,5;3,2\n20,5;6,4');
+  assert.deepEqual(m.depth, [10.5, 20.5]); assert.deepEqual(m.age, [3.2, 6.4]);
+  const s = parseAgeModel('0 0 0.3 1\n10 10 0.3 2');   // sigma and a code: not an age range
+  assert.equal(s.min, undefined);
+  const h = parseAgeModel('age;depth;max;min\n1;0;2;0,5\n3;10;4;2');
+  assert.deepEqual(h.depth, [0, 10]); assert.deepEqual(h.age, [1, 3]); assert.deepEqual(h.min, [0.5, 2]);
+  const b = parseAgeModel('depth min max median mean\n0 100 300 200 200\n100 9000 11000 10000 10100');
+  assert.ok(b.bacon); assert.deepEqual(b.age, [200, 10000]); assert.deepEqual(b.max, [300, 11000]);
+});

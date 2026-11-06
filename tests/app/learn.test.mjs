@@ -40,3 +40,14 @@ test('V22: wrong predictions of a class absent from the test set count as errors
   const g = ['s1', 's1', 's2', 's2', 's3', 's3', 's4', 's4', 's5', 's5'], f = groupedFolds(test.map(() => 'A'), g, 5, 1);
   for (const fold of f) assert.equal(new Set(fold.map((i) => g[i])).size, 1);
 });
+
+test('V0.37: few groups give leave-one-group-out folds and the scheme is reported', async () => {
+  const { evaluateModels, groupedFolds } = await import('../../app/js/learn.js');
+  const f = groupedFolds(['A', 'B', 'A', 'B', 'A', 'B'], ['s1', 's1', 's2', 's2', 's3', 's3'], 5, 1);
+  assert.equal(f.length, 3); assert.ok(f.every((q) => q.length === 2));
+  const ex = Array.from({ length: 12 }, (_, i) => ({ key: 'k' + i, g: 'c' + (i % 3), y: i % 2 ? 'A' : 'B', x: [i % 2, (i * 7) % 5] }));
+  const r = evaluateModels({ test: ex, pools: { all: ex }, methods: ['knn'], opt: { k: 1 } });
+  assert.equal(r.all.knn.scheme, 'logo'); assert.equal(r.all.knn.nGroups, 3);
+  const one = evaluateModels({ test: ex, pools: { all: ex }, methods: ['knn'], opt: { k: 1 }, group: () => 'x' });
+  assert.equal(one.all.knn.scheme, 'examples');
+});

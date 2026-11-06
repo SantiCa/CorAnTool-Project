@@ -80,7 +80,7 @@ export function fitVariogram(xy, v, model = 'spherical') {
   let best = { err: Infinity, nugget: 0, range: hmax };
   for (let r = 1; r <= 30; r++) for (let q = 0; q <= 5; q++) {
     const range = (hmax * 2 * r) / 30, nugget = (sill * q) / 10;
-    const err = bins.reduce((s, b) => s + (b.n / (b.h * b.h)) * (variogram(model, b.h, nugget, sill, range) - b.g) ** 2, 0); // weights n_h/h² (Cressie, 1985)
+    const err = bins.reduce((s, b) => s + (b.n / (b.h * b.h)) * (variogram(model, b.h, nugget, sill, range) - b.g) ** 2, 0); // weights n_h/h² (gstat fit.method 7, Pebesma 2004; Cressie 1985 uses n_h/γ(h)²)
     if (err < best.err) best = { err, nugget, range };
   }
   return { nugget: best.nugget, sill, range: best.range, bins };
