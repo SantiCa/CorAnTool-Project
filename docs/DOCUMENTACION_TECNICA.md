@@ -1814,6 +1814,13 @@ cambia lo que se ve en la imagen de trabajo.
 - **Figura «Distribución de icnotaxones»** (`buildRangeSVG`): una columna por icnotaxón presente; barra de ancho
   proporcional a su porcentaje en cada intervalo dividido por su máximo en la ventana; en modo identificación,
   triángulos en los intervalos con marcas. Columna opcional de bioturbación (%).
+  **V0.51:** lista «Icnotaxones mostrados» en el panel (escribe `style.colHide` con ids `sp:<nombre>`, la misma lista
+  que el orden de columnas); ancho de columna `fig.rangeColW` (16–200 px, 30 por defecto); modos `kite` y
+  `kiteSymbols`: la abundancia de cada icnotaxón como **dos curvas simétricas** respecto al eje de su columna. Para cada
+  tramo continuo de intervalos con dato se dibuja un contorno cerrado que pasa por `(eje ± a/2, profundidad media del
+  intervalo)`, con `a = (p / pₘₐₓ) · (anchoColumna − 6)` (p = % del icnotaxón en el intervalo, pₘₐₓ = su máximo en la
+  ventana) o, con eje horizontal propio, `a = |sx(p) − sx(mín)|`; empieza y acaba en el eje en el techo del primer
+  intervalo y el muro del último. Los intervalos sin dato cortan el contorno. `kiteSymbols` añade los símbolos.
 
 ### 22.7 Proyecto de entrenamiento, carteles de ayuda y recorrido guiado (desde V19)
 - **Datos sintéticos** (`tools/make_tutorial.py`, semilla 2026; `examples/tutorial/`): 7 sondeos ficticios
@@ -1934,6 +1941,20 @@ proyecto con latitud y longitud.
   ejemplos de entrenamiento, métricas) con su número de repetición; las repeticiones se marcan, porque dejan de ser
   independientes si el modelo se cambió tras ver la anterior.
 
+### 22.v Orientación horizontal y zonas excluidas en las figuras (desde V0.51)
+- **Orientación** (`fig.orient`: `v` o `h`; todas las figuras salvo los mapas): `orientSVG` gira el dibujo 90° en
+  sentido antihorario (`rotate(-90)`: la profundidad o edad avanza de izquierda a derecha y la primera columna queda
+  abajo; las imágenes giran con él). Cada texto se envuelve en `rotate(c, ax, ay)` sobre su punto de anclaje (`ax, ay`
+  = transformación propia aplicada a `x, y`), con `c = deseado + 90 − propio`: los textos conservan su ángulo de
+  lectura y los que eran verticales (±90°) pasan a horizontales. Anclajes: textos del margen superior original
+  (12 % de arriba) terminan en su punto, los del inferior (12 % de abajo) empiezan en él y los que terminaban en él
+  (etiquetas de escala) quedan centrados. El título y el subtítulo (arriba a la izquierda) no giran. La página se
+  ajusta a lo dibujado (`getBBox` del SVG en una copia oculta) más 6 px. Leyendas y etiquetas muy densas pueden
+  solaparse; se pueden mover o editar en la figura.
+- **Zonas excluidas:** todas las figuras con imagen del sondeo permiten ocultarlas (sondeo entero y secciones, con su
+  opción propia; registro del sondeo y registro multiproxy, con la del registro, `S.logView.hideExcl`, ahora también
+  en el panel de la figura).
+
 ## 23. Referencias
 
 - Cressie, N. (1985). Fitting variogram models by weighted least squares. *Mathematical Geology*, 17,
@@ -2043,7 +2064,8 @@ en navegador de unidades en metros, marcas cada 1 m, rango logarítmico 1–20 y
 
 ### Símbolos de distribución e identificación (V0.12)
 
-`fig.rangeDisplay` controla la distribución: `symbols` (predeterminado), `bars` o `both`.
+`fig.rangeDisplay` controla la distribución: `symbols` (predeterminado), `bars`, `both`, `kite` o `kiteSymbols`
+(V0.51).
 En símbolos se representa una presencia por intervalo con `classPct[index] > 0` o con marcas
 identificadas; si coinciden ambas fuentes en el mismo intervalo no se duplica el símbolo.
 El símbolo se sitúa en el centro del tramo visible del intervalo. Solo se incluyen icnotaxones

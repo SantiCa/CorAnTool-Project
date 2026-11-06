@@ -84,6 +84,7 @@ La descripción detallada de los algoritmos está en
 | V0.48 | 07-11-2026 | Preparación de release | Prueba real de Electron con cierre/reapertura, inferencia DINOv2 y fondos Esri; borrador de release con instaladores, HTML sin conexión, manifiesto y SHA-256; Zenodo aplazado |
 | V0.49 | 07-11-2026 | Validación | Prueba final con sondeos reservados (icnotaxones y multiproxy, registrada) y comparación automática web–V2 (exacta con la misma máscara; la diferencia de 0,56 puntos viene del decodificador JPEG, no de los pesos de gris) |
 | V0.50 | 07-11-2026 | Datos y repositorio | Descargas sin datos de ejemplo (solo la costa de Natural Earth); botones de ejemplo ocultos si faltan sus archivos; sin menciones a la tesis ni al artículo de la V2.1 fuera de `publications/` |
+| V0.51 | 07-11-2026 | Figuras | Distribución de icnotaxones: elegir los mostrados, ancho de columna y abundancia en curvas simétricas; orientación horizontal en todas las figuras; ocultar zonas excluidas en todas las figuras con sondeo |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -674,6 +675,25 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.51 — Curvas simétricas, orientación horizontal y zonas excluidas en todas las figuras (07-11-2026)
+
+- **Qué se hizo:**
+  - Distribución de icnotaxones: lista visible para elegir qué icnotaxones se muestran (con «Todos» y «Ninguno»),
+    ancho de cada columna y dos modos nuevos: abundancia en **curvas simétricas** (diagrama tipo *kite*) y curvas con
+    símbolos.
+  - **Orientación horizontal** en todas las figuras (salvo los mapas): la profundidad o edad avanza hacia la derecha,
+    los textos siguen leyéndose en horizontal y el título queda arriba.
+  - **Ocultar zonas excluidas** también desde el panel del registro del sondeo y del registro multiproxy (el sondeo
+    entero y las secciones ya lo tenían).
+- **Cambios:** `app/js/log.js` (`buildRangeSVG`: `colW`, modos `kite`/`kiteSymbols`), `app/js/app.js`
+  (`orientSVG`, panel de distribución, `figOrient`, `figLogHideExcl`), `index.html`, `i18n.js`,
+  `tests/app/log.test.mjs`. `DELIVERY` = V0.51.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 94 pruebas JS (1 nueva: contorno simétrico, ancho máximo, sin barras, icnotaxón oculto). En Chrome:
+  distribución con curvas simétricas en vertical y horizontal, sondeo entero y secciones en horizontal; sin errores.
+- **Pendiente:** en horizontal, las leyendas en varias columnas y las etiquetas muy densas (flechas de icnotaxones)
+  pueden solaparse; una maquetación horizontal propia para cada figura quedaría mejor que el giro general.
 
 ## V0.50 — Descargas sin datos y repositorio sin menciones a publicaciones propias (07-11-2026)
 

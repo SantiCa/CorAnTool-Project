@@ -449,7 +449,7 @@ export function abbrevs(names) {
  * total: bool (bioturbation % column)}.
  */
 export function buildRangeSVG(o) {
-  const H = o.height, from = o.from, to = o.to, span = to - from || 1, colW = 30, x0 = 72;
+  const H = o.height, from = o.from, to = o.to, span = to - from || 1, colW = Math.max(16, Math.min(200, +o.colW || 30)), x0 = 72;   // V0.51: column width
   const longest = Math.max(8, ...o.classes.map((c) => String(c.name).length)), top = 46 + Math.min(150, longest * 5.2 * 0.87);   // room for names at 60°
   const y = (v) => f2(top + ((v - from) / span) * H);
   const rows = (o.rows || []).filter((r) => r.a1 > from && r.a0 < to), display = o.display || 'symbols';
@@ -503,13 +503,27 @@ export function buildRangeSVG(o) {
     out.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${top + H}" stroke="#d5dbd9" stroke-width="0.6"/>`);
     const sx = rangeScale('species', x, colW - 6, max);
     out.push(`<g clip-path="url(#range-${x})">`);
-    for (const r of display === 'symbols' ? [] : rows) {
+    // V0.51: display = symbols | bars | both | kite (abundance as two symmetric curves) | kiteSymbols
+    const showSym = display === 'symbols' || display === 'both' || display === 'kiteSymbols', kite = display === 'kite' || display === 'kiteSymbols';
+    const custom = Object.keys(o.style?.axes?.species || {}).length > 0;
+    if (kite) {   // one closed outline per run of intervals with data: right side downwards, left side back up
+      const half = (v) => (custom ? Math.abs(sx(v) - sx.base) : (v / max) * (colW - 6)) / 2;
+      const runs = []; let cur = [];
+      for (const r of [...rows].sort((a, b) => a.a0 - b.a0)) { if (r.classPct?.[c.index] == null || r.pct == null) { if (cur.length) runs.push(cur); cur = []; continue; } cur.push(r); }
+      if (cur.length) runs.push(cur);
+      for (const run of runs) {
+        if (!run.some((r) => r.classPct[c.index] > 0)) continue;
+        const pts = run.map((r) => [half(r.classPct[c.index]), y((r.a0 + r.a1) / 2)]), y0 = y(run[0].a0), y1 = y(run.at(-1).a1);
+        const right = [[0, y0], ...pts, [0, y1]].map(([h, yy]) => `${f2(cx + h)},${f2(yy)}`), left = [...pts].reverse().map(([h, yy]) => `${f2(cx - h)},${f2(yy)}`);
+        out.push(`<polygon points="${[...right, ...left].join(' ')}" fill="${c.color}" fill-opacity="0.85" stroke="${c.color}" stroke-width="0.6" stroke-linejoin="round"/>`);
+      }
+    }
+    for (const r of display === 'bars' || display === 'both' ? rows : []) {
       const v = r.classPct?.[c.index] || 0; if (!v) continue;
-      const custom = Object.keys(o.style?.axes?.species || {}).length > 0;
       const w = custom ? Math.abs(sx(v) - sx.base) : Math.max(2, (v / max) * (colW - 6));
       out.push(`<rect x="${f2(custom ? Math.min(sx(v), sx.base) : cx - w / 2)}" y="${y(r.a0)}" width="${f2(w)}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="${c.color}"/>`);
     }
-    if (o.points && display !== 'bars') {   // V0.32: one symbol per identified trace or mark, at its own depth or age
+    if (o.points && showSym) {   // V0.32: one symbol per identified trace or mark, at its own depth or age
       let lastY = -1e9, lastK = '';
       for (const p of o.points) {
         if (p.index !== c.index || p.a < from || p.a > to) continue;
@@ -520,7 +534,7 @@ export function buildRangeSVG(o) {
     }
     const presence = o.points ? [] : [...(o.presence || []).filter((q) => q.index === c.index)];
     if (!o.points) for (const r of rows) if ((r.classPct?.[c.index] || 0) > 0 && !presence.some((p) => p.a0 === r.a0 && p.a1 === r.a1)) presence.push({a0:r.a0,a1:r.a1});
-    if (display !== 'bars') for (const p of presence) {
+    if (showSym) for (const p of presence) {
       if (p.a1 <= from || p.a0 >= to) continue;
       const mid = (Math.max(from, p.a0) + Math.min(to, p.a1)) / 2;
       out.push(traceSymbol(cx, y(mid) + 4, c.color, c.symbol));

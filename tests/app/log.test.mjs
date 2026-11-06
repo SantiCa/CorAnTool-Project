@@ -145,3 +145,19 @@ test('V0.38: quoted fields, thousands separators, dropped cells and Latin-1', as
   assert.equal(decodeText(new Uint8Array([0x50, 0x72, 0x6f, 0x66, 0x2e, 0x20, 0xb5, 0x6d])), 'Prof. µm');
   assert.equal(decodeText(new TextEncoder().encode('Profundidad (µm)')), 'Profundidad (µm)');
 });
+
+test('V0.51: ichnotaxa distribution as symmetric curves, column width and hidden taxa', () => {
+  const rows = [{ a0: 0, a1: 5, pct: 10, classPct: [10, 0] }, { a0: 5, a1: 10, pct: 30, classPct: [20, 5] }];
+  const classes = [{ name: 'A', color: '#111111', index: 0 }, { name: 'B', color: '#222222', index: 1 }];
+  const k = buildRangeSVG({ from: 0, to: 10, height: 100, rows, classes, display: 'kite', colW: 60, points: [{ index: 0, a: 2, kind: 'object' }] }).svg;
+  const poly = [...k.matchAll(/<polygon points="([^"]+)" fill="#111111"/g)];
+  assert.equal(poly.length, 1);   // one outline for the run of intervals with data
+  const xs = poly[0][1].split(' ').map((p) => +p.split(',')[0]), cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+  assert.ok(xs.every((x) => Math.abs(x - cx) <= 27 + 1e-6));   // half-width ≤ (60 − 6)/2, symmetric about the column centre
+  assert.ok(Math.abs(Math.max(...xs) - cx - 27) < 0.02);       // the largest abundance fills the column
+  assert.doesNotMatch(k, /<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#111111"/);   // no bars
+  const ks = buildRangeSVG({ from: 0, to: 10, height: 100, rows, classes, display: 'kiteSymbols', points: [{ index: 0, a: 2, kind: 'object' }] }).svg;
+  assert.ok(ks.length > k.length - 200 && /#111111/.test(ks));
+  const hid = buildRangeSVG({ from: 0, to: 10, height: 100, rows, classes, display: 'kite', style: { colHide: ['sp:B'] } });
+  assert.doesNotMatch(hid.svg, />B<\/text>/);
+});

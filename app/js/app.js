@@ -21,7 +21,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.50';
+const DELIVERY = 'V0.51';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -6498,7 +6498,7 @@ function rangeSVG() {
   const F = S.fig, D = compositeData(F.rangeAxis || S.logView.axis), [from, to] = figAxisWin(D);
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, plain: !!c.plain })).filter((c) => S.classes[c.index].id !== 'artifact');
   const points = figPoints(D, F.rangeSrc || 'all');
-  const res = buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t(F.rangeDisplay === 'bars' ? 'fig.rangeSub' : F.rangeDisplay === 'both' ? 'fig.rangeSubBoth' : 'fig.rangeSubPts'), axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
+  const res = buildRangeSVG({ title: curCore()?.name || S.name, subtitle: t({ bars: 'fig.rangeSub', both: 'fig.rangeSubBoth', kite: 'fig.rangeSubKite', kiteSymbols: 'fig.rangeSubKiteSym' }[F.rangeDisplay] || 'fig.rangeSubPts'), colW: F.rangeColW || 30, axisLabel: logStyleOf(D).label, style: logStyleOf(D).style,
     from, to, height: F.rangeH, rows: D.rows, classes, points, markHollow: F.rangeSrc === 'all' && F.rangeHollow !== false, display: F.rangeDisplay || 'symbols', total: F.rangeTotal, totalLabel: t('log.total') });
   setTimeout(() => syncColOrder('range', res.columns), 0);   // V0.33 (after the form exists)
   return res.svg;
@@ -6534,6 +6534,7 @@ function verticalStyleHTML(st = S.logView.style || {}, nd = true) {
 function renderFigPanel() {
   const F = S.fig, box = $('figOpts');
   $('figType').value = F.type; $('figTitle').value = F.title; $('figCaption').value = F.caption;
+  $('figOrient').value = F.orient === 'h' ? 'h' : 'v'; $('figOrientBox').hidden = ['map', 'locmap'].includes(F.type);   // V0.51
   if (F.type === 'traces') {
     const cls = S.classes.filter((c) => classTraces(c.id).length);
     box.innerHTML = `${figWinHTML()}<div class="grid2"><label class="f"><span>${t('fig.n')}</span><input type="number" id="figN" min="1" max="20" value="${F.n}"></label>
@@ -6575,9 +6576,12 @@ function renderFigPanel() {
       <div class="grid2"><label class="f"><span>${t('fig.axisFig')}</span><select id="figRangeAxis"><option value="depth" ${(F.rangeAxis || S.logView.axis) !== 'age' ? 'selected' : ''}>${t('log.depth')}</option><option value="age" ${(F.rangeAxis || S.logView.axis) === 'age' ? 'selected' : ''} ${S.age.model ? '' : 'disabled'}>${t('log.age')}</option></select></label>
       <label class="f"><span>${t('fig.ptsSrc')}</span><select id="figRangeSrc">${['all', 'objects', 'marks'].map((v) => `<option value="${v}" ${(F.rangeSrc || 'all') === v ? 'selected' : ''}>${t('fig.ptsSrc.' + v)}</option>`).join('')}</select></label></div>
       ${(F.rangeSrc || 'all') === 'all' ? `<label class="chk"><input type="checkbox" id="figRangeHollow" ${F.rangeHollow !== false ? 'checked' : ''}><span>${t('fig.ptsHollow')}</span></label>` : ''}
-      <label class="f"><span>${t('fig.rangeDisplay')}</span><select id="figRangeDisplay">${['symbols', 'bars', 'both'].map((v) => `<option value="${v}" ${(F.rangeDisplay || 'symbols') === v ? 'selected' : ''}>${t('fig.rangeDisplay.' + v)}</option>`).join('')}</select></label>
+      <label class="f"><span>${t('fig.rangeDisplay')}</span><select id="figRangeDisplay">${['symbols', 'bars', 'both', 'kite', 'kiteSymbols'].map((v) => `<option value="${v}" ${(F.rangeDisplay || 'symbols') === v ? 'selected' : ''}>${t('fig.rangeDisplay.' + v)}</option>`).join('')}</select></label>
       <details class="mini"><summary>${t('fig.taxonSymbols')}</summary>${S.classes.filter((c) => c.id !== 'artifact').map((c) => `<label class="f"><span>${esc(c.name)}</span><select data-taxon-symbol="${esc(c.id)}">${['triDown','tri','circle','square','diamond','star','cross'].map((v) => `<option value="${v}" ${(c.symbol || 'triDown') === v ? 'selected' : ''}>${t('fig.ms.' + v)}</option>`).join('')}</select></label>`).join('')}</details>
-      <label class="chk"><input type="checkbox" id="figRangeTotal" ${F.rangeTotal ? 'checked' : ''}><span>${t('log.total')}</span></label><p class="note">${t('fig.rangeNote')}</p>`;
+      <label class="f"><span>${t('fig.rangeColW')}</span><input type="number" id="figRangeColW" min="16" max="200" step="2" value="${F.rangeColW || 30}"></label>
+      <div class="f"><span>${t('fig.rangeTaxa')}</span><div class="chk2">${S.classes.filter((c) => c.id !== 'artifact').map((c) => `<label class="chk"><input type="checkbox" data-range-taxon="${esc(c.name)}" ${(colView('range').style?.colHide || []).includes('sp:' + c.name) ? '' : 'checked'}><span>${esc(c.name)}</span></label>`).join('')}</div>
+      <div class="row"><button class="btn small" type="button" data-range-all="1">${t('mp.all')}</button><button class="btn small" type="button" data-range-all="0">${t('mp.none')}</button></div></div>
+      <label class="chk"><input type="checkbox" id="figRangeTotal" ${F.rangeTotal ? 'checked' : ''}><span>${t('log.total')}</span></label><p class="note">${t('fig.rangeNote')}</p>`;   // V0.51: taxa shown and column width
   } else if (F.type === 'core') {
     const tr = F.tracks || S.logView.tracks, names = [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))], shown = F.recs || S.records.flatMap((r) => r.series.filter((x) => x.show).map((x) => x.name));
     const trLab = { image: t('log.image'), total: t('log.total'), species: t('log.species'), BI: 'BI', ii: 'ii', manual: t('log.manual') };
@@ -6596,6 +6600,7 @@ function renderFigPanel() {
     box.innerHTML = `<label class="f"><span>${t('geo.core')}</span><select id="figGeoCore">${S.cores.map((c) => `<option value="${c.id}" ${c.id === S.geo.view.core ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label><p class="note">${t('fig.geoNote')}</p>`;
   } else if (F.type === 'locmap') box.innerHTML = locmapPanelHTML();
   else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
+  if (F.type === 'log' || F.type === 'geolog') box.insertAdjacentHTML('afterbegin', `<label class="chk"><input type="checkbox" id="figLogHideExcl" ${S.logView.hideExcl ? 'checked' : ''}><span>${t('log.hideExcl')}</span></label>`);   // V0.51: every figure with the core
   if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? colOrderHTML('range') + speciesFormHTML(S.logView.style || {}) + axesFormHTML(['total', 'species']) : '')}</details>`);
 }
 
@@ -6745,6 +6750,12 @@ async function exportLocmap() {
   const type = st.fmt === 'jpg' ? 'image/jpeg' : 'image/png', blob = await new Promise((r) => c.toBlob(r, type, st.quality));
   if (blob) await saveFile(name + (st.fmt === 'jpg' ? '.jpg' : '.png'), blob, type);
 }
+$('figPanel').addEventListener('click', (e) => {   // V0.51: show all / no ichnotaxa in the distribution figure
+  const b = e.target.closest('[data-range-all]'); if (!b) return;
+  const st = (colView('range').style ||= {}), on = b.dataset.rangeAll === '1', h = new Set((st.colHide || []).filter((id) => !id.startsWith('sp:')));
+  if (!on) for (const c of S.classes) if (c.id !== 'artifact') h.add('sp:' + c.name);
+  st.colHide = [...h]; markDirty(); renderFigPanel(); scheduleLog(); scheduleFigure();
+});
 $('figPanel').addEventListener('click', (e) => {
   const b = e.target.closest('[data-lmz]'); if (!b) return;
   const st = lmSet(), z = b.dataset.lmz, cur = st.bbox || lastLocmap?.bbox || lmFitBBox(lmPoints(), st.margin);
@@ -6754,6 +6765,54 @@ $('figPanel').addEventListener('click', (e) => {
   else st.bbox = lmZoom(cur, z === 'in' ? 1.5 : z === 'out' ? 1 / 1.5 : 1, z === 'e' ? 0.25 : z === 'w' ? -0.25 : 0, z === 'n' ? 0.25 : z === 's' ? -0.25 : 0);
   markDirty(); renderFigPanel(); scheduleFigure();
 });
+
+/**
+ * V0.51: horizontal version of a figure: the whole drawing is turned 90° anticlockwise (depth or age runs left → right,
+ * the first column ends at the bottom; images turn with it) and every text is turned back so it keeps its reading
+ * orientation; titles that were vertical (±90°) become horizontal. Tick labels left of an axis are centred under it,
+ * labels of the top margin end at their anchor and those of the bottom margin start at it. The page is then fitted to
+ * the drawn content (getBBox), so nothing is cut.
+ */
+function orientSVG(svg) {
+  const doc = new DOMParser().parseFromString(svg, 'image/svg+xml'), root = doc.documentElement;
+  if (root.nodeName !== 'svg') return svg;
+  const vb = (root.getAttribute('viewBox') || `0 0 ${root.getAttribute('width')} ${root.getAttribute('height')}`).split(/[\s,]+/).map(Number), [vx, vy, vw, vh] = vb;
+  const NS = 'http://www.w3.org/2000/svg', g = doc.createElementNS(NS, 'g');
+  // the heading (title and subtitle at the top left of the drawing) stays horizontal on top of the new page
+  const head = [...root.children].filter((e) => e.nodeName === 'text' && !e.getAttribute('transform') && +e.getAttribute('y') < 40 && +(e.getAttribute('x') || 0) < 30);
+  for (const e of head) e.remove();
+  g.setAttribute('transform', 'rotate(-90)');
+  while (root.firstChild) g.appendChild(root.firstChild);
+  root.appendChild(g);
+  for (const tx of [...g.querySelectorAll('text')]) {
+    const m = tx.transform?.baseVal?.consolidate()?.matrix || { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+    const x = +(String(tx.getAttribute('x') || '0').split(/[\s,]+/)[0]) || 0, y = +(String(tx.getAttribute('y') || '0').split(/[\s,]+/)[0]) || 0;
+    const ax = m.a * x + m.c * y + m.e, ay = m.b * x + m.d * y + m.f, own = (Math.atan2(m.b, m.a) * 180) / Math.PI;
+    const vertical = Math.abs(Math.abs(own) - 90) < 1, want = vertical ? 0 : own, c = want + 90 - own;
+    if (want === 0) {
+      const an = tx.getAttribute('text-anchor') || 'start';
+      if (!vertical && ay < vy + vh * 0.12) tx.setAttribute('text-anchor', 'end');
+      else if (!vertical && ay > vy + vh * 0.88) tx.setAttribute('text-anchor', 'start');
+      else if (an === 'end') tx.setAttribute('text-anchor', 'middle');
+    }
+    const w = doc.createElementNS(NS, 'g'); w.setAttribute('transform', `rotate(${+c.toFixed(3)} ${+ax.toFixed(2)} ${+ay.toFixed(2)})`);
+    tx.parentNode.insertBefore(w, tx); w.appendChild(tx);
+  }
+  // page = what is actually drawn (measured in a hidden copy), with a small margin
+  let box = { x: vy, y: -(vx + vw), width: vh, height: vw };
+  const host = document.createElement('div'); host.style.cssText = 'position:absolute;left:-99999px;top:0;visibility:hidden';
+  host.innerHTML = new XMLSerializer().serializeToString(root); document.body.appendChild(host);
+  try { const b = host.querySelector('svg').getBBox(); if (b.width > 0 && b.height > 0) box = b; } catch { /* keep the rotated page */ }   // root user space: includes the rotation
+  host.remove();
+  const hh = head.length ? Math.max(...head.map((e) => +e.getAttribute('y'))) + 10 : 0;
+  const pad = 6, X = Math.floor(box.x - pad), Y = Math.floor(box.y - pad - hh), W = Math.ceil(box.width + 2 * pad), H = Math.ceil(box.height + 2 * pad + hh);
+  root.setAttribute('viewBox', `${X} ${Y} ${W} ${H}`); root.setAttribute('width', W); root.setAttribute('height', H);
+  // background of the whole new page
+  const bg = doc.createElementNS(NS, 'rect'); for (const [k, v] of [['x', X], ['y', Y], ['width', W], ['height', H], ['fill', '#ffffff']]) bg.setAttribute(k, v);
+  root.insertBefore(bg, g);
+  for (const e of head) { e.setAttribute('x', X + (+e.getAttribute('x') || 0)); e.setAttribute('y', Y + +e.getAttribute('y')); root.appendChild(e); }
+  return new XMLSerializer().serializeToString(root);
+}
 
 /** V0.13: message for a drawing error (translated when it is an invalid axis, the real message otherwise). */
 const axisErr = (e) => (/^Invalid horizontal axis/.test(e?.message || '') ? t('edit.invalidAxis') : e?.message || String(e));
@@ -6770,6 +6829,7 @@ function renderFigure() {
     else if (F.type === 'geolog') { if (geoRT.dirty) geoComputeSamples(); renderGeoLogs(); svg = $('geoLogSvg').querySelector('svg')?.outerHTML || null; }
     else if (F.type === 'locmap') svg = locmapSVG();
     else { if (geoRT.dirty) geoComputeSamples(); svg = renderGeoMap() || null; }
+    if (svg && F.orient === 'h' && !['map', 'locmap'].includes(F.type)) svg = orientSVG(svg);   // V0.51
   } catch (e) { console.error(e); $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(axisErr(e))}</p>`; return; }
   figSvgCache = svg ? wrapFigure(svg, F.title, F.caption) : '';
   // V0.27: an empty figure is a blank sheet with what to do next
@@ -6786,6 +6846,10 @@ $('figPanel').addEventListener('change', (e) => {
   const F = S.fig, el = e.target;
   if (el.id === 'figType') { F.type = el.value; renderFigPanel(); }
   else if (el.id === 'figTitle') F.title = el.value; else if (el.id === 'figCaption') F.caption = el.value;
+  else if (el.id === 'figOrient') F.orient = el.value;   // V0.51
+  else if (el.id === 'figRangeColW') F.rangeColW = Math.max(16, Math.min(200, +el.value || 30));
+  else if (el.dataset.rangeTaxon != null) { const st = (colView('range').style ||= {}), h = new Set(st.colHide || []), id = 'sp:' + el.dataset.rangeTaxon; if (el.checked) h.delete(id); else h.add(id); st.colHide = [...h]; scheduleLog(); }
+  else if (el.id === 'figLogHideExcl') { S.logView.hideExcl = el.checked; if ($('logHideExcl')) $('logHideExcl').checked = el.checked; scheduleLog(); }
   else if (el.id === 'figN') F.n = Math.max(1, +el.value || 1); else if (el.id === 'figPick') F.pick = el.value;
   else if (el.id === 'figTile') F.tile = Math.max(60, +el.value || 150); else if (el.id === 'figImg') { F.img = el.value; renderFigPanel(); }
   else if (el.id === 'figOutline') F.outline = el.checked; else if (el.id === 'figCoreH') F.coreH = Math.max(200, +el.value || 1400);

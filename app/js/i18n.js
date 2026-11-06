@@ -1946,3 +1946,16 @@ Object.assign(D.en, {
 });
 Object.assign(D.es, { 'ft.retrain': 'El clasificador se entrenó con otra reserva de sondeos: vuelve a entrenarlo antes de la prueba final.' });
 Object.assign(D.en, { 'ft.retrain': 'The classifier was trained with another core reservation: retrain it before the final test.' });
+// V0.51: figures
+Object.assign(D.es, {
+  'fig.orient': 'Orientación', 'fig.orient.v': 'Vertical (profundidad o edad hacia abajo)', 'fig.orient.h': 'Horizontal (profundidad o edad hacia la derecha)',
+  'fig.rangeColW': 'Ancho de cada icnotaxón (px)', 'fig.rangeTaxa': 'Icnotaxones mostrados',
+  'fig.rangeDisplay.kite': 'Abundancia en curvas simétricas', 'fig.rangeDisplay.kiteSymbols': 'Curvas simétricas y símbolos',
+  'fig.rangeSubKite': 'Abundancia de cada icnotaxón (% del área) como curvas simétricas', 'fig.rangeSubKiteSym': 'Abundancia en curvas simétricas y trazas identificadas',
+});
+Object.assign(D.en, {
+  'fig.orient': 'Orientation', 'fig.orient.v': 'Vertical (depth or age downwards)', 'fig.orient.h': 'Horizontal (depth or age to the right)',
+  'fig.rangeColW': 'Width of each ichnotaxon (px)', 'fig.rangeTaxa': 'Ichnotaxa shown',
+  'fig.rangeDisplay.kite': 'Abundance as symmetric curves', 'fig.rangeDisplay.kiteSymbols': 'Symmetric curves and symbols',
+  'fig.rangeSubKite': 'Abundance of each ichnotaxon (% of area) as symmetric curves', 'fig.rangeSubKiteSym': 'Abundance as symmetric curves and identified traces',
+});

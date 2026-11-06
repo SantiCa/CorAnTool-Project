@@ -41,10 +41,11 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 - Estado: libre.
 - Editor: ninguno.
 - Objetivo: sin tarea de implementación activa.
-- Commit base y archivos: V0.49 sobre 18270c4; app.js, learn.js, i18n.js, pruebas web–V2 y de prueba final, e2e, documentación.
+- Commit base y archivos: V0.51 sobre 15db6af; app.js, log.js, index.html, i18n.js, pruebas y documentación.
 
 ### Último traspaso
 
+- **V0.51, 07-11-2026 (Claude):** figuras: curvas simétricas y elección de icnotaxones, orientación horizontal, zonas excluidas en todas.
 - **V0.50, 07-11-2026 (Claude):** descargas sin datos de ejemplo; sin menciones a la tesis ni al artículo de la V2.1 fuera de `publications/`.
 - **V0.49, 07-11-2026 (Claude):** prueba final con sondeos reservados y comparación automática web–V2 (corrige la causa de la diferencia de 0,56 puntos: decodificador JPEG).
 - **V0.48, 07-11-2026 (Codex):** preparación de release mediante `Desktop builds` manual en `master`
