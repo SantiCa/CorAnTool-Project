@@ -29,6 +29,9 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 - **Figuras de secciones (V32):** paneles original / tratada / trazas resaltadas / flechas, al estilo de Dorador y
   Rodríguez-Tovar; las trazas resaltadas son las clasificadas en el programa (incluidas las predicciones aceptadas si así
   está configurado), lo que debe constar en el pie.
+- **Datos editados a mano (V0.35):** los valores cambiados en la hoja de Datos se guardan con el original y la fecha y
+  se listan en el CSV; hay que declararlos si se usan. Las columnas calculadas interpolan linealmente las columnas
+  usadas a cada profundidad cuando se midieron a profundidades distintas.
 - **Modelo de edad (V0.28):** se puede importar un modelo de Bacon (mediana o media e intervalo del 95 %); el
   programa no ejecuta Bacon ni propaga las iteraciones del MCMC. Las edades por intervalo se interpolan linealmente
   sobre la tabla de Bacon; citar Bacon (Blaauw y Christen, 2011) y la curva de calibración usada.

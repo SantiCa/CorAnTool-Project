@@ -1781,6 +1781,13 @@ foto por defecto (`style.imgAspect = 'keep'`: ancho = alto del gráfico / (alto/
 secciones; × `imgStretch`) o fijo (`imgW`). Flechas (`fig.arrowSrc` = todas / solo marcas a mano / solo trazas,
 `arrowExcl` grupos excluidos, `objScale` tamaño de las de cada traza, `markScale`, `markStroke(W)`, `labelSize`,
 `labelColor`, `labelHalo`), compartidas por Secciones y la Columna.
+Desde V0.35, **Datos** es una hoja de cálculo. Con «Permitir editar valores» cualquier valor que no sea de una columna
+calculada se puede cambiar; el cambio se guarda aparte del original en `core.edits[columna][profundidad] = {v, o, at}`
+(nuevo, original, fecha), se aplica sobre los datos combinados antes de las columnas calculadas (`applyCellEdits`),
+se marca en la tabla y se lista en la cabecera del CSV (`# edited by hand: …`). Las columnas manuales siguen en
+`core.user`. Columnas calculadas: fórmula sobre otras columnas (`sheet.js::parseFormula/evalColumn`); por defecto
+(`interp`), cada columna usada se interpola linealmente a la profundidad de cada fila entre sus valores vecinos, sin
+extrapolar (`sheet.js::fillLinear`), porque cada registro se mide a profundidades propias.
 Desde V0.34, **intervalos**: dentro de un mismo sondeo, familia, eje y tipo (manual o automático) no se solapan y los
 contiguos o solapados de la misma clase se unen (`geo.js::tidyIntervals`). El intervalo recién dibujado o editado
 manda: los que solapa se recortan o se parten en dos. Se aplica a cada edición, a las importaciones y al abrir proyectos

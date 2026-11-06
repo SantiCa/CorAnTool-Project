@@ -156,3 +156,28 @@ export function evalCells(cells, getCol) {
   for (const ref of Object.keys(cells)) value(ref);
   return out;
 }
+
+/** V0.35: names of the columns a formula refers to. */
+export function formulaRefs(src) {
+  const out = new Set(), walk = (n) => { if (!n) return; if (n.k === 'ref') out.add(n.v); for (const k of ['a', 'b']) walk(n[k]); (n.args || []).forEach(walk); };
+  walk(parseFormula(src));
+  return [...out];
+}
+
+/**
+ * V0.35: values of a column at every row, linearly interpolated along x (depth or age, ascending) between the nearest
+ * rows that have a value; no extrapolation beyond the first and last values, and no filling across gaps wider than
+ * maxGap (in x units). Rows that already have a value keep it.
+ */
+export function fillLinear(x, v, maxGap = Infinity) {
+  const n = v.length, out = v.slice();
+  let prev = -1;
+  for (let i = 0; i < n; i++) {
+    if (v[i] == null || x[i] == null) continue;
+    if (prev >= 0 && i - prev > 1 && x[i] - x[prev] <= maxGap) {
+      for (let k = prev + 1; k < i; k++) if (x[k] != null && x[i] !== x[prev]) out[k] = v[prev] + ((v[i] - v[prev]) * (x[k] - x[prev])) / (x[i] - x[prev]);
+    }
+    prev = i;
+  }
+  return out;
+}

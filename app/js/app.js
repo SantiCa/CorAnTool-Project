@@ -5,7 +5,7 @@ import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, gue
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
-import { evalColumn, evalCells, cellName, FUNCTIONS } from './sheet.js';
+import { evalColumn, evalCells, cellName, FUNCTIONS, parseFormula, formulaRefs, fillLinear } from './sheet.js';
 import { Classifier, TaxonModel, evaluateModels, vec, FEATURES } from './learn.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
@@ -18,7 +18,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.34';
+const DELIVERY = 'V0.35';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2390,7 +2390,7 @@ function makeCore(q = {}) {
   const c = {
     id: q.id || 'c' + uid(), name: q.name || t('core.new'), lat: q.lat ?? null, lon: q.lon ?? null, waterDepth: q.waterDepth ?? null,
     units: q.units || 'm', source: q.source || null, notes: q.notes || '',
-    imp: q.imp || null, user: q.user || {}, records: q.records || [], sections: [],
+    imp: q.imp || null, user: q.user || {}, edits: q.edits || {}, records: q.records || [], sections: [],
     logView: { ...lv, ...(q.logView || {}), tracks: { ...lv.tracks, ...(q.logView?.tracks || {}) } },
     ageModel: { text: q.age?.text || q.ageText || '', units: q.age?.units || 'ka', model: null, bacon: q.age?.bacon || null, center: q.age?.center || 'median' },
     depth: null, age: null, proxies: {}, src: {}, ageText: '',
@@ -2456,9 +2456,27 @@ function refreshCoreData(c) {
   c.proxies = {};
   for (const q of parts) for (const name of Object.keys(q.vals)) { c.proxies[name] = rows.map(() => null); c.src[name] = q.src; }
   rows.forEach((r, k) => { for (const [name, arr] of Object.entries(r.q.vals)) c.proxies[name][k] = arr?.[r.i] ?? null; });
+  applyCellEdits(c);   // V0.35
   applyComputedColumns(c);
 }
 function refreshAllCores() { for (const c of S.cores) refreshCoreData(c); }
+
+/**
+ * V0.35: cells edited by hand in the Data sheet. c.edits[column][axisValue] = { v: new value (null = deleted), o: original
+ * value, at: ISO date }. They are applied over the merged data (so analyses and computed columns use them) and the
+ * original is kept to show and restore it. Rows are matched by depth (or age for age-only cores).
+ */
+function applyCellEdits(c) {
+  if (!c.edits) return;
+  const ax = c.depth || c.age || [], pos = new Map();
+  ax.forEach((x, k) => { const key = String(x); if (!pos.has(key)) pos.set(key, k); });
+  for (const [name, e] of Object.entries(c.edits)) {
+    const arr = c.proxies[name]; if (!arr) continue;
+    for (const [key, ed] of Object.entries(e)) { const k = pos.get(key); if (k == null) continue; ed.o = arr[k]; arr[k] = ed.v; }
+  }
+}
+const cellEdit = (c, name, x) => c.edits?.[name]?.[String(x)] || null;
+const editCount = (cores) => cores.reduce((n, c) => n + Object.values(c.edits || {}).reduce((m, e) => m + Object.keys(e).length, 0), 0);
 
 /** Computed columns of the Data tab (formulas over the core's columns), applied after merging. */
 function applyComputedColumns(c) {
@@ -2466,7 +2484,10 @@ function applyComputedColumns(c) {
   for (const col of S.sheet.columns) {
     if (col.core && col.core !== 'all' && col.core !== c.id) continue;
     try {
-      const v = evalColumn(col.formula, { ...c.proxies, depth: c.depth || new Array(n).fill(null), age: c.age || new Array(n).fill(null) }, n);
+      const cols = { ...c.proxies, depth: c.depth || new Array(n).fill(null), age: c.age || new Array(n).fill(null) };
+      // V0.35: columns measured at different depths are interpolated to every row (linear, no extrapolation)
+      if (col.interp !== false) { const x = c.depth || c.age || []; for (const r of formulaRefs(col.formula)) if (c.proxies[r]) cols[r] = fillLinear(x, c.proxies[r]); }
+      const v = evalColumn(col.formula, cols, n);
       c.proxies[col.name] = v; c.src[col.name] = 'calc';
     } catch (e) { col.error = e.message; continue; }
     col.error = null;
@@ -2551,7 +2572,7 @@ function serialize() {
     geo, sheet: S.sheet, fig: S.fig, curCore: S.curCore, plots: S.plots || [], plotCur: S.plotCur || 0,
     cores: S.cores.map((c) => ({
       id: c.id, name: c.name, lat: c.lat, lon: c.lon, waterDepth: c.waterDepth ?? null, units: c.units, source: c.source || null, notes: c.notes || '',
-      imp: c.imp, user: c.user || {}, records: c.records, logView: c.logView, age: { text: c.ageModel.text, units: c.ageModel.units, bacon: c.ageModel.bacon || undefined, center: c.ageModel.center || undefined },
+      imp: c.imp, user: c.user || {}, edits: c.edits && Object.keys(c.edits).length ? c.edits : undefined, records: c.records, logView: c.logView, age: { text: c.ageModel.text, units: c.ageModel.units, bacon: c.ageModel.bacon || undefined, center: c.ageModel.center || undefined },
       sections: c.sections.map((q) => serSection(q)),
     })),
   };
@@ -5650,6 +5671,9 @@ function renderData() {
   const sel = $('dCore'), cur = sel.value || S.curCore;
   sel.innerHTML = S.cores.map((c) => `<option value="${c.id}" ${c.id === cur ? 'selected' : ''}>${esc(c.name)}</option>`).join('') + `<option value="__all" ${cur === '__all' ? 'selected' : ''}>${t('data.allCores')}</option>`;
   refreshAllCores();
+  // V0.35: the sheet replaces the old «computed columns» view; the free cell sheet stays only for projects that use it
+  for (const o of $('dView').options) if (o.value === 'cols' || (o.value === 'cells' && !Object.keys(S.sheet.cells || {}).length)) o.hidden = true;
+  if ($('dView').selectedOptions[0]?.hidden) $('dView').value = 'table';
   const view = $('dView').value;
   if (view === 'cols') renderDataCols(); else if (view === 'cells') renderDataCells(); else if (view === 'plot') renderDataPlot(); else renderDataTable();
 }
@@ -5670,25 +5694,119 @@ function tableModel() {
   }
   return { cores, cols, layers, rows };
 }
+/* ───────────── V0.35: Data as a spreadsheet — every value editable (flagged), computed columns ───────────── */
+let dataEditOn = false, dataFormOpen = null, dataLastCell = null;
 function renderDataTable() {
-  const M = tableModel(), multi = M.cores.length > 1;
+  const M = tableModel(), multi = M.cores.length > 1, nEd = editCount(M.cores);
   $('dInfo').textContent = t('data.info', { r: M.rows.length, c: M.cols.length });
-  const head = `<tr>${multi ? `<th>${t('geo.core')}</th>` : ''}<th>${t('r.depth')}</th><th>${t('r.age')}</th>${M.cols.map(([k, src]) => `<th class="${src}" title="${esc(t('data.src.' + src))}"><span class="tag">${t('data.src.' + src)}</span>${esc(k)}</th>`).join('')}${M.layers.map((L) => `<th class="lay"><span class="tag">${t('data.src.lay')}</span>${esc(L.name)}</th>`).join('')}</tr>`;
-  const body = M.rows.slice(0, dataLimit).map((r) => `<tr>${multi ? `<td class="txt">${esc(r.c.name)}</td>` : ''}<td>${fmt(r.depth, 4)}</td><td>${fmt(r.age, 3)}</td>${r.vals.map((v, j) => {
-    const [k, src] = M.cols[j];
-    return src === 'man' && r.depth != null ? `<td contenteditable data-core="${r.c.id}" data-col="${esc(k)}" data-d="${r.depth}">${v ?? ''}</td>` : `<td>${v == null ? '' : fmt(v, 4)}</td>`;
-  }).join('')}${r.lay.map((v) => `<td class="txt">${esc(v)}</td>`).join('')}</tr>`).join('');
-  $('dBody').innerHTML = `<table class="dtable"><thead>${head}</thead><tbody>${body}</tbody></table>${M.rows.length > dataLimit ? `<p><button class="btn small" id="dMore">${t('data.more', { n: M.rows.length - dataLimit })}</button></p>` : ''}<p class="note">${t('data.note')}</p>`;
+  const colLetter = (i) => cellName(i, 0).replace(/\d+$/, '');
+  const fixed = (multi ? 1 : 0) + 2;
+  const head = `<tr><th class="rn"></th>${multi ? `<th class="txt">${t('geo.core')}</th>` : ''}<th>${t('r.depth')}</th><th>${t('r.age')}</th>${M.cols.map(([k, src], j) => {
+    const calc = S.sheet.columns.findIndex((x) => x.name === k);
+    return `<th class="src-${src}" title="${esc(t('data.src.' + src))}"><span class="tag">${colLetter(fixed + j)} · ${t('data.src.' + src)}</span>${esc(k)}${src === 'calc' && calc >= 0 ? ` <button type="button" class="btn small ghost fx" data-fx="${calc}" title="${esc(t('ds.editFx'))}">ƒ</button>` : ''}</th>`;
+  }).join('')}${M.layers.map((L) => `<th class="src-lay txt"><span class="tag">${t('data.src.lay')}</span>${esc(L.name)}</th>`).join('')}</tr>`;
+  const body = M.rows.slice(0, dataLimit).map((r, ri) => {
+    const x = r.depth ?? r.age;
+    return `<tr><td class="rn">${ri + 1}</td>${multi ? `<td class="txt">${esc(r.c.name)}</td>` : ''}<td class="ax">${fmt(r.depth, 4)}</td><td class="ax">${fmt(r.age, 3)}</td>${r.vals.map((v, j) => {
+      const [k, src] = M.cols[j], ed = src !== 'man' && cellEdit(r.c, k, x), canEdit = dataEditOn && src !== 'calc' && x != null;
+      const tip = ed ? t('ds.modTip', { o: ed.o == null ? '—' : fmt(ed.o, 6), d: (ed.at || '').slice(0, 10) }) : '';
+      return `<td${canEdit ? ' contenteditable spellcheck="false"' : ''} class="${ed ? 'mod' : ''}${src === 'calc' ? ' calc' : ''}" data-core="${r.c.id}" data-col="${esc(k)}" data-src="${src}" data-x="${x}"${tip ? ` title="${esc(tip)}"` : ''}>${v == null ? '' : fmt(v, 6)}</td>`;
+    }).join('')}${r.lay.map((v) => `<td class="txt">${esc(v)}</td>`).join('')}</tr>`;
+  }).join('');
+  const cores = S.cores.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  const f = dataFormOpen, fcol = f?.i != null ? S.sheet.columns[f.i] : null;
+  const names = [...new Set(M.cols.map(([k]) => k)), 'depth', 'age'];
+  const form = f ? `<div class="dsform">
+      <div class="row"><label class="f"><span>${t('ds.type')}</span><select id="dsType" ${fcol ? 'disabled' : ''}><option value="calc" ${f.type !== 'man' ? 'selected' : ''}>${t('ds.calc')}</option><option value="man" ${f.type === 'man' ? 'selected' : ''}>${t('ds.man')}</option></select></label>
+      <label class="f" style="flex:1"><span>${t('ds.name')}</span><input type="text" id="dsName" value="${esc(fcol?.name || '')}"></label>
+      <label class="f"><span>${t('data.core')}</span><select id="dsCore">${f.type === 'man' ? '' : `<option value="all">${t('data.allCores')}</option>`}${cores}</select></label></div>
+      ${f.type !== 'man' ? `<label class="f"><span>${t('ds.formula')}</span><input type="text" id="dsFormula" value="${esc(fcol?.formula || '')}" placeholder="[reflectance_L*] / [reflectance_a*]" spellcheck="false"></label>
+      <p class="note">${t('ds.formulaHelp', { f: FUNCTIONS.join(', ') })}</p>
+      <div class="dsnames">${names.map((n) => `<button type="button" class="btn small ghost" data-ins="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : `<p class="note">${t('ds.manHelp')}</p>`}
+      ${f.type !== 'man' ? `<label class="chk"><input type="checkbox" id="dsInterp" ${fcol?.interp === false ? '' : 'checked'}><span>${t('ds.interp')}</span></label>` : ''}
+      ${fcol?.error ? `<p class="note err">${esc(fcol.error)}</p>` : ''}
+      <div class="row"><button type="button" class="btn small primary" id="dsSave">${t(fcol ? 'ds.save' : 'ds.add')}</button>${fcol ? `<button type="button" class="btn small" id="dsDel">${t('ds.del')}</button>` : ''}<button type="button" class="btn small ghost" id="dsCancel">${t('ds.cancel')}</button></div></div>` : '';
+  $('dBody').innerHTML = `<div class="dsbar">
+      <label class="chk ${dataEditOn ? 'on' : ''}"><input type="checkbox" id="dsEdit" ${dataEditOn ? 'checked' : ''}><span>${t('ds.edit')}</span></label>
+      <button type="button" class="btn small" id="dsNewCol">${t('ds.newCol')}</button>
+      <span class="dsmod">${nEd ? t('ds.nMod', { n: nEd }) : ''}</span>
+      ${nEd ? `<button type="button" class="btn small ghost" id="dsRestoreCell" disabled>${t('ds.restoreCell')}</button><button type="button" class="btn small ghost" id="dsRestoreAll">${t('ds.restoreAll')}</button>` : ''}
+    </div>
+    ${dataEditOn ? `<p class="dswarn">${t('ds.warn')}</p>` : ''}${form}
+    <div class="dsgrid"><table class="dtable sheet"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    ${M.rows.length > dataLimit ? `<p><button class="btn small" id="dMore">${t('data.more', { n: M.rows.length - dataLimit })}</button></p>` : ''}`;
   if ($('dMore')) $('dMore').onclick = () => { dataLimit += 1000; renderDataTable(); };
+  if (f && $('dsCore')) $('dsCore').value = fcol?.core || (f.type === 'man' ? M.cores[0]?.id : 'all') || 'all';
 }
+$('dBody').addEventListener('change', (e) => {
+  if (e.target.id === 'dsEdit') { dataEditOn = e.target.checked; renderDataTable(); }
+  else if (e.target.id === 'dsType') { dataFormOpen = { type: e.target.value }; renderDataTable(); }
+});
+$('dBody').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'dsNewCol') { dataFormOpen = dataFormOpen ? null : { type: 'calc' }; renderDataTable(); }
+  else if (b.dataset.fx != null) { dataFormOpen = { type: 'calc', i: +b.dataset.fx }; renderDataTable(); }
+  else if (b.dataset.ins != null) { const i = $('dsFormula'), ins = /^[\w.]+$/.test(b.dataset.ins) ? b.dataset.ins : `[${b.dataset.ins}]`; const p0 = i.selectionStart ?? i.value.length; i.value = i.value.slice(0, p0) + ins + i.value.slice(i.selectionEnd ?? p0); i.focus(); i.selectionStart = i.selectionEnd = p0 + ins.length; }
+  else if (b.id === 'dsCancel') { dataFormOpen = null; renderDataTable(); }
+  else if (b.id === 'dsDel') { S.sheet.columns.splice(dataFormOpen.i, 1); dataFormOpen = null; refreshAllCores(); geoRT.dirty = true; markDirty(); renderDataTable(); }
+  else if (b.id === 'dsSave') {
+    const name = $('dsName').value.trim(), core = $('dsCore').value; if (!name) { toast(t('ds.needName')); return; }
+    if (dataFormOpen.type === 'man') {
+      const c = S.cores.find((x) => x.id === core); if (!c) return;
+      c.user ||= {}; c.user[name] ||= { d: (c.depth || []).slice(), v: (c.depth || []).map(() => null) };
+      dataEditOn = true; refreshCoreData(c);
+    } else {
+      const formula = $('dsFormula').value.trim(); if (!formula) { toast(t('ds.needFormula')); return; }
+      try { parseFormula(formula); } catch (err) { toast(t('ds.badFormula', { e: err.message })); return; }
+      const interp = $('dsInterp')?.checked !== false;
+      if (dataFormOpen.i != null) Object.assign(S.sheet.columns[dataFormOpen.i], { name, formula, core, interp }); else S.sheet.columns.push({ name, formula, core, interp });
+      refreshAllCores();
+    }
+    dataFormOpen = null; geoRT.dirty = true; markDirty(); renderDataTable();
+  }
+  else if (b.id === 'dsRestoreAll') { if (!armed(b)) return; for (const c of dataCores()) c.edits = {}; refreshAllCores(); geoRT.dirty = true; markDirty(); renderDataTable(); }
+  else if (b.id === 'dsRestoreCell' && dataLastCell) {
+    const { core, col, x } = dataLastCell, c = S.cores.find((q) => q.id === core);
+    if (c?.edits?.[col]) { delete c.edits[col][x]; if (!Object.keys(c.edits[col]).length) delete c.edits[col]; }
+    dataLastCell = null; refreshCoreData(c); geoRT.dirty = true; markDirty(); renderDataTable();
+  }
+});
+$('dBody').addEventListener('focusin', (e) => {
+  const td = e.target.closest?.('td[data-col]'); if (!td) return;
+  td.dataset.before = td.textContent;
+  dataLastCell = td.classList.contains('mod') ? { core: td.dataset.core, col: td.dataset.col, x: td.dataset.x } : null;
+  if ($('dsRestoreCell')) $('dsRestoreCell').disabled = !dataLastCell;
+});
+$('dBody').addEventListener('keydown', (e) => {
+  const td = e.target.closest?.('td[contenteditable]'); if (!td) return;
+  if (e.key === 'Escape') { td.textContent = td.dataset.before || ''; td.blur(); return; }
+  const move = e.key === 'Enter' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0; if (!move) return;
+  e.preventDefault();
+  const tr = move > 0 ? td.parentElement.nextElementSibling : td.parentElement.previousElementSibling, nx = tr?.children[td.cellIndex];
+  if (nx?.isContentEditable) nx.focus(); else td.blur();
+});
 $('dBody').addEventListener('focusout', (e) => {
   const td = e.target.closest('td[contenteditable]'); if (!td) return;
-  const c = S.cores.find((x) => x.id === td.dataset.core), u = c?.user?.[td.dataset.col]; if (!u) return;
-  const d = +td.dataset.d, raw = td.textContent.trim().replace(',', '.'), v = raw === '' ? null : +raw;
-  if (raw !== '' && !Number.isFinite(v)) { td.textContent = ''; return; }
-  const k = u.d.indexOf(d);
-  if (k >= 0) u.v[k] = v; else { u.d.push(d); u.v.push(v); }
+  const raw = td.textContent.trim(); if (raw === (td.dataset.before || '').trim()) return;
+  const c = S.cores.find((x) => x.id === td.dataset.core); if (!c) return;
+  const v = raw === '' ? null : +raw.replace(',', '.');
+  if (raw !== '' && !Number.isFinite(v)) { td.textContent = td.dataset.before || ''; toast(t('ds.notNumber')); return; }
+  const col = td.dataset.col, x = td.dataset.x;
+  if (td.dataset.src === 'man') {   // manual column: the value is the data itself
+    const u = c.user?.[col]; if (!u) return; const d = +x, k = u.d.indexOf(d);
+    if (k >= 0) u.v[k] = v; else { u.d.push(d); u.v.push(v); }
+  } else {   // V0.35: any other value is kept as an edit over the original, flagged and reversible
+    c.edits ||= {}; const E = (c.edits[col] ||= {}), prev = E[x];
+    const orig = prev ? prev.o : (td.dataset.before === '' ? null : +td.dataset.before.replace(',', '.'));
+    if (orig != null && v != null && Math.abs(orig - v) <= 1e-12 * Math.max(1, Math.abs(orig))) delete E[x];
+    else E[x] = { v, o: orig, at: new Date().toISOString() };
+    if (!Object.keys(E).length) delete c.edits[col];
+  }
   refreshCoreData(c); geoRT.dirty = true; markDirty();
+  const ed = cellEdit(c, col, x); td.classList.toggle('mod', !!ed);
+  if (ed) td.title = t('ds.modTip', { o: ed.o == null ? '—' : fmt(ed.o, 6), d: ed.at.slice(0, 10) }); else td.removeAttribute('title');
+  const n = editCount(dataCores()); const m = $('dBody').querySelector('.dsmod'); if (m) m.textContent = n ? t('ds.nMod', { n }) : '';
+  if (n && !$('dsRestoreAll')) renderDataTable();
 });
 function renderDataCols() {
   const cores = S.cores.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
@@ -5751,7 +5869,10 @@ for (const id of ['dCore', 'dView', 'dLayers']) $(id).addEventListener('change',
 $('dCsv').addEventListener('click', () => {
   const M = tableModel();
   const rows = [['core', 'depth', 'age', ...M.cols.map(([k]) => k), ...M.layers.map((L) => L.name)], ...M.rows.map((r) => [r.c.name, r.depth, r.age, ...r.vals, ...r.lay])];
-  saveFile(`${safe(S.name)}_datos.csv`, toCSV(rows), 'text/csv');
+  // V0.35: the cells edited by hand are listed in the header (lines starting with # are ignored when the file is read back)
+  const notes = [`# CorAnTool ${DELIVERY}, ${new Date().toISOString().slice(0, 10)}`];
+  for (const c of M.cores) for (const [col, E] of Object.entries(c.edits || {})) for (const [x, ed] of Object.entries(E)) notes.push(`# edited by hand: ${c.name}; ${col}; ${c.depth ? 'depth' : 'age'} ${x}; original ${ed.o ?? ''}; new ${ed.v ?? ''}; ${ed.at || ''}`);
+  saveFile(`${safe(S.name)}_datos.csv`, notes.join('\n') + '\n' + toCSV(rows), 'text/csv');
 });
 
 /* ───────────── windows and floating panel (work on a core while watching the map) ───────────── */

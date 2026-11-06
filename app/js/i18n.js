@@ -1802,3 +1802,27 @@ Object.assign(D.en, { 'sh.target': 'Classification (target or prediction)', 'sh.
   'h.sh.mode': '«Blend» overlays the colours of the chosen families; «One strip per family» puts them side by side in each record.' });
 Object.assign(D.es, { 'iv.tidied': 'Se han corregido intervalos solapados de una misma familia y se han unido los contiguos de la misma clase.' });
 Object.assign(D.en, { 'iv.tidied': 'Overlapping intervals of the same family were corrected and touching intervals of the same class were joined.' });
+
+// V0.35: Data as a spreadsheet
+Object.assign(D.es, {
+  'data.table': 'Hoja de datos', 'ds.edit': 'Permitir editar valores', 'ds.newCol': '+ Columna', 'ds.nMod': '{n} celdas modificadas a mano', 'ds.restoreCell': 'Restaurar celda', 'ds.restoreAll': 'Restaurar todas',
+  'ds.warn': 'Estás editando datos. Cada valor cambiado queda marcado (fondo amarillo y esquina roja), guarda el original y la fecha, se usa en los análisis y figuras y se indica en el CSV exportado. Enter baja una fila; Esc deshace la celda. Las columnas calculadas no se editan: cambia su fórmula (ƒ).',
+  'ds.modTip': 'Modificado a mano el {d}. Original: {o}', 'ds.notNumber': 'Escribe un número (o deja la celda vacía para borrar el valor).',
+  'ds.type': 'Tipo', 'ds.calc': 'Calculada con otras columnas', 'ds.man': 'Manual (para rellenar a mano)', 'ds.name': 'Nombre', 'ds.formula': 'Fórmula',
+  'ds.formulaHelp': 'Usa los nombres de las columnas (entre corchetes si llevan espacios o símbolos; pulsa un nombre para insertarlo), números, + − × / ^ y paréntesis. Funciones: {f}.',
+  'ds.manHelp': 'Crea una columna vacía en el sondeo elegido, con una fila por profundidad, para escribir valores. Al crearla se activa la edición.',
+  'ds.add': 'Añadir columna', 'ds.save': 'Guardar', 'ds.del': 'Eliminar columna', 'ds.cancel': 'Cancelar', 'ds.editFx': 'Editar la fórmula',
+  'ds.needName': 'Pon un nombre a la columna.', 'ds.needFormula': 'Escribe la fórmula.', 'ds.badFormula': 'La fórmula no es válida: {e}',
+});
+Object.assign(D.en, {
+  'data.table': 'Data sheet', 'ds.edit': 'Allow editing values', 'ds.newCol': '+ Column', 'ds.nMod': '{n} cells edited by hand', 'ds.restoreCell': 'Restore cell', 'ds.restoreAll': 'Restore all',
+  'ds.warn': 'You are editing data. Every changed value is flagged (yellow background and red corner), keeps the original and the date, is used by the analyses and figures and is listed in the exported CSV. Enter moves down; Esc undoes the cell. Computed columns are not edited: change their formula (ƒ).',
+  'ds.modTip': 'Edited by hand on {d}. Original: {o}', 'ds.notNumber': 'Type a number (or leave the cell empty to delete the value).',
+  'ds.type': 'Type', 'ds.calc': 'Computed from other columns', 'ds.man': 'Manual (to fill in by hand)', 'ds.name': 'Name', 'ds.formula': 'Formula',
+  'ds.formulaHelp': 'Use column names (in brackets when they contain spaces or symbols; click a name to insert it), numbers, + − × / ^ and parentheses. Functions: {f}.',
+  'ds.manHelp': 'Creates an empty column in the chosen core, one row per depth, to type values in. Editing is turned on when it is created.',
+  'ds.add': 'Add column', 'ds.save': 'Save', 'ds.del': 'Delete column', 'ds.cancel': 'Cancel', 'ds.editFx': 'Edit the formula',
+  'ds.needName': 'Give the column a name.', 'ds.needFormula': 'Type the formula.', 'ds.badFormula': 'The formula is not valid: {e}',
+});
+Object.assign(D.es, { 'ds.interp': 'Interpolar las columnas usadas a la profundidad de cada fila (lineal, sin extrapolar; necesario si se midieron a profundidades distintas)' });
+Object.assign(D.en, { 'ds.interp': 'Interpolate the columns used to the depth of each row (linear, no extrapolation; needed when they were measured at different depths)' });

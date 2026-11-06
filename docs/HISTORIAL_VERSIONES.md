@@ -68,6 +68,7 @@ La descripción detallada de los algoritmos está en
 | V0.32 | 06-11-2026 | Figuras | Distribución de icnotaxones: un símbolo por traza o marca en su profundidad, eje propio en edad, trazas/marcas/ambas |
 | V0.33 | 06-11-2026 | Figuras | Orden de las columnas (arrastrar o flechas) y visibilidad en todos los gráficos; mostrar u ocultar familias de intervalos sin borrarlas |
 | V0.34 | 06-11-2026 | Multiproxy | Colorear registros por la familia elegida (o varias, mezcladas o en franjas); intervalos de una familia sin solape y unión de contiguos iguales |
+| V0.35 | 06-11-2026 | Datos | Hoja de datos tipo Excel: valores editables con aviso, celdas modificadas marcadas y reversibles, columnas calculadas con interpolación |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -658,6 +659,25 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.35 — Datos como hoja de cálculo (06-11-2026)
+
+- **Qué se hizo:** la vista Datos pasa a ser una hoja de cálculo con filas y columnas numeradas (A, B, C…):
+  - «Permitir editar valores» (con aviso) deja cambiar cualquier valor. Cada celda cambiada queda marcada (fondo amarillo
+    y esquina roja), guarda el original y la fecha (visibles al pasar el ratón), se usa en análisis y figuras y se
+    lista en el CSV exportado. «Restaurar celda» y «Restaurar todas» vuelven al original. Enter baja una fila; Esc
+    deshace la celda.
+  - «+ Columna» añade una columna calculada con fórmula (pulsando los nombres de columna para insertarlos) o una
+    manual para rellenar. Las calculadas se editan con ƒ en su cabecera.
+  - Las vistas «Columnas calculadas y manuales» y «Hoja libre» desaparecen del selector (la segunda solo se mantiene
+    si el proyecto ya tenía celdas).
+  - Corregido (auditoría): la cabecera de la tabla se descolocaba por la regla CSS `.rec`.
+- **Cambios:** `app.js` (`renderDataTable`, `applyCellEdits`, edición, formulario, CSV; `core.edits` guardado),
+  `sheet.js` (`formulaRefs`, `fillLinear`), `index.html`, `i18n.js`. `DELIVERY` = V0.35.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** 73 pruebas JS (1 nueva); en Chrome con U1385I: edición marcada y restaurada, columna L*/a*
+  calculada (385 filas con valor gracias a la interpolación); sin errores.
+- **Pendiente / no probado:** filas con la misma profundidad de fuentes distintas se editan por la primera.
 
 ## V0.34 — Colorear por familia e intervalos sin solape (06-11-2026)
 

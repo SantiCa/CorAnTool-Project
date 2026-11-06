@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.35 — 2026-11-06
+- Data is now a spreadsheet: every value can be edited (with a warning); edited cells are flagged, keep the original and date, can be restored and are listed in the CSV. Computed columns from formulas (with linear interpolation between records measured at different depths) and manual columns are added inline.
+
 ## V0.34 — 2026-11-06
 - Multiproxy: colour records by the chosen family or several (blended or one strip each).
 - Intervals of one family never overlap within a core; touching or overlapping intervals of the same class are joined.

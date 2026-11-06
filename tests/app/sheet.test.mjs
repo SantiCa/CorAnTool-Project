@@ -21,3 +21,10 @@ test('cells: references, ranges, aggregates, columns, cycles', () => {
   assert.ok(r.C1.error); assert.equal(r.D1, 'texto');
   assert.equal(cellName(0, 0), 'A1'); assert.equal(cellName(27, 4), 'AB5');
 });
+
+test('V0.35: formula references and linear filling', async () => {
+  const { formulaRefs, fillLinear } = await import('../../app/js/sheet.js');
+  assert.deepEqual(formulaRefs('[reflectance_L*] / a + log(b)').sort(), ['a', 'b', 'reflectance_L*']);
+  assert.deepEqual(fillLinear([0, 1, 2, 3, 4], [null, 10, null, 30, null]), [null, 10, 20, 30, null]);
+  assert.deepEqual(fillLinear([0, 1, 5], [0, null, 10], 2), [0, null, 10]);
+});
