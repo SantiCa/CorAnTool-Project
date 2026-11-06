@@ -45,6 +45,7 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 
 ### Último traspaso
 
+- **V0.44, 06-11-2026 (Claude):** restos de la auditoría (guardado por secciones, dropIds, realce al abrir, exportio.js, estilos en línea).
 - **V0.43, 06-11-2026 (Claude):** mapa de localización de sondeos.
 - **V0.42, 06-11-2026 (Claude):** pruebas de edición y e2e (auditoría §3). Auditoría V0.31 completada salvo lo anotado como pendiente.
 - **V0.41, 06-11-2026 (Claude):** rendimiento y memoria (auditoría §4).

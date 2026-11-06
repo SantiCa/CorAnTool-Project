@@ -2,6 +2,9 @@
 
 Delivery numbers and full details: [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md).
 
+## V0.44 — 2026-11-06
+- Saving by sections (only changed sections are rewritten; IndexedDB v5), trace deletion limited to the traces' rectangles, enhancement on opening a section in the worker, exports and record import moved to the tested module `exportio.js`, and no inline styles left in `index.html`.
+
 ## V0.43 — 2026-11-06
 - New figure: core location map with base layers (blank, vector, Esri satellite/topographic/relief/physical/streets/ocean), editable extent with zoom and pan, WGS 84 / Web Mercator / UTM (zone and hemisphere) projections, graticule or metric grid, coordinates on any chosen sides in DD, DMS or metres, positionable scale bar and north arrow (UTM convergence), and SVG/PNG/JPEG output.
 

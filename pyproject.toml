@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ichantool"
-version = "0.43.0"
+version = "0.44.0"
 description = "CorAnTool (formerly IchAnTool): quantitative ichnofabric analysis of sediment core images"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }

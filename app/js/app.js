@@ -1,5 +1,6 @@
 // CorAnTool web (antes IchAnTool) — application (UI, state, tools, rendering, files).
 import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
+import { withProvenance, ageModelText, bioturbationTable, objectsTable, recordSeries } from './exportio.js';
 import { LOCMAP_DEFAULTS, lmUtmZone, lmFitBBox, lmZoom, buildLocMapSVG } from './locmap.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
 import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, decodeText, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
@@ -20,7 +21,7 @@ const APP = 'CorAnTool', APP_NAMES = ['CorAnTool', 'IchAnTool'];
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.43';
+const DELIVERY = 'V0.44';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -168,7 +169,10 @@ function ensurePixels(s) {
   s._loading = (async () => {
     const r = await decodeWorking(s, s.ds);
     if (r.w !== s.w || r.h !== s.h) console.warn('image size differs from the stored masks', s.name, r.w, r.h, s.w, s.h);
-    s.orig = r.rgba; enhance(s);
+    // V0.44: the enhancement of a section being opened is computed in the worker; orig and enh are set together
+    const f = effectiveFilters({ filters: s.filters, orig: r.rgba, w: r.w, h: r.h, roi: s.roi });
+    const enh = await offload('filters', { rgba: r.rgba, w: r.w, h: r.h, f }, () => applyFilters(r.rgba, r.w, r.h, f));
+    s.orig = r.rgba; s.enh = enh;
     return s;
   })().catch((e) => { s._pxErr = e.message || String(e); toast(s._pxErr); throw e; }).finally(() => { s._loading = null; if (s.orig) pxTouch(s); });
   return s._loading;
@@ -458,8 +462,13 @@ function mergeSameTaxon(s, ids) {
 const subPx = (op, i, id) => setLabel(op, i, withoutId(op.s.labels[i], id, op.s.stacks, six(op.s)));
 /** Remove a set of ids from every pixel. */
 function dropIds(op, set) {
-  const s = op.s, L = s.labels, st = s.stacks;
-  for (let i = 0; i < L.length; i++) {
+  const s = op.s, L = s.labels, st = s.stacks, w = s.w;
+  // V0.44: only the union of the objects' rectangles is scanned (kept up to date by refreshObjects); a missing
+  // rectangle falls back to the whole image
+  let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+  for (const id of set) { const b = s.objects.get(id)?.bbox; if (!b) { x0 = 0; y0 = 0; x1 = w - 1; y1 = s.h - 1; break; } x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]); }
+  x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(w - 1, x1); y1 = Math.min(s.h - 1, y1);
+  for (let y = y0; y <= y1; y++) for (let i = y * w + x0, e = y * w + x1; i <= e; i++) {
     const v = L[i]; if (!v) continue;
     if (v > 0) { if (set.has(v)) setLabel(op, i, 0); }
     else if (st[-v].some((x) => set.has(x))) setLabel(op, i, codeFor(st[-v].filter((x) => !set.has(x)), st, six(s)));
@@ -2324,28 +2333,20 @@ async function saveFile(name, data, type = 'application/octet-stream') {
 const safe = (s) => String(s).replace(/[^\w.-]+/g, '_').slice(0, 80) || 'section';
 
 $('expCSV').addEventListener('click', () => {
-  const counted = S.classes.map((c, k) => [c, k]).filter(([c]) => c.counts);
-  const rng = !!S.age.model?.min, head = ['section', 'depth_top', 'depth_bottom', 'depth', 'units', 'age', ...(rng ? ['age_min', 'age_max'] : []), 'age_units', 'valid_pixels', 'bioturbation_pct', ...counted.map(([c]) => c.name + '_pct'), 'BI', 'ii', 'BI_manual', 'ii_manual'];
-  const rows = [head];
-  for (const s of S.sections) {
-    analyze(s);
-    for (const b of s.bins) rows.push([s.name, b.dTop, b.dBottom, b.depth, s.units, b.age, ...(rng ? [b.ageMin, b.ageMax] : []), S.age.model ? S.age.units : null, b.valid, b.pct, ...counted.map(([, k]) => b.classPct[k]), b.BI, b.ii, b.BIm, b.iim]);
-  }
+  const counted = S.classes.map((c, k) => [c.name, k]).filter(([, k]) => S.classes[k].counts);
+  for (const s of S.sections) analyze(s);
+  const rows = bioturbationTable(S.sections, { counted, range: !!S.age.model?.min, ageUnits: S.age.model ? S.age.units : null });   // V0.44: exportio.js
   analyze(sec());
   saveFile(`${safe(S.name)}_bioturbation.csv`, withProv(toCSV(rows)), 'text/csv');
 });
 
 $('expObjects').addEventListener('click', () => {
-  const rows = [['section', 'object_id', 'class', 'status', 'suggested_class', 'confidence', 'depth_top', 'depth_bottom', 'depth_center', 'units', 'area_cm2', 'length_cm', 'width_cm', 'elongation', 'verticality', 'compactness', 'mean_luminance', 'contrast', 'counted']];
+  const items = [];
   for (const s of S.sections) {
     const eff = effClassArray(s);
-    for (const o of s.objects.values()) {
-      if (!o.bbox) continue; const f = o.feat || {};
-      rows.push([s.name, o.id, clsById(o.cls)?.name ?? '', status(o), clsById(o.pred)?.name ?? '', o.cls ? 1 : o.conf, depthAtRow(s, o.bbox[1]), depthAtRow(s, o.bbox[3] + 1), depthAtRow(s, f.cy + 0.5), s.units,
-        f.areaCm2, f.majorCm, f.minorCm, f.elong, f.vert, f.compact, f.meanL, f.contrast, eff[o.id] >= 0 ? 1 : 0]);
-    }
+    for (const o of s.objects.values()) items.push({ section: s.name, units: s.units, o, cls: clsById(o.cls)?.name, status: status(o), pred: clsById(o.pred)?.name, counted: eff[o.id] >= 0, depth: (row) => depthAtRow(s, row) });
   }
-  saveFile(`${safe(S.name)}_objects.csv`, withProv(toCSV(rows)), 'text/csv');
+  saveFile(`${safe(S.name)}_objects.csv`, withProv(toCSV(objectsTable(items))), 'text/csv');   // V0.44: exportio.js
 });
 
 $('expMask').addEventListener('click', () => {
@@ -2640,6 +2641,7 @@ async function loadSection(q) {
     const tmp = mk(newSection({ name: q.name, file, w: 1, h: 1, orig: null, ds: q.ds || 1 }));
     const r = await decodeWorking(tmp, q.ds || 1); ({ w, h } = r); orig = r.rgba;
   }
+  if (q.$missing) throw new Error(t('load.badMask', { s: q.name || '?', k: 'section' }));   // V0.44: section record missing in the library
   // V0.36: a damaged mask stops the load instead of being saved over the good copy
   for (const k of ['labels', 'exclude']) if (q[k] != null && !rleValid(q[k], w * h)) throw new Error(t('load.badMask', { s: q.name || '?', k }));
   const s = mk(newSection({ name: q.name, file, w, h, orig, ds: q.ds || 1, full: q.full || null, labels: { rle: q.labels }, exclude: { rle: q.exclude } }));
@@ -3597,10 +3599,7 @@ let pendingTable = null;
 
 function addRecordFromTable(name, tab, xCol, axis, yCols) {
   const n0 = S.records.reduce((k, r) => k + r.series.length, 0);
-  const series = yCols.map((c, k) => {
-    const pts = tab.rows.map((r) => [r[xCol], r[c]]).filter((p) => p[0] != null && p[1] != null).sort((a, b) => a[0] - b[0]);
-    return { name: tab.headers[c], x: pts.map((p) => p[0]), y: pts.map((p) => p[1]), color: REC_COLORS[(n0 + k) % REC_COLORS.length], show: true, reverse: false };
-  }).filter((s) => s.x.length);
+  const series = recordSeries(tab, xCol, yCols, REC_COLORS, n0);   // V0.44: exportio.js
   if (!series.length) return false;
   S.records.push({ id: uid(), name, axis, series });
   renderRecList(); markDirty(); scheduleLog();
@@ -6782,12 +6781,8 @@ let toastTimer = 0;
  * which settings produced it, so a table can be reproduced.
  */
 function withProv(csv) {
-  const st = S.settings, m = S.age.model;
   const det = [...new Set(S.cores.flatMap((c) => c.sections.map((x) => (x.detect || DEFAULT_DETECT).method || 'adaptive')))].join('/');
-  const age = m ? `${S.age.bacon ? `Bacon ${S.age.center || 'median'}` : 'table'}${m.min ? ' with range' : ''}, ${S.age.units || 'ka'}` : 'none';
-  return [`# CorAnTool ${DELIVERY} (format ${FORMAT_VERSION}); exported ${new Date().toISOString()}; project "${S.name}"`,
-    `# settings: binCm=${st.binCm}; minValid=${st.minValid}%; includePred=${!!st.includePred}; predThr=${st.predThr}; countCandidates=${!!st.countCandidates}; detection=${det}; age model=${age}`,
-    csv].join('\n');
+  return withProvenance(csv, { delivery: DELIVERY, format: FORMAT_VERSION, date: new Date().toISOString(), project: S.name, settings: S.settings, detection: det, age: ageModelText(S.age.model, S.age) });   // V0.44: exportio.js
 }
 function toast(msg, ms = 3200) { const el = $('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), ms); }
 

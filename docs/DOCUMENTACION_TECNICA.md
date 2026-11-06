@@ -857,6 +857,10 @@ ni en la copia automática). Al importar y al abrir se comprueba que cada RLE de
 par, repeticiones enteras no negativas y sume exactamente `w × h` (`core.js::rleValid`); si no, el archivo se rechaza
 y la copia guardada no se toca.
 
+**Módulo de tablas (V0.44, `exportio.js`, sin DOM y probado):** `bioturbationTable`, `objectsTable`,
+`provenanceLines`/`withProvenance`, `ageModelText` y `recordSeries` (series de un registro importado: filas sin x o y
+fuera, ordenadas por x). `app.js` solo reúne los datos y guarda.
+
 **Procedencia de los CSV (V0.36).** Todos los CSV exportados (bioturbación, objetos, registro, intervalos, mapa,
 clasificación, figuras, datos) empiezan con líneas `#`:
 `# CorAnTool <entrega> (format 5) · <fecha ISO> · <proyecto>` y
@@ -1041,6 +1045,17 @@ Implementación: `storage.js` y `app.js` (bloque *projects*).
 - **Guardado automático** 1,5 s después de cualquier cambio. El estado se muestra junto al nombre
   del proyecto. Al abrir la aplicación se abre el último proyecto usado.
 - **Desde V0.8** exportar crea un paquete `.corantool` (ZIP sin compresión: `project.json` con `file.path = images/<id de sección><ext>` y las imágenes originales). La copia automática escribe una carpeta por proyecto (`project.json`, `images/`, `historial/`). Los archivos JSON antiguos (imágenes en base64) se siguen importando.
+- **Guardado por secciones (V0.44, IndexedDB versión 5):** el registro del proyecto (`data`) guarda de cada sección
+  solo `{$sec, id, name, file}` y la sección completa va al almacén `secs` con la clave `<proyecto>|<sección>`. Una
+  sección se escribe solo si cambió desde la última vez que se escribió o leyó en la sesión (mismas máscaras RLE y
+  mismo resto de campos) o si falta su registro; las que ya no existen se borran. `getProject` recompone el proyecto
+  completo, así que exportar, copiar y restaurar no cambian. Los registros anteriores (secciones dentro del proyecto)
+  se leen igual. Una sección sin registro impide abrir el proyecto (no se guarda vacía). Con el sondeo de prueba,
+  cambiar una traza reescribe 1 de las 6 secciones.
+- **Realce al abrir (V0.44):** al leer los píxeles de una sección, el realce se calcula en el worker y la imagen
+  original y la realzada se asignan a la vez.
+- **Borrar trazas (V0.44):** `dropIds` recorre solo la unión de los rectángulos de las trazas (que `refreshObjects`
+  mantiene al día con la zona editada ∪ el rectángulo anterior); si alguna no tiene rectángulo, toda la imagen.
 - Exportar e importar usaba antes el mismo contenido en JSON, con las imágenes originales en base64 (§12).
   Al importar se asigna un identificador nuevo para no sobrescribir otro proyecto y las imágenes
   pasan al almacén `images`.

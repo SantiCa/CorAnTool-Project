@@ -635,6 +635,37 @@ details.mini[open] { display: grid; gap: 6px; }
   .chk input, input[type=checkbox], input[type=radio] { width: 20px; height: 20px; }
   input[type=range] { min-height: 32px; }
 }
+
+/* V0.44: former inline styles of index.html as utility classes (!important keeps the precedence they had inline) */
+.u1 { justify-content:center !important; }
+.u2 { flex-wrap:nowrap !important; }
+.u3 { flex:1 !important; }
+.u4 { width:auto !important; }
+.u5 { display:grid !important;gap:8px !important; }
+.u6 { display:grid !important;gap:6px !important; }
+.u7 { width:70px !important; }
+.u8 { align-self:end !important; }
+.u9 { margin-bottom:8px !important; }
+.u10 { padding:14px !important;display:grid !important;gap:10px !important; }
+.u11 { margin:0 -14px -14px !important; }
+.u12 { min-width:320px !important; }
+.u13 { display:grid !important;gap:4px !important; }
+.u14 { width:60px !important; }
+.u15 { margin-top:10px !important; }
+.u16 { width:min(640px,95vw) !important; }
+.u17 { width:100% !important; }
+.u18 { justify-content:space-between !important; }
+.u19 { max-height:55vh !important;overflow:auto !important; }
+.u20 { justify-content:flex-end !important; }
+.u21 { gap:10px !important;margin-bottom:8px !important; }
+.u22 { display:flex !important;flex-wrap:wrap !important;gap:8px !important;align-items:end !important; }
+.u23 { max-width:240px !important; }
+.u24 { max-height:40vh !important; }
+.u25 { display:grid !important;gap:10px !important; }
+.u26 { justify-content:flex-end !important;margin-top:10px !important; }
+.u27 { justify-content:space-between !important;align-items:center !important; }
+.u28 { margin:0 !important; }
+.u29 { justify-content:space-between !important;margin-top:10px !important; }
 </style>
 </head>
 <body>
@@ -660,11 +691,11 @@ details.mini[open] { display: grid; gap: 6px; }
       <details class="step" open>
         <summary><span class="n">1</span><span data-i18n="s1"></span></summary>
         <div class="body">
-          <label class="btn primary file" style="justify-content:center"><span data-i18n="sec.add"></span><input type="file" id="addImg" accept="image/*,.tif,.tiff" multiple></label>
+          <label class="btn primary file u1"><span data-i18n="sec.add"></span><input type="file" id="addImg" accept="image/*,.tif,.tiff" multiple></label>
           <label class="f"><span data-i18n="sec.maxMP"></span><select id="maxMP"><option value="2">2 MP</option><option value="4">4 MP</option><option value="8">8 MP</option><option value="16">16 MP</option><option value="1000" data-i18n="mp.orig"></option></select></label>
           <p class="note" data-i18n="sec.maxMPNote"></p>
           <div class="f"><span data-i18n="sec.section"></span>
-            <div class="row" style="flex-wrap:nowrap"><select id="secSel"></select><button class="btn small" id="secDel" data-i18n-title="sec.delete">✕</button></div>
+            <div class="row u2"><select id="secSel"></select><button class="btn small" id="secDel" data-i18n-title="sec.delete">✕</button></div>
           </div>
           <label class="f"><span data-i18n="sec.name"></span><input type="text" id="secName"></label>
           <div class="grid3">
@@ -683,9 +714,9 @@ details.mini[open] { display: grid; gap: 6px; }
           </div>
           <div class="f"><span data-i18n="age.title"></span>
             <textarea id="ageText" data-i18n-ph="age.ph" rows="3"></textarea>
-            <div class="row" id="ageCenterRow" hidden><label class="f" style="flex:1"><span data-i18n="age.center"></span><select id="ageCenter"><option value="median" data-i18n="age.c.median"></option><option value="mean" data-i18n="age.c.mean"></option></select></label></div>
+            <div class="row" id="ageCenterRow" hidden><label class="f u3"><span data-i18n="age.center"></span><select id="ageCenter"><option value="median" data-i18n="age.c.median"></option><option value="mean" data-i18n="age.c.mean"></option></select></label></div>
             <div class="row"><label class="btn small file" data-i18n-title="age.fileTip"><span data-i18n="age.file"></span><input type="file" id="ageFile" accept=".csv,.txt,text/csv,text/plain"></label>
-              <select id="ageUnits" style="width:auto"><option value="ka">ka</option><option value="yr BP">yr BP</option><option value="Ma">Ma</option></select></div>
+              <select class="u4" id="ageUnits"><option value="ka">ka</option><option value="yr BP">yr BP</option><option value="Ma">Ma</option></select></div>
             <p class="note" id="ageStatus"></p>
           </div>
         </div>
@@ -695,14 +726,14 @@ details.mini[open] { display: grid; gap: 6px; }
         <div class="body">
           <label class="f"><span data-i18n="f.preset"></span><select id="fPreset"></select></label>
           <p class="note" id="presetNote"></p>
-          <div class="row" style="flex-wrap:nowrap"><input type="text" id="presetName" data-i18n-ph="f.saveName"><button class="btn small" id="presetSave" data-i18n="f.save"></button><button class="btn small ghost" id="presetDel" data-i18n-title="f.del">✕</button></div>
+          <div class="row u2"><input type="text" id="presetName" data-i18n-ph="f.saveName"><button class="btn small" id="presetSave" data-i18n="f.save"></button><button class="btn small ghost" id="presetDel" data-i18n-title="f.del">✕</button></div>
           <button class="btn small" id="presetAll" data-i18n="f.applyAll"></button>
           <button class="btn small" id="presetBest" data-i18n="f.best"></button>
           <p class="note" id="presetRank"></p>
           <label class="chk"><input type="checkbox" id="fAuto"><span data-i18n="f.auto"></span></label>
           <label class="chk"><input type="checkbox" id="fAutoG"><span data-i18n="f.autoG"></span></label>
           <label class="f"><span data-i18n="f.channel"></span><select id="fChannel"></select></label>
-          <div id="filterCtl" style="display:grid;gap:8px"></div>
+          <div class="u5" id="filterCtl"></div>
           <label class="chk"><input type="checkbox" id="fEqualize"><span data-i18n="f.equalize"></span></label>
           <label class="chk"><input type="checkbox" id="fInvert"><span data-i18n="f.invert"></span></label>
         </div>
@@ -711,7 +742,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <summary><span class="n">3</span><span data-i18n="s3"></span></summary>
         <div class="body">
           <label class="f"><span data-i18n="d.method"></span><select id="dMethod"><option value="adaptive" data-i18n="d.adaptive"></option><option value="global" data-i18n="d.global"></option><option value="kmeans" data-i18n="d.kmeans"></option><option value="unet" data-i18n="d.unet"></option></select></label>
-          <div id="unetBox" hidden style="display:grid;gap:6px">
+          <div class="u6" id="unetBox" hidden>
             <p class="note" id="unetName"></p>
             <label class="btn small file"><span data-i18n="u.load"></span><input type="file" id="unetFile" accept=".onnx,.json" multiple></label>
             <label class="chk"><input type="checkbox" id="showDoubt"><span data-i18n="u.doubt"></span></label>
@@ -719,7 +750,7 @@ details.mini[open] { display: grid; gap: 6px; }
             <p class="note" data-i18n="u.note"></p>
           </div>
           <label class="f" id="dPolBox"><span data-i18n="d.polarity"></span><select id="dPol"><option value="dark" data-i18n="d.dark"></option><option value="light" data-i18n="d.light"></option><option value="both" data-i18n="d.both"></option></select></label>
-          <div id="detectCtl" style="display:grid;gap:8px"></div>
+          <div class="u5" id="detectCtl"></div>
           <label class="chk"><input type="checkbox" id="dFill"><span data-i18n="d.fill"></span></label>
           <div class="row"><button class="btn primary" id="detectBtn" data-i18n="d.run"></button><button class="btn" id="clearCand" data-i18n="d.clear"></button></div>
           <p class="status-line" id="detectStatus" role="status" aria-live="polite"></p>
@@ -757,10 +788,10 @@ details.mini[open] { display: grid; gap: 6px; }
         <label class="opt" id="optShape" hidden><span data-i18n="tool.shape"></span><select id="exShape"><option value="brush" data-i18n="tool.shapeBrush"></option><option value="rect" data-i18n="tool.shapeRect"></option></select></label>
         <label class="opt" id="optSize"><span data-i18n="tool.size"></span><input type="range" id="brushSize" min="1" max="120"><output id="brushOut"></output></label>
         <label class="opt" id="optTol"><span data-i18n="tool.tol"></span><input type="range" id="wandTol" min="2" max="120"><output id="tolOut"></output></label>
-        <span class="grow" style="flex:1"></span>
+        <span class="grow u3"></span>
         <button class="btn small ghost" id="undoBtn" data-i18n-title="undo" disabled>↶</button>
         <label class="opt"><input type="checkbox" id="showOrig"><span data-i18n="view.orig"></span></label>
-        <label class="opt"><span data-i18n="view.overlay"></span><input type="range" id="ovAlpha" min="0" max="100" style="width:70px"></label>
+        <label class="opt"><span data-i18n="view.overlay"></span><input class="u7" type="range" id="ovAlpha" min="0" max="100"></label>
         <button class="btn small" id="zoomOut" data-i18n-title="aria.zoomOut">−</button><span class="zoom" id="zoomLbl">100%</span><button class="btn small" id="zoomIn" data-i18n-title="aria.zoomIn">+</button>
         <button class="btn small" id="zoomFit" data-i18n="view.fit"></button><button class="btn small" id="zoomAll" data-i18n="view.all" data-i18n-title="view.allTip"></button>
       </div>
@@ -779,7 +810,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <div class="empty" id="empty"><div>
           <h2 data-i18n="empty.title"></h2>
           <p data-i18n="empty.body"></p>
-          <div class="row" style="justify-content:center">
+          <div class="row u1">
             <label class="btn primary file"><span data-i18n="sec.add"></span><input type="file" id="addImg2" accept="image/*,.tif,.tiff" multiple></label>
             <button class="btn" id="loadExample" data-i18n="empty.example"></button>
           </div>
@@ -858,11 +889,11 @@ details.mini[open] { display: grid; gap: 6px; }
       <details class="step"><summary><span data-i18n="logs.img"></span></summary><div class="body">
         <div id="logImgPanels"></div>
         <div class="grid2"><label class="f"><span data-i18n="log.imgMode"></span><select id="logImgMode"><option value="enh" data-i18n="log.enh"></option><option value="orig" data-i18n="log.orig"></option></select></label>
-          <label class="chk" style="align-self:end"><input type="checkbox" id="logOverlay"><span data-i18n="log.overlay"></span></label><label class="chk" data-i18n-title="log.hideExclTip"><input type="checkbox" id="logHideExcl"><span data-i18n="log.hideExcl"></span></label></div>
+          <label class="chk u8"><input type="checkbox" id="logOverlay"><span data-i18n="log.overlay"></span></label><label class="chk" data-i18n-title="log.hideExclTip"><input type="checkbox" id="logHideExcl"><span data-i18n="log.hideExcl"></span></label></div>
       </div></details>
       <details class="step"><summary><span data-i18n="log.records"></span></summary><div class="body">
         <div class="f">
-          <div id="recList" style="display:grid;gap:6px"></div>
+          <div class="u6" id="recList"></div>
           <label class="btn small file"><span data-i18n="log.addRec"></span><input type="file" id="recFile" accept=".csv,.txt,.tsv,.dat,.xlsx,.xls,.ods,text/csv,text/plain"></label>
           <p class="note" data-i18n="log.recNote"></p>
         </div>
@@ -870,17 +901,17 @@ details.mini[open] { display: grid; gap: 6px; }
       <details class="step"><summary><span data-i18n="st.title"></span></summary><div class="body"><div id="logStyle"></div></div></details>
       <div class="exp sticky"><button class="btn small primary" id="logSVGBtn" data-i18n="log.svg"></button><button class="btn small" id="logCSVBtn" data-i18n="log.csv"></button></div>
     </aside>
-    <section id="logStage"><div class="row" style="margin-bottom:8px"><button class="btn small" data-win="corelog" data-i18n="win.new"></button><button class="btn small" data-float="corelog" data-i18n="win.panel"></button></div><div id="logSvg"></div></section>
+    <section id="logStage"><div class="row u9"><button class="btn small" data-win="corelog" data-i18n="win.new"></button><button class="btn small" data-float="corelog" data-i18n="win.panel"></button></div><div id="logSvg"></div></section>
 
     <aside class="side left" id="figPanel">
-      <div class="body" style="padding:14px;display:grid;gap:10px">
+      <div class="body u10">
         <label class="f"><span data-i18n="fig.type"></span><select id="figType">
           <option value="traces" data-i18n="fig.t.traces"></option><option value="core" data-i18n="fig.t.core"></option><option value="log" data-i18n="fig.t.log"></option>
           <option value="sections" data-i18n="fig.t.sections"></option><option value="range" data-i18n="fig.t.range"></option><option value="geolog" data-i18n="fig.t.geolog"></option><option value="map" data-i18n="fig.t.map"></option><option value="locmap" data-i18n="fig.t.locmap"></option></select></label>
         <label class="f"><span data-i18n="fig.title"></span><input type="text" id="figTitle"></label>
         <label class="f"><span data-i18n="fig.caption"></span><textarea id="figCaption" rows="3"></textarea></label>
-        <div id="figOpts" style="display:grid;gap:8px"></div>
-        <div class="exp sticky" style="margin:0 -14px -14px"><button class="btn small primary" id="figSvg">SVG</button><button class="btn small" id="figPng">PNG</button></div>
+        <div class="u5" id="figOpts"></div>
+        <div class="exp sticky u11"><button class="btn small primary" id="figSvg">SVG</button><button class="btn small" id="figPng">PNG</button></div>
         <p class="note" data-i18n="fig.note"></p>
       </div>
     </aside>
@@ -927,7 +958,7 @@ details.mini[open] { display: grid; gap: 6px; }
           <p class="note" data-i18n="geo.prepNote"></p>
           <div data-i18n-title="gx.tip.features" class="f"><span data-i18n="geo.features"></span><div id="geoFeats" class="rec"></div></div>
           <div data-i18n-title="gx.tip.ratio" class="f"><span data-i18n="geo.ratio"></span>
-            <div class="row" style="flex-wrap:nowrap"><select id="geoRatioA"></select><span>/</span><select id="geoRatioB"></select><button class="btn small" id="geoAddRatio" data-i18n-title="aria.addRatio">+</button></div>
+            <div class="row u2"><select id="geoRatioA"></select><span>/</span><select id="geoRatioB"></select><button class="btn small" id="geoAddRatio" data-i18n-title="aria.addRatio">+</button></div>
           </div>
         </div>
       </details>
@@ -935,15 +966,15 @@ details.mini[open] { display: grid; gap: 6px; }
         <summary><span class="n">3</span><span data-i18n="geo.s3"></span><span class="ssum" id="geoSum3"></span></summary>
         <div class="body">
           <div data-i18n-title="gx.tip.layer" class="f"><span data-i18n="geo.layer"></span>
-            <div class="row" style="flex-wrap:nowrap"><select id="geoLayerSel"></select><button class="btn small" id="geoLayerDel" data-i18n-title="geo.layerDel">✕</button></div><label class="chk"><input type="checkbox" id="geoLayerShow" checked><span data-i18n="geo.layerShow"></span></label></div>
+            <div class="row u2"><select id="geoLayerSel"></select><button class="btn small" id="geoLayerDel" data-i18n-title="geo.layerDel">✕</button></div><label class="chk"><input type="checkbox" id="geoLayerShow" checked><span data-i18n="geo.layerShow"></span></label></div>
           <div class="grid2"><label class="f"><span data-i18n="geo.layerName"></span><input type="text" id="geoLayerName"></label>
             <label data-i18n-title="gx.tip.parent" class="f"><span data-i18n="geo.layerParent"></span><select id="geoLayerParent"></select></label></div>
-          <div class="row" style="flex-wrap:nowrap"><input type="text" id="geoNewLayer" data-i18n-ph="geo.newLayer"><button class="btn small" id="geoAddLayer" data-i18n="geo.addLayer"></button></div>
+          <div class="row u2"><input type="text" id="geoNewLayer" data-i18n-ph="geo.newLayer"><button class="btn small" id="geoAddLayer" data-i18n="geo.addLayer"></button></div>
           <label class="chk"><input type="checkbox" id="geoNewLayerChild"><span data-i18n="geo.newLayerChild"></span></label>
           <div data-i18n-title="gx.tip.cats" class="f"><span data-i18n="geo.cats"></span><ul class="clist" id="geoLabels"></ul></div>
-          <div class="row" style="flex-wrap:nowrap"><input type="text" id="geoNewLabel" data-i18n-ph="geo.newLabel"><button class="btn small" id="geoAddLabel" data-i18n="geo.addLabel"></button></div>
+          <div class="row u2"><input type="text" id="geoNewLabel" data-i18n-ph="geo.newLabel"><button class="btn small" id="geoAddLabel" data-i18n="geo.addLabel"></button></div>
           <p class="note" data-i18n="geo.labelsNote"></p>
-          <div data-i18n-title="gx.tip.rules" class="f"><span data-i18n="geo.rules"></span><div id="geoRules" style="display:grid;gap:6px"></div>
+          <div data-i18n-title="gx.tip.rules" class="f"><span data-i18n="geo.rules"></span><div class="u6" id="geoRules"></div>
             <div class="row"><button class="btn small" id="geoAddRule" data-i18n="geo.addRule"></button><label class="chk"><input type="checkbox" id="geoUseRules"><span data-i18n="geo.useRules"></span></label></div>
             <p class="note" data-i18n="geo.rulesNote"></p>
           </div>
@@ -973,7 +1004,7 @@ details.mini[open] { display: grid; gap: 6px; }
           <div class="grp"><label class="chk" data-i18n-title="gx.tip.shade"><input type="checkbox" id="geoShade"><span data-i18n="geo.shade"></span></label><div id="geoShadeBy" class="shadeby" hidden></div>
             <label class="f inl" data-i18n-title="gx.tip.trackW"><span data-i18n="gx.trackW"></span><input type="range" id="geoTrackW" min="60" max="260" step="10"></label>
             <button class="btn small" id="geoTrackReset" data-i18n="gx.trackReset" data-i18n-title="gx.tip.trackReset"></button></div>
-          <div class="grp"><details class="mini" id="geoStyleBox" data-stt="geo"><summary data-i18n="st.scales"></summary><div id="geoStyleForm" style="min-width:320px"></div></details></div>
+          <div class="grp"><details class="mini" id="geoStyleBox" data-stt="geo"><summary data-i18n="st.scales"></summary><div class="u12" id="geoStyleForm"></div></details></div>
           <div class="grp"><button class="btn small primary" id="geoTestBtn" data-i18n="geo.test" data-i18n-title="gx.tip.test"></button><span id="geoTestOut" class="note"></span></div>
           <div class="grp end"><button class="btn small" data-win="geologs" data-i18n="win.new"></button></div>
         </div>
@@ -981,7 +1012,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <div class="glogwrap"><div id="geoLogSvg"></div>
           <div class="glogside"><b data-i18n="geo.intervals"></b><p class="note" data-i18n="cl.listNote"></p>
             <div class="row"><button class="btn small" id="geoClearAuto" data-i18n="geo.clearAuto"></button><button class="btn small" id="geoIvCsv" data-i18n="geo.ivCsv"></button></div>
-            <div id="geoIntervals" style="display:grid;gap:4px"></div></div></div>
+            <div class="u13" id="geoIntervals"></div></div></div>
       </div>
       <div class="gpane" data-pane="map" hidden>
         <div class="gctl" id="geoMapCtl">
@@ -991,8 +1022,8 @@ details.mini[open] { display: grid; gap: 6px; }
           <label data-i18n-title="gx.tip.mapMode" class="f"><span data-i18n="geo.mapMode"></span><select id="gmMode"><option value="class" data-i18n="geo.mm.class"></option><option value="value" data-i18n="geo.mm.value"></option></select></label><label class="f" id="gmSrcRow" data-i18n-title="cl.tip.mapSrc"><span data-i18n="cl.mapSrc"></span><select id="gmSrc"></select></label>
           <label data-i18n-title="gx.tip.mapFeature" class="f" id="gmFeatRow"><span data-i18n="geo.feature"></span><select id="gmFeature"></select></label>
           <div class="row" id="gmIdwRow"><label data-i18n-title="gx.tip.idw" class="chk"><input type="checkbox" id="gmIdw"><span data-i18n="ip.on"></span></label><input type="hidden" id="gmPower"></div>
-          <div class="row" id="gmRefRow"><label data-i18n-title="gx.tip.ref" class="chk"><input type="checkbox" id="gmRef"><span data-i18n="geo.ref"></span></label><input type="number" id="gmR0" step="any" style="width:60px"><input type="number" id="gmR1" step="any" style="width:60px"></div>
-          <div class="row"><button class="btn small" id="gmBig" data-i18n-title="ms.big">⤢</button><button class="btn small" id="gmFull" data-i18n-title="ms.full">⛶</button><button class="btn small primary" id="gmSvg">SVG</button><select id="gmPngW" style="width:auto"><option value="1800">PNG 1800 px</option><option value="3600" selected>PNG 3600 px</option><option value="5400">PNG 5400 px</option><option value="7200">PNG 7200 px</option></select><button class="btn small" id="gmPng">PNG</button><button class="btn small" id="gmCsv" data-i18n-title="gx.tip.mapCsv">CSV</button><button class="btn small" data-win="map" data-i18n="win.new"></button><button class="btn small" data-float="map" data-i18n="win.panel"></button></div>
+          <div class="row" id="gmRefRow"><label data-i18n-title="gx.tip.ref" class="chk"><input type="checkbox" id="gmRef"><span data-i18n="geo.ref"></span></label><input class="u14" type="number" id="gmR0" step="any"><input class="u14" type="number" id="gmR1" step="any"></div>
+          <div class="row"><button class="btn small" id="gmBig" data-i18n-title="ms.big">⤢</button><button class="btn small" id="gmFull" data-i18n-title="ms.full">⛶</button><button class="btn small primary" id="gmSvg">SVG</button><select class="u4" id="gmPngW"><option value="1800">PNG 1800 px</option><option value="3600" selected>PNG 3600 px</option><option value="5400">PNG 5400 px</option><option value="7200">PNG 7200 px</option></select><button class="btn small" id="gmPng">PNG</button><button class="btn small" id="gmCsv" data-i18n-title="gx.tip.mapCsv">CSV</button><button class="btn small" data-win="map" data-i18n="win.new"></button><button class="btn small" data-float="map" data-i18n="win.panel"></button></div>
         </div>
         <div class="mapstyle" id="gmCores"></div>
         <div class="mapstyle" id="gmInterp"></div>
@@ -1002,28 +1033,28 @@ details.mini[open] { display: grid; gap: 6px; }
       </div>
       <div class="gpane" data-pane="model" hidden>
         <div id="geoModelOut"></div>
-        <div class="row" style="margin-top:10px"><button class="btn small" id="geoPredCsv" data-i18n="geo.predCsv"></button></div>
+        <div class="row u15"><button class="btn small" id="geoPredCsv" data-i18n="geo.predCsv"></button></div>
       </div>
     </section>
   </div>
 </div>
 
-<dialog id="cmtDlg" style="width:min(640px,95vw)">
+<dialog class="u16" id="cmtDlg">
   <h2 data-i18n="cmt.title"></h2>
   <div class="grid2"><label class="f"><span data-i18n="cmt.author"></span><input type="text" id="cmtAuthor"></label>
     <label class="f"><span data-i18n="cmt.filter"></span><select id="cmtFilter"><option value="all" data-i18n="cmt.f.all"></option><option value="open" data-i18n="cmt.f.open"></option><option value="sec" data-i18n="cmt.f.sec"></option></select></label></div>
-  <textarea id="cmtText" rows="3" style="width:100%" data-i18n-ph="cmt.ph"></textarea>
-  <div class="row" style="justify-content:space-between"><label class="chk"><input type="checkbox" id="cmtLink" checked><span data-i18n="cmt.link"></span></label><button class="btn primary small" id="cmtAdd" data-i18n="cmt.add"></button></div>
-  <div id="cmtBody" style="max-height:55vh;overflow:auto"></div>
-  <div class="row" style="justify-content:flex-end"><button class="btn" id="cmtClose" data-i18n="help.close"></button></div>
+  <textarea class="u17" id="cmtText" rows="3" data-i18n-ph="cmt.ph"></textarea>
+  <div class="row u18"><label class="chk"><input type="checkbox" id="cmtLink" checked><span data-i18n="cmt.link"></span></label><button class="btn primary small" id="cmtAdd" data-i18n="cmt.add"></button></div>
+  <div class="u19" id="cmtBody"></div>
+  <div class="row u20"><button class="btn" id="cmtClose" data-i18n="help.close"></button></div>
 </dialog>
 <dialog id="help">
   <h2><span data-i18n="help.title"></span> <span class="vtag" data-version></span></h2>
-  <div class="row" style="gap:10px;margin-bottom:8px"><button class="btn primary small" id="tourBtn" data-i18n="tour.start"></button><label class="chk"><input type="checkbox" id="tipsToggle"><span data-i18n="tip.toggle"></span></label><label class="chk"><input type="checkbox" id="hoverHelpToggle"><span data-i18n="hh.toggle"></span></label></div>
-  <div class="row" style="gap:10px;margin-bottom:8px"><label class="chk" data-i18n-title="a11y.keysNote"><input type="checkbox" id="keysToggle"><span data-i18n="a11y.keys"></span></label></div>
+  <div class="row u21"><button class="btn primary small" id="tourBtn" data-i18n="tour.start"></button><label class="chk"><input type="checkbox" id="tipsToggle"><span data-i18n="tip.toggle"></span></label><label class="chk"><input type="checkbox" id="hoverHelpToggle"><span data-i18n="hh.toggle"></span></label></div>
+  <div class="row u21"><label class="chk" data-i18n-title="a11y.keysNote"><input type="checkbox" id="keysToggle"><span data-i18n="a11y.keys"></span></label></div>
   <div data-i18n-html="help.structure"></div>
   <div data-i18n-html="help.body"></div>
-  <div class="row" style="justify-content:flex-end"><button class="btn" id="helpClose" data-i18n="help.close"></button></div>
+  <div class="row u20"><button class="btn" id="helpClose" data-i18n="help.close"></button></div>
 </dialog>
 <section id="home" hidden>
   <header class="hhead">
@@ -1072,13 +1103,13 @@ details.mini[open] { display: grid; gap: 6px; }
       <h2 data-i18n="home.all"></h2>
       <p class="note" data-i18n="home.allNote"></p>
       <div class="mpsaved" id="mpSaved"><h3 data-i18n="mp.saved"></h3><div id="mpList" class="mplist"></div></div>
-      <div class="gctl" id="allCtl" style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
+      <div class="gctl u22" id="allCtl">
         <label class="f"><span data-i18n="geo.mapMode"></span><select id="amMode"><option value="value" data-i18n="geo.mm.value"></option><option value="class" data-i18n="home.mmLayer"></option><option value="sites" data-i18n="home.mmSites"></option></select></label>
         <label class="f" id="amVarRow"><span data-i18n="geo.feature"></span><select id="amVar"></select></label>
         <label class="f" id="amLayRow"><span data-i18n="geo.layer"></span><select id="amLayer"></select></label>
-        <label class="f"><span data-i18n="geo.ageFrom"></span><input type="number" id="amA0" step="any" value="9" style="width:70px"></label>
-        <label class="f"><span data-i18n="geo.ageTo"></span><input type="number" id="amA1" step="any" value="14" style="width:70px"></label>
-        <div class="row"><button class="btn small" id="amPrev" data-i18n-title="aria.prev">◀</button><button class="btn small" id="amNext" data-i18n-title="aria.next">▶</button><button class="btn small" id="amSvg">SVG</button><select id="amPngW" style="width:auto"><option value="1800">PNG 1800 px</option><option value="3600" selected>PNG 3600 px</option><option value="7200">PNG 7200 px</option></select><button class="btn small" id="amPng">PNG</button></div>
+        <label class="f"><span data-i18n="geo.ageFrom"></span><input class="u7" type="number" id="amA0" step="any" value="9"></label>
+        <label class="f"><span data-i18n="geo.ageTo"></span><input class="u7" type="number" id="amA1" step="any" value="14"></label>
+        <div class="row"><button class="btn small" id="amPrev" data-i18n-title="aria.prev">◀</button><button class="btn small" id="amNext" data-i18n-title="aria.next">▶</button><button class="btn small" id="amSvg">SVG</button><select class="u4" id="amPngW"><option value="1800">PNG 1800 px</option><option value="3600" selected>PNG 3600 px</option><option value="7200">PNG 7200 px</option></select><button class="btn small" id="amPng">PNG</button></div>
       </div>
       <div class="mapstyle" id="amCores"></div>
       <div class="mapstyle" id="amInterp"></div>
@@ -1086,25 +1117,25 @@ details.mini[open] { display: grid; gap: 6px; }
       <div class="mapframe" id="amFrame"><div id="allMap" class="zmap"></div><div class="rszh" data-frame="amFrame" data-i18n-title="ui.resizeMap"></div><div class="rszv" data-frame="amFrame" data-i18n-title="ui.resizeMap"></div></div>
       <div class="mpbox"><h3 data-i18n="mp.title"></h3><p class="note" data-i18n="mp.note"></p>
         <div class="row"><button class="btn small" id="mpAll" data-i18n="mp.all"></button><button class="btn small" id="mpNone" data-i18n="mp.none"></button><span class="note" id="mpCount"></span>
-          <input type="text" id="mpName" data-i18n-ph="mp.name" style="max-width:240px"><button class="btn small primary" id="mpCreate" data-i18n="mp.create"></button></div></div>
-      <div class="tablewrap" style="max-height:40vh"><table class="dtable" id="allTable"></table></div>
+          <input class="u23" type="text" id="mpName" data-i18n-ph="mp.name"><button class="btn small primary" id="mpCreate" data-i18n="mp.create"></button></div></div>
+      <div class="tablewrap u24"><table class="dtable" id="allTable"></table></div>
     </section>
   </div>
 </section>
 <dialog id="recDlg">
   <h2 data-i18n="rec.title"></h2>
-  <div style="display:grid;gap:10px">
+  <div class="u25">
     <label class="f"><span data-i18n="rec.name"></span><input type="text" id="recName"></label>
     <div class="grid2"><label class="f"><span data-i18n="rec.x"></span><select id="recX"></select></label>
       <label class="f"><span data-i18n="rec.axis"></span><select id="recAxis"><option value="depth" data-i18n="log.depth"></option><option value="age" data-i18n="log.age"></option></select></label></div>
     <div class="f"><span data-i18n="rec.cols"></span><div id="recCols" class="reccols"></div></div>
     <p class="note" data-i18n="log.recNote"></p>
   </div>
-  <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" id="recCancel" data-i18n="confirm.no"></button><button class="btn primary" id="recAdd" data-i18n="rec.add"></button></div>
+  <div class="row u26"><button class="btn" id="recCancel" data-i18n="confirm.no"></button><button class="btn primary" id="recAdd" data-i18n="rec.add"></button></div>
 </dialog>
 <dialog id="geoImpDlg" class="gimp">
   <h2 id="giTitle"></h2>
-  <div style="display:grid;gap:10px">
+  <div class="u25">
     <div class="grid2">
       <label class="f" id="giCoreRow"><span data-i18n="geo.r.core"></span><select id="giCore"></select></label>
       <label class="f" id="giWdRow"><span data-i18n="geo.r.wd"></span><select id="giWd"></select></label>
@@ -1121,31 +1152,31 @@ details.mini[open] { display: grid; gap: 6px; }
     <div class="f" id="giProxRow"><span data-i18n="geo.r.proxies"></span><div id="giProx" class="reccols"></div></div>
     <p class="note" id="giNote"></p>
   </div>
-  <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" id="giCancel" data-i18n="confirm.no"></button><button class="btn primary" id="giOk" data-i18n="geo.r.ok"></button></div>
+  <div class="row u26"><button class="btn" id="giCancel" data-i18n="confirm.no"></button><button class="btn primary" id="giOk" data-i18n="geo.r.ok"></button></div>
 </dialog>
 <div id="tipCard" class="tipcard" hidden></div>
 <div id="tour" hidden><div class="tourhl"></div><div class="tourbox"></div></div>
 <dialog id="mlDlg" class="wide">
-  <div class="row" style="justify-content:space-between;align-items:center"><h2 data-i18n="ml.title" style="margin:0"></h2><button class="btn small" id="mlClose" data-i18n="help.close"></button></div>
+  <div class="row u27"><h2 class="u28" data-i18n="ml.title"></h2><button class="btn small" id="mlClose" data-i18n="help.close"></button></div>
   <div class="htabs" id="mlTabs" role="tablist"><button class="btn small" role="tab" data-mltab="guide" data-i18n="ml.tab.guide"></button><button class="btn small" role="tab" data-mltab="train" data-i18n="ml.tab.train"></button><button class="btn small" role="tab" data-mltab="examples" data-i18n="ml.tab.examples"></button><button class="btn small" role="tab" data-mltab="others" data-i18n="ml.tab.others"></button></div>
   <div id="mlBody" class="mlbody"></div>
 </dialog>
 <dialog id="trainDlg" class="wide">
-  <div class="row" style="justify-content:space-between;align-items:center"><h2 data-i18n="tr.title" style="margin:0"></h2><button class="btn small" id="trainClose" data-i18n="help.close"></button></div>
+  <div class="row u27"><h2 class="u28" data-i18n="tr.title"></h2><button class="btn small" id="trainClose" data-i18n="help.close"></button></div>
   <div id="trainBody" class="mlbody"></div>
 </dialog>
 <dialog id="coreDlg">
   <h2 id="cdTitle"></h2>
-  <div style="display:grid;gap:10px">
+  <div class="u25">
     <label class="f"><span data-i18n="core.name"></span><input type="text" id="cdName"></label>
     <div class="grid3"><label class="f"><span>Lat</span><input type="number" id="cdLat" step="any"></label><label class="f"><span>Lon</span><input type="number" id="cdLon" step="any"></label><label class="f"><span data-i18n="geo.r.wd"></span><input type="number" id="cdWd" step="any"></label></div>
     <label class="f"><span data-i18n="core.units"></span><select id="cdUnits"><option>mm</option><option>cm</option><option>m</option></select></label>
     <label class="f"><span data-i18n="core.notes"></span><textarea id="cdNotes" rows="3"></textarea></label>
     <p class="note" data-i18n="core.note"></p>
   </div>
-  <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn danger" id="cdDel"></button><span><button class="btn" id="cdCancel" data-i18n="confirm.no"></button> <button class="btn primary" id="cdOk" data-i18n="geo.r.ok"></button></span></div>
+  <div class="row u29"><button class="btn danger" id="cdDel"></button><span><button class="btn" id="cdCancel" data-i18n="confirm.no"></button> <button class="btn primary" id="cdOk" data-i18n="geo.r.ok"></button></span></div>
 </dialog>
-<div class="float" id="float" hidden><header id="floatHead"><span id="floatTitle"></span><span style="flex:1"></span><button class="btn small ghost" id="floatClose">✕</button></header><div class="fbody" id="floatBody"></div></div>
+<div class="float" id="float" hidden><header id="floatHead"><span id="floatTitle"></span><span class="u3"></span><button class="btn small ghost" id="floatClose">✕</button></header><div class="fbody" id="floatBody"></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script type="module" src="js/app.js"></script>
