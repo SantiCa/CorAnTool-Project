@@ -10,6 +10,10 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.72 — 2026-11-07
+- Figures: vertical or horizontal orientation is now set separately for each figure type, instead of applying to all of
+  them. Projects saved before keep their single orientation for the types you do not change.
+
 ## V0.71 — 2026-11-07
 - No visible change: the save indicator keeps its internal state "saved" (used by the end-to-end test); the warning
   colour for "no folder backup" is a separate attribute.

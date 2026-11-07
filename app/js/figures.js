@@ -405,10 +405,12 @@ function syncCoreFigSize() {
 export function verticalStyleHTML(st = S.logView.style || {}, nd = true) {
   return `${nd ? ndFormHTML(st) : ''}<div class="grid2"><label class="f"><span>${t('st.yUnit')}</span><select data-st="yUnit">${['', 'mm', 'cm', 'm'].map((u) => `<option value="${u}" ${(st.yUnit || '') === u ? 'selected' : ''}>${u || t('st.native')}</option>`).join('')}</select></label>${tickFieldsHTML(st)}</div>`;
 }
+/** V0.72: orientation of each figure type (F.orients); projects saved before keep their single F.orient as the fallback. */
+const orientOf = (F) => F.orients?.[F.type] ?? F.orient ?? 'v';
 export function renderFigPanel() {
   const F = S.fig, box = $('figOpts');
   $('figType').value = F.type; $('figTitle').value = F.title; $('figCaption').value = F.caption;
-  $('figOrient').value = F.orient === 'h' ? 'h' : 'v'; $('figOrientBox').hidden = ['map', 'locmap'].includes(F.type);   // V0.51
+  $('figOrient').value = orientOf(F) === 'h' ? 'h' : 'v'; $('figOrientBox').hidden = ['map', 'locmap'].includes(F.type);   // V0.51
   if (F.type === 'traces') {
     const cls = S.classes.filter((c) => classTraces(c.id).length);
     box.innerHTML = `${figWinHTML()}<div class="grid2"><label class="f"><span>${t('fig.n')}</span><input type="number" id="figN" min="1" max="20" value="${F.n}"></label>
@@ -704,7 +706,7 @@ export function renderFigure() {
     else if (F.type === 'geolog') { if (geoRT.dirty) geoComputeSamples(); renderGeoLogs(); svg = $('geoLogSvg').querySelector('svg')?.outerHTML || null; }
     else if (F.type === 'locmap') svg = locmapSVG();
     else { if (geoRT.dirty) geoComputeSamples(); svg = renderGeoMap() || null; }
-    if (svg && F.orient === 'h' && !['map', 'locmap'].includes(F.type)) svg = orientSVG(svg);   // V0.51
+    if (svg && orientOf(F) === 'h' && !['map', 'locmap'].includes(F.type)) svg = orientSVG(svg);   // V0.51
     if (svg) svg = scopeIds(svg);   // V0.70
   } catch (e) { console.error(e); $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(axisErr(e))}</p>`; return; }
   figSvgCache = svg ? wrapFigure(svg, F.title, F.caption) : '';
@@ -732,7 +734,7 @@ $('figPanel').addEventListener('change', (e) => {
   const F = S.fig, el = e.target;
   if (el.id === 'figType') { F.type = el.value; renderFigPanel(); }
   else if (el.id === 'figTitle') F.title = el.value; else if (el.id === 'figCaption') F.caption = el.value;
-  else if (el.id === 'figOrient') F.orient = el.value;   // V0.51
+  else if (el.id === 'figOrient') (F.orients ||= {})[F.type] = el.value;   // V0.51
   else if (el.id === 'figRangeColW') F.rangeColW = Math.max(16, Math.min(200, +el.value || 30));
   else if (el.dataset.rangeTaxon != null) { const st = (colView('range').style ||= {}), h = new Set(st.colHide || []), id = 'sp:' + el.dataset.rangeTaxon; if (el.checked) h.delete(id); else h.add(id); st.colHide = [...h]; scheduleLog(); }
   else if (el.id === 'figLogHideExcl') { S.logView.hideExcl = el.checked; if ($('logHideExcl')) $('logHideExcl').checked = el.checked; scheduleLog(); }
