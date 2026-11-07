@@ -1,53 +1,54 @@
-# Sondeo de prueba: IODP Expedition 397, Site U1385, Hole I, Core 1H
+# Test core: IODP Expedition 397, Site U1385, Hole I, Core 1H
 
-Datos públicos del IODP usados para probar IchAnTool. Margen ibérico ("Shackleton site"):
-lodo hemipelágico con bioturbación entre sutil y moderada.
+Public data of the International Ocean Discovery Program (IODP), used by the tests and available as an example
+project when the program runs from a copy of the repository. Iberian Margin ("Shackleton site"): hemipelagic mud with
+subtle to moderate bioturbation.
 
-## Contenido
+## Contents
 
-| Carpeta | Contenido |
-|---------|-----------|
-| `web/` | Imágenes de media sección (A, *archive half*) de las secciones 1–6, reducidas a **50 px/cm** con filtro Lanczos (`*_50pxcm.jpg`). Es lo que carga la aplicación. |
-| `records/397-U1385I-1H_RSC_color.csv` | Reflectancia de color L\*, a\*, b\* (instrumento SHMSL), 438 medidas cada 2 cm, profundidad CSF-A (m). |
-| `records/397-U1385I-1H_MS.csv` | Susceptibilidad magnética de lazo continuo (WRMSL, unidades del instrumento), 420 medidas, profundidad CSF-A (m). |
-| `records/397-U1385_core1_section_images_LIMS.csv` | Tabla del LIMS con las secciones, profundidades y nombres de archivo de las imágenes. |
-| `images/` | Imágenes originales a resolución completa (unos 200 px/cm, 1 380 × 29 880 px por sección). **No se guardan en git** por tamaño (16 MB); se descargan como se explica abajo. |
+| Path | Content |
+|------|---------|
+| `web/` | Archive-half images of sections 1–6, reduced to **50 px/cm** with a Lanczos filter (`*_50pxcm.jpg`). These are the files the program loads. |
+| `records/397-U1385I-1H_RSC_color.csv` | Colour reflectance L\*, a\*, b\* (SHMSL instrument), 438 measurements every 2 cm, depth CSF-A (m). |
+| `records/397-U1385I-1H_MS.csv` | Whole-round magnetic susceptibility (WRMSL, instrument units), 420 measurements, depth CSF-A (m). |
+| `records/397-U1385_core1_section_images_LIMS.csv` | LIMS table with the sections, depths and image file names. |
 
-Secciones (profundidad CSF-A del techo y muro de cada sección curada):
+The full-resolution originals (about 200 px/cm, 1,380 × 29,880 px per section, 16 MB in total) are not stored in the
+repository; they can be downloaded as described below.
 
-| Sección | Techo (m) | Muro (m) | Archivo original del LIMS |
-|---------|-----------|----------|---------------------------|
-| 1 | 0,00 | 1,50 | 397-u1385i-1h-1-a_shlf11915031_20221126134127_trim.jpg |
-| 2 | 1,50 | 2,99 | 397-u1385i-1h-2-a_shlf11915061_20221126134246_trim.jpg |
-| 3 | 2,99 | 4,49 | 397-u1385i-1h-3-a_shlf11915091_20221126134353_trim.jpg |
-| 4 | 4,49 | 5,98 | 397-u1385i-1h-4-a_shlf11915121_20221126134500_trim.jpg |
-| 5 | 5,98 | 7,48 | 397-u1385i-1h-5-a_shlf11915151_20221126134601_trim.jpg |
-| 6 | 7,48 | 8,78 | 397-u1385i-1h-6-a_shlf11915181_20221126134717_trim.jpg |
+Sections (CSF-A depth of the top and bottom of each curated section):
 
-La altura de cada imagen corresponde a la longitud de su sección (unos 199–200 px/cm en los
-originales), así que techo y muro de la sección se usan directamente como techo y muro de la
-imagen.
+| Section | Top (m) | Bottom (m) | Original LIMS file |
+|---------|---------|------------|--------------------|
+| 1 | 0.00 | 1.50 | 397-u1385i-1h-1-a_shlf11915031_20221126134127_trim.jpg |
+| 2 | 1.50 | 2.99 | 397-u1385i-1h-2-a_shlf11915061_20221126134246_trim.jpg |
+| 3 | 2.99 | 4.49 | 397-u1385i-1h-3-a_shlf11915091_20221126134353_trim.jpg |
+| 4 | 4.49 | 5.98 | 397-u1385i-1h-4-a_shlf11915121_20221126134500_trim.jpg |
+| 5 | 5.98 | 7.48 | 397-u1385i-1h-5-a_shlf11915151_20221126134601_trim.jpg |
+| 6 | 7.48 | 8.78 | 397-u1385i-1h-6-a_shlf11915181_20221126134717_trim.jpg |
 
-## Cómo se obtuvieron (31-10-2026)
+The height of each image corresponds to the length of its section, so the section's top and bottom are used directly
+as the top and bottom of the image.
 
-Portal LIMS Online Report (LORE), <https://web.iodp.tamu.edu/LORE/>:
-- **Images → Core Sections (LSIMG) → Standard**: Expedition 397, Site U1385, Hole I, Core 1,
-  columna *Cropped image (JPG) link*.
-- **Physical Properties → Reflectance Spectroscopy and Colorimetry (RSC)**, mismos filtros.
-- **Physical Properties → Magnetic Susceptibility – Pass-through (MS)**, mismos filtros.
+## Source
 
-Las secciones de U1385 de la Expedición 397 son los pozos F–J (A–E corresponden a la
-Expedición 339).
+LIMS Online Report portal (LORE), <https://web.iodp.tamu.edu/LORE/>, accessed 31 October 2026:
+- **Images → Core Sections (LSIMG) → Standard**: Expedition 397, Site U1385, Hole I, Core 1, column *Cropped image
+  (JPG) link*.
+- **Physical Properties → Reflectance Spectroscopy and Colorimetry (RSC)**, same filters.
+- **Physical Properties → Magnetic Susceptibility – Pass-through (MS)**, same filters.
 
-## Modelo de edad
+Expedition 397 holes at Site U1385 are F–J (A–E belong to Expedition 339).
 
-El proyecto de prueba trae un modelo de edad **ilustrativo, no publicado**: tasa constante supuesta
-de 10 cm/ka (0 m = 0 ka; 8,78 m = 87,8 ka). Sirve solo para probar la conversión a edad. Para
-cualquier interpretación hay que sustituirlo por el modelo de edad publicado del sitio U1385 y
-pasar antes las profundidades de este pozo (CSF-A) a la escala compuesta (CCSF).
+## Age model
 
-## Cita y uso
+The example project includes an **illustrative, unpublished** age model: an assumed constant rate of 10 cm/ka
+(0 m = 0 ka; 8.78 m = 87.8 ka). It only serves to test the conversion to age. For any interpretation it must be
+replaced by the published age model of Site U1385, after converting this hole's depths (CSF-A) to the composite
+depth scale (CCSF).
 
-Datos del International Ocean Discovery Program (IODP), Expedition 397 (Iberian Margin
-Paleoclimate), obtenidos del LIMS del IODP JRSO. Los datos del IODP son de acceso abierto; al
-usarlos, cita los *Proceedings of the IODP*, volumen 397, y la base de datos LIMS.
+## Citation and use
+
+Data from the International Ocean Discovery Program (IODP), Expedition 397 (Iberian Margin Paleoclimate), obtained
+from the LIMS database of the IODP JOIDES Resolution Science Operator. IODP data are openly available; when using them,
+cite the *Proceedings of the International Ocean Discovery Program*, Volume 397, and the LIMS database.

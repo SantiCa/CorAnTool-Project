@@ -1,47 +1,42 @@
-## SedCoreTool V0.52
+## SedCoreTool V0.54
 
-Aplicación para identificar y cuantificar trazas en imágenes de sondeos, integrar registros multiproxy
-y exportar figuras. Versión 0.x en desarrollo. Incluye ejemplos públicos; arranca sin proyectos privados.
+SedCoreTool quantifies bioturbation and ichnotaxa in sediment-core images and combines them with other down-core
+records and described intervals. Version 0.x, in active development. The downloads contain no sample data: the
+program starts empty and you open your own images and tables.
 
-### Cambios recientes
+### Highlights
+- New name: **SedCoreTool** (formerly CorAnTool and IchAnTool). Projects saved with earlier versions and `.corantool`
+  packages still open.
+- Projects saved section by section, robust table import, accessibility and performance improvements.
+- Core location map figure (WGS 84, Web Mercator, UTM) with grid, scale bar, north arrow and optional Esri backgrounds.
+- Ichnotaxa distribution as symmetric curves; horizontal orientation for figures.
+- Final test on cores reserved from training.
 
-- Nuevo nombre: **SedCoreTool** (antes CorAnTool e IchAnTool). Los proyectos `.corantool` y los guardados con la versión anterior se siguen abriendo.
-- Guardado por secciones, edición con deshacer, mejoras de rendimiento y accesibilidad, e importación CSV robusta.
-- Figura de localización de sondeos con proyecciones geográficas, Web Mercator y UTM, retícula y fondos Esri.
-- SheetJS 0.20.3 y pesos DINOv2 fijados a un commit y SHA-256 verificable.
-- Electron 45.2.1 y electron-builder 26.18.0. Prueba automática de cierre y reapertura del escritorio
-  antes de construir los instaladores de cada sistema.
-- HTML sin conexión, manifiesto del commit y sumas SHA-256 incluidos con las descargas.
+The full list of changes is in [CHANGELOG.md](https://github.com/SantiCa/SedCoreTool-Project/blob/master/CHANGELOG.md).
 
-### Descargas
+### Downloads
 
-| Sistema | Archivo |
+| System | File |
 |---|---|
-| Windows 10/11, x64 | `SedCoreTool-V0.52-windows-setup.exe` o `SedCoreTool-V0.52-windows-portable.exe` |
-| macOS 13+, Intel y Apple Silicon | `SedCoreTool-V0.52-mac-universal.dmg` |
-| Linux, x64 | `SedCoreTool-V0.52-linux-x86_64.AppImage` o `SedCoreTool-V0.52-linux-amd64.deb` |
-| Navegador, archivo único | `SedCoreTool_V0.52.html` |
-| Verificación de las descargas | `SHA256SUMS.txt` y `RELEASE_MANIFEST.json` |
+| Windows 10/11, x64 | `SedCoreTool-V0.54-windows-setup.exe` or `SedCoreTool-V0.54-windows-portable.exe` |
+| macOS 13 or later, Intel and Apple Silicon | `SedCoreTool-V0.54-mac-universal.dmg` |
+| Linux, x64 | `SedCoreTool-V0.54-linux-x86_64.AppImage` or `SedCoreTool-V0.54-linux-amd64.deb` |
+| Any system, in a browser | `SedCoreTool_V0.54.html` (single file, works offline) |
+| Verification | `SHA256SUMS.txt` and `RELEASE_MANIFEST.json` |
 
-Windows: ejecutar el instalador o abrir el portable. macOS: arrastrar la aplicación a Aplicaciones.
-Linux: dar permiso de ejecución al AppImage o instalar el DEB. El HTML se abre con doble clic.
-Los ejecutables no están firmados: el sistema puede pedir confirmación de apertura.
+Windows: run the installer or open the portable version. macOS: drag the application to Applications. Linux: make
+the AppImage executable or install the DEB package. The HTML file opens with a double click. The installers are not
+code-signed, so the operating system may ask for confirmation the first time.
 
-Para verificar un archivo: `Get-FileHash archivo -Algorithm SHA256` en PowerShell,
-`shasum -a 256 archivo` en macOS o `sha256sum -c SHA256SUMS.txt` en Linux.
-El manifiesto identifica exactamente el commit fuente y los tamaños y hashes de los seis archivos de programa.
+To verify a file: `Get-FileHash <file> -Algorithm SHA256` in PowerShell, `shasum -a 256 <file>` on macOS or
+`sha256sum -c SHA256SUMS.txt` on Linux. The manifest identifies the source commit and the size and hash of each file.
 
-### Comprobaciones y límites
+### Before you update
+Export a copy of your projects. The program does not update itself; install the new version over the old one.
 
-Se comprobó en Electron el guardado de una edición pendiente al cerrar y reiniciar, la detección del
-ejemplo público, el puente de estado del entrenador y la carga local de ONNX Runtime Web.
-El DINOv2 real produjo un vector válido de 384 valores con una entrada sintética y los seis fondos Esri
-se descargaron correctamente. Estas pruebas técnicas no miden precisión con testigos reales.
+### Known limitations
+- U-Net models must be trained by the user; no model trained on real cores is distributed yet.
+- The first download of the vision model and map backgrounds need an internet connection.
+- Training a U-Net needs Python 3.10 or later on the computer and installs a 2–3 GB module once.
 
-Antes de actualizar, exportar una copia de los proyectos. Quedan por comprobar el uso humano de los
-instaladores en cada equipo, el lector de pantalla y el entrenamiento con el hardware del usuario.
-Los modelos U-Net necesitan entrenamiento propio; la primera descarga de DINOv2 y los fondos de mapa
-requieren internet. El programa no se actualiza solo.
-
-Este borrador queda preparado para revisión antes de publicar. Zenodo y DOI están aplazados.
-Detalles y métodos: `CHANGELOG.md`, `docs/HISTORIAL_VERSIONES.md` y `docs/TECHNICAL_DOCUMENTATION.md`.
+Documentation: [technical documentation](https://github.com/SantiCa/SedCoreTool-Project/blob/master/docs/TECHNICAL_DOCUMENTATION.md).

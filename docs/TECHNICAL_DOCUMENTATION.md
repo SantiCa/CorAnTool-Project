@@ -6,8 +6,7 @@ implemented, written as `file::function`, so that every statement can be checked
 choice needs a reason, or a method has limits that affect how results should be read, the explanation is given in
 the same place.
 
-The document describes the current version. The history of changes is in
-[`HISTORIAL_VERSIONES.md`](HISTORIAL_VERSIONES.md) and [`../CHANGELOG.md`](../CHANGELOG.md).
+The document describes the current version; the history of changes is in [`CHANGELOG.md`](../CHANGELOG.md).
 
 ## Contents
 

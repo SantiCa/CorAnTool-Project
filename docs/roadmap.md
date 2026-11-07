@@ -1,31 +1,52 @@
 # Roadmap
 
-## 3.0 — core package (in progress)
-- [x] Installable package, CLI and Python API
-- [x] Vectorised computation; PNG/TIFF/JPEG input; grayscale or RGB
-- [x] Multi-class (per-ichnotaxon) percentages from colour-coded images
-- [x] Configurable index schemes (BI, ii)
-- [x] Depth -> age conversion
-- [x] CSV / Excel export
-- [x] Regression test against the v2.1 reference results
-- [ ] Batch processing of folders and multi-section cores (splices, gaps)
+Planned work, grouped by area. Completed work is listed in the [changelog](../CHANGELOG.md).
+
+## Distribution and publication
+- [x] Desktop installers for Windows, macOS and Linux, and an offline single-file version
+- [x] Single version number across the program, the Python package and the installers
+- [ ] First public release of the installers
+- [ ] Python package on PyPI (`sedcoretool`)
+- [ ] Archived release with a DOI (Zenodo)
+- [ ] Software paper (`paper/`)
+- [ ] Documentation website with example notebooks
+
+## Python package
+- [x] Installable package with API and command line; regression against version 2.1
+- [x] Per-ichnotaxon percentages, overlapping traces, configurable index schemes, age model, CSV and Excel export
+- [ ] Interval thickness in centimetres on the command line (`--bin-cm`, already available in the API)
+- [ ] Exclusion layer, as in the program
+- [ ] Batch processing of folders and of multi-section cores (splices, gaps)
 - [ ] LAS export for well-log software
-- [ ] Documentation site and example notebooks
-- [ ] Release on PyPI + Zenodo DOI; JOSS submission
 
-## 3.x — assisted segmentation
-- [ ] Interactive annotation helper (promptable segmentation models)
-- [ ] Learned segmentation (U-Net-type) trained on annotated core images
-- [ ] Open annotated dataset of core images and masks
-- [ ] Validation: automatic vs. manual masks vs. visual BI/ii estimates
+## Segmentation and identification
+- [x] Learned segmentation (U-Net): training-data export, training, evaluation on independent cores, inference in the
+      program and in Python
+- [x] Ichnotaxa classifier on shape and colour descriptors or on pre-trained vision features
+- [ ] U-Net models trained and evaluated on annotated real cores
+- [ ] Open dataset of annotated core images and masks, with an annotation protocol and inter-annotator agreement
+- [ ] Classical segmentation baselines in Python for comparison
+- [ ] Click-assisted segmentation with promptable models
+- [ ] Texture descriptors for ichnotaxa
 
-## Web application (app/)
-- [x] Image -> enhancement -> detection -> editing -> curves and indices in the browser
-- [x] Incremental learning of ichnotaxa (k-NN with novelty detection); model export/import
-- [ ] Pixel-level learned segmentation in the app (train on painted masks)
-- [ ] Host on GitHub Pages
-- [ ] Batch processing and reports for institutional/industry users
+## Validation
+- [x] Final test on cores reserved from training and model selection
+- [ ] Automatic versus manual masks versus experts' visual BI/ii estimates
+- [ ] Blind comparison of ichnotaxa identification with ichnologists
+- [ ] Multiproxy classification on cores with an independent, published interpretation
 
-## Extensions
-- [ ] Additional ichnological parameters: ichnodiversity, burrow size, tiering, cross-cutting
-- [ ] CT / X-ray image support
+## Multiproxy analysis and maps
+- [ ] Permutation importance of variables (also for the neural network)
+- [ ] Kriging variance maps
+- [ ] Location map: cores from other projects and an inset location map
+
+## Program
+- [ ] Unified data import; age model edited in the core dialog
+- [ ] Column headers that stay visible while scrolling
+- [ ] Dedicated horizontal layout for each figure type
+- [ ] Simultaneous editing of a shared project
+- [ ] `app.js` split into smaller modules
+
+## Further ichnological parameters
+- [ ] Ichnodiversity, burrow size, tiering and cross-cutting relationships
+- [ ] CT and X-ray image support

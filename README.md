@@ -1,272 +1,166 @@
 # SedCoreTool
 
-**Sediment Core Tool** — quantify bioturbation and ichnotaxa in sediment-core images and combine them with any other
-down-core record (geochemistry, foraminifera, TOC, colour, magnetic susceptibility…) in one project.
+[![Tests](https://github.com/SantiCa/SedCoreTool-Project/actions/workflows/tests.yml/badge.svg)](https://github.com/SantiCa/SedCoreTool-Project/actions/workflows/tests.yml)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
-SedCoreTool started in 2019 as **IchAnTool**, a script that turned hand-segmented core images into bioturbation series,
-and was called **SedCoreTool** in 2026 until V0.51. It is now a desktop program (Windows, macOS, Linux) and a Python
-package (import name `sedcoretool`; the old `ichantool` still works).
+**SedCoreTool** (*Sediment Core Tool*) quantifies bioturbation and ichnotaxa in sediment-core images and combines them
+with any other down-core record — geochemistry, foraminifera, TOC, colour, magnetic susceptibility — and with
+described intervals, on a common depth or age axis.
 
-> **Earlier names and version 2.1.** The reference version 2.1 (IchAnTool, 2019) is kept unchanged in
-> [`legacy/`](legacy/), archived in Zenodo ([doi:10.5281/zenodo.3518837](https://doi.org/10.5281/zenodo.3518837)) and
-> marked in this repository with the tag `v2.1`. The old repository addresses (`IchAnTool-Project`,
-> `CorAnTool-Project`) redirect here.
+It runs on Windows, macOS and Linux, or in a web browser, and keeps all data on the user's computer. A Python package
+with the same analysis definitions is available for scripting and batch processing.
 
-> Status: version **0.x** (in development). Version 1.0 will be released when the program is considered complete.
+> **Status:** version 0.x, in active development. Version 1.0 will be released when the program is considered
+> complete. See the [changelog](CHANGELOG.md).
 
 ---
 
-## What it is useful for
+## Features
 
-- **Ichnofabric analysis of cores.** Measure the percentage of bioturbated area and of each ichnotaxon, interval by
-  interval, with depth and age, instead of estimating it by eye. The Bioturbation Index (BI) and the ichnofabric index
-  (ii) are derived automatically and can also be entered manually.
-- **Reproducible, documented results.** Every step is saved in the project (image, depth scale, enhancement,
-  detection, masks, excluded zones, classes), so the analysis can be repeated and checked by a reviewer.
-- **Less manual work.** Enhancement filters, automatic shape detection and a classifier that learns from the traces
-  you label speed up the segmentation; you stay in control and correct what it gets wrong.
-- **Ichnology together with other proxies.** Plot bioturbation next to geochemistry or other records on a common
-  depth or age axis, classify intervals automatically (multiproxy mode) and map results between cores.
-- **Publication-ready figures** of the core column, ichnotaxon distribution, representative traces and sections.
-- **Team work.** Projects can be shared as a single file with the full-resolution images, or through a shared folder
-  (Drive, OneDrive, Dropbox), with dated comments and replies.
+- **Bioturbation from core images.** Percentage of bioturbated area and of each ichnotaxon per depth interval, with
+  the Bioturbation Index (BI) and the ichnofabric index (ii) derived automatically or entered manually.
+- **Assisted segmentation.** Image enhancement (including published protocols), automatic detection of candidate
+  traces, drawing and editing tools, an exclusion layer for cracks, voids and samples, and optional learned
+  segmentation (U-Net).
+- **Ichnotaxa identification.** A classifier learns from the traces you label and suggests the ichnotaxon of the
+  rest, rejecting shapes unlike any example; you review every suggestion.
+- **Core column.** All sections of a core on one depth or age axis, with images, traces, indices and external records.
+- **Multiproxy analysis.** Numerical records and described intervals of many cores; user-defined classifiers
+  (random forest, neural network, k-nearest neighbours, naive Bayes, k-means) validated by leaving whole cores out;
+  maps by age window with several interpolation methods and projections.
+- **Publication figures.** Core column, ichnotaxa distribution, representative traces, core sections and core
+  location maps, as SVG, PNG or JPEG, with editable axes and labels.
+- **Reproducible and shareable.** Every parameter is stored in the project together with the original images;
+  exported tables record the version and settings used. Projects can be shared as a single file or through a shared
+  folder, with comments.
 
-## Download
+## Installation
 
-Installers for the latest version are on the [Releases page](../../releases/latest):
+### The program
+
+Download the installer for your system from the [latest release](../../releases/latest):
 
 | System | File |
 |---|---|
-| Windows | `…-windows-setup.exe` (installer) or `…-windows-portable.exe` (no installation) |
-| macOS (Intel and Apple Silicon; 13+ for V0.47+) | `…-mac-universal.dmg` |
-| Linux | `…-linux-x86_64.AppImage` or `…-linux-amd64.deb` |
+| Windows 10/11 (x64) | `SedCoreTool-V0.<n>-windows-setup.exe`, or `…-windows-portable.exe` (no installation) |
+| macOS 13 or later (Intel and Apple Silicon) | `SedCoreTool-V0.<n>-mac-universal.dmg` |
+| Linux (x64) | `SedCoreTool-V0.<n>-linux-x86_64.AppImage` or `…-linux-amd64.deb` |
+| Any system, in a browser | `SedCoreTool_V0.<n>.html` — a single file that opens with a double click, offline |
 
-The installers are not code-signed. On Windows, if SmartScreen appears, choose *More info → Run anyway*. On macOS,
-open the program the first time with right-click → *Open*. The program does not update itself: download the new
-installer from Releases and install it over the old one (your projects are kept).
+The installers are not code-signed: on Windows choose *More info → Run anyway* if SmartScreen appears; on macOS open
+the program the first time with right-click → *Open*. To update, install the new version over the old one; projects
+are kept. Each release includes `SHA256SUMS.txt` and `RELEASE_MANIFEST.json` to verify the downloads.
 
-From V0.48, releases also include `SedCoreTool_V0.<n>.html` (the standalone web app),
-`SHA256SUMS.txt` and `RELEASE_MANIFEST.json` (source commit, file sizes and hashes).
-Maintainers can prepare an unpublished draft from **Actions → Desktop builds → Run workflow → master →
-draft_release**. Default manual builds still produce test artifacts only. Review the draft before publishing;
-Zenodo and a DOI are deferred and are not required to distribute the downloads on GitHub.
-
----
-
-## How to use it
-
-### 1. Create a project and add images
-
-1. Start the program and create a project (*Create*).
-2. Add the core images (JPEG, PNG or TIFF). You are asked which **core** they belong to (or create a new one).
-   Each image is a **section** of that core.
-3. For each section give the **top and bottom depth** of the analysed area and its units. Optionally rotate, crop
-   and set the analysis area (to leave out the scale bar, colour chart or core edges).
-
-Large images are reduced for working by averaging pixels; the original file is always kept at full resolution, and
-the **working resolution** of each section can be changed later.
-
-### 2. Mark the bioturbation
-
-- **Enhance** the image (contrast, levels, CLAHE and published presets) to make the traces visible.
-- **Detect** shapes automatically, or draw them with the brush, magic wand and lasso.
-- **Exclude** zones that must not be counted (cracks, sampling holes, labels). Intervals with too few valid pixels
-  are shown as *NO DATA*, never as 0.
-- **Assign ichnotaxa** (classes) to the traces. After a few examples the classifier proposes the class of the rest;
-  accept or correct its proposals. Other ichnotaxa can be hidden while you interpret.
-
-### 3. Results
-
-- The analysis interval is set **in centimetres**. For each interval you get the percentage of bioturbation, the
-  percentage of each ichnotaxon, BI and ii.
-- Add an **age model** to work in age as well as depth.
-- Export the results to **CSV** (one row per interval).
-
-### 4. Core column and other records
-
-- The **Column** mode joins all the sections of a core on a depth or age axis, with the image, bioturbation,
-  ichnotaxa, BI, ii and any **external records** you import (CSV, TXT or Excel).
-- Columns, axes (limits, divisions, units, logarithmic scale), widths, colours and labels can be edited.
-- An **identification mode** marks where each ichnotaxon was recognised, alone or together with the quantified
-  columns.
-
-### 5. Multiproxy mode
-
-Import numeric records of many cores, define described intervals (lithology, turbidites, organic-rich layers…),
-label them, and train a classifier (random forest, k-NN, naive Bayes, neural network or k-means) that recognises the
-intervals in other cores. Validation leaves one core out at a time. Results can be mapped by age.
-
-### 6. Figures
-
-*Figures* builds publication figures as SVG or PNG: core column, ichnotaxon distribution, representative traces of
-each ichnotaxon (several versions side by side, configurable scale bar) and sections side by side, with a depth
-window, real proportions and editable labels and symbols.
-
-### 7. Saving, sharing and team work
-
-- Projects are **saved automatically** on your computer.
-- **Export this project (with images)** creates a `.sedcoretool` file (older `.corantool` files still open) with the full-resolution images; anyone can open
-  it with *Import file…* on any system.
-- **Automatic copy to a folder**: choose a folder (ideally a shared Drive/OneDrive/Dropbox folder). Each project is
-  written there as a folder; a colleague opens it with *Open project folder…*. When the same project is opened again,
-  you choose whether to replace your version or keep a copy (comments of both versions are kept).
-- **Comments** (💬 button): dated comments with author, linked to a point of a section, with replies, resolve and
-  delete. Work by turns: there is no lock between users yet.
-
-The built-in **help** and guided tour explain each step. The downloads (installers and offline file) carry **no
-sample data**: you open your own images and tables. The examples in `examples/` (idealised core, public IODP test core,
-synthetic geochemistry demo and training project) are only in the repository, for development and automatic tests;
-their buttons appear when the app is run from a copy of the repository.
-
----
-
-## The program and the Python package: which one do I need?
-
-SedCoreTool has two parts that compute bioturbation in exactly the same way:
-
-| | **The program** | **The Python package `sedcoretool`** |
-|---|---|---|
-| What it is | An application with windows: images, tools, column, multiproxy, figures | A library and a command-line tool, without windows |
-| What it starts from | Your core photographs | A **mask**: an image where bioturbation is already marked (painted black, colour-coded per ichnotaxon, exported from the program, or predicted by a U-Net) |
-| What it does | Everything described above: enhance, detect, draw, exclude, identify ichnotaxa, column, records, multiproxy, maps, figures, projects | Turns masks into depth/age series of bioturbation %, % per ichnotaxon, BI and ii; trains and evaluates U-Net models |
-| Who it is for | Anyone analysing cores | People who write scripts or process many images at once |
-| How to get it | Installers on the Releases page, the offline HTML file, or a copy of the repository in a browser | `pip install` (below) |
-
-Most users only need **the program**. The Python package is for batch processing and for training U-Net models (the
-desktop program uses it behind the scenes when you train a model on your computer).
-
-### The program without installing it
-
-The program is a web application, so the same code also runs in a browser, with all data kept on your computer:
-
-- **Offline single file:** download `SedCoreTool_V0.<n>.html` from Releases and open it with a double click
-  (Chrome, Edge or Firefox). No server, no internet needed. You can also build it yourself with
-  `python tools/build_standalone.py` (→ `dist/SedCoreTool_V0.<n>.html`).
-- **From a copy of the repository:** run `python -m http.server` in the repository folder and open
-  `http://localhost:8000/app/`. This also shows the example buttons.
-
-The desktop program adds more memory, a data folder on disk and training of U-Net models on your graphics card.
+The program can also be run from a copy of this repository: start a local server (`python3 -m http.server`) and
+open `http://localhost:8000/app/`.
 
 ### The Python package
 
-Install it from GitHub (it is not on PyPI yet; Python ≥ 3.10):
-
 ```bash
 pip install "sedcoretool @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
-# with Excel export and plots:
+# optional extras: excel (Excel export), plot (matplotlib), unet (U-Net training)
 pip install "sedcoretool[excel,plot] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
 ```
 
-This gives the Python module `sedcoretool` and the command `sedcoretool`. (Code written for the old name `ichantool`
-keeps working, with a warning.)
+Requires Python 3.10 or later. The package is not on PyPI yet.
 
-**Command line.** An image with the bioturbation painted black, whose top and bottom rows are at 0 and 500 cm:
+## Which part do I need?
+
+| | **The program** | **The Python package `sedcoretool`** |
+|---|---|---|
+| Starts from | Your core photographs | A **mask**: an image in which bioturbation is already marked (painted, colour-coded per ichnotaxon, exported from the program, or predicted by a U-Net) |
+| Does | Everything listed under *Features* | Turns masks into depth or age series of bioturbation %, % per ichnotaxon, BI and ii; trains and evaluates U-Net models |
+| For | Anyone analysing cores | Scripted and batch processing |
+
+Most users only need the program. The desktop program uses the Python package behind the scenes when it trains a
+U-Net on the computer.
+
+## Quick start (program)
+
+1. **Create a project** and add the images of a core, one per section, with the top and bottom depth of each.
+   Large images are reduced for working; the original file is always kept.
+2. **Mark the bioturbation:** enhance the image, detect candidate traces or draw them, and exclude zones that must not
+   be counted. Intervals with too few valid pixels are reported as *no data*, never as 0.
+3. **Assign ichnotaxa** to some traces; the program suggests the rest, and you accept or correct the suggestions.
+4. **Read the results** per interval (thickness in cm): bioturbation %, % per ichnotaxon, BI and ii. Add an age model
+   to work in age.
+5. **Combine and interpret** in the *Core column*, *Data* and *Multiproxy* modes, and prepare figures in *Figures*.
+6. **Save and share:** projects are saved automatically on your computer. *Export this project (with images)* creates
+   a `.sedcoretool` file that opens on any system; an automatic copy can be kept in a synchronised folder.
+
+The built-in help and guided tour explain each step. The downloads contain no sample data.
+
+## Quick start (Python package)
 
 ```bash
+# image with bioturbation painted black; top and bottom of the image at 0 and 500 cm
 sedcoretool analyze core.png --top 0 --bottom 500 --units cm --bin-px 100 -o core.csv
-```
 
-A colour-coded image with one colour per ichnotaxon (for example the `*_mask.png` and `*_palette.json` exported by
-the program; `palette.json` = `{"Zoophycos": "#ff0000", "Chondrites": "#0000ff"}`):
-
-```bash
+# colour-coded mask, e.g. the *_mask.png and *_palette.json exported by the program
 sedcoretool analyze core_mask.png --top 0 --bottom 500 --palette palette.json -o core.xlsx
 ```
 
-**In Python:**
-
 ```python
-from sedcoretool import analyze_image, analyze_mask, load_image, mask_from_palette
-from sedcoretool.plotting import plot_section
+from sedcoretool import analyze_mask, load_image, mask_from_palette
 
-# painted image (bioturbation in black), 1 cm intervals
-section = analyze_image("core.png", top=0, bottom=500, bin_cm=1)
-
-# or a colour-coded mask exported by the program
 mask, names = mask_from_palette(load_image("core_mask.png", "RGB"), {"Zoophycos": "#ff0000", "Chondrites": "#0000ff"})
-section = analyze_mask(mask, top=0, bottom=500, bin_cm=1, class_names=names)
-
-section.add_age(model_depth=[0, 500], model_age=[0, 40_000])       # optional age model
-section.data.to_csv("core.csv", index=False)                       # depth, bioturbation_pct, <class>_pct, BI, ii, age
-plot_section(section)
+section = analyze_mask(mask, top=0, bottom=500, units="cm", bin_cm=1, class_names=names)
+section.add_age(model_depth=[0, 500], model_age=[0, 40_000])     # optional age model
+section.data.to_csv("core.csv", index=False)                     # depth, bioturbation_pct, <class>_pct, BI, ii, age
 ```
 
-The package has no image tools and no exclusion layer: every pixel of the mask counts. Prefer lossless formats
-(PNG/TIFF) for masks, because JPEG compression alters the pixel values that are counted. All functions and options are
-described in the [technical documentation](docs/TECHNICAL_DOCUMENTATION.md#25-the-sedcoretool-python-package).
+Use lossless formats (PNG, TIFF) for masks. The complete API, command line and U-Net commands are described in the
+[technical documentation](docs/TECHNICAL_DOCUMENTATION.md#25-the-sedcoretool-python-package).
 
-### Learned segmentation (U-Net, experimental)
+**Learned segmentation (experimental).** A U-Net can be trained on the traces reviewed in the program — from the
+desktop program (*Detection → U-Net → Train on this computer…*) or with `sedcoretool unet` — and then used as a
+detection method. No model trained on real cores is distributed yet.
 
-A U-Net learns to find traces from the ones you reviewed in the program; the trained model is then used as a
-detection method (*Detection → U-Net*, load `model.onnx` and `model.json`). No model trained on real cores is
-published yet.
+## Privacy
 
-- **In the desktop program** (no command line): *Detection → U-Net → Train on this computer…* installs a 2–3 GB
-  training module once (needs Python ≥ 3.10 on the computer) and uses an NVIDIA or Apple GPU if present.
-- **With the Python package:**
+Images and data never leave the computer. The program connects to the internet only for optional downloads: map
+backgrounds (Esri, GEBCO; only after you allow it, since the map extent is sent), the vision model (Hugging Face) and,
+in the browser version, a few libraries. See [SECURITY.md](SECURITY.md).
 
-```bash
-pip install "sedcoretool[unet] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
-# in the program: Results → U-Net training data (ZIP)
-sedcoretool unet prepare project_segmentation_dataset.zip data --test CORE_A CORE_B   # tiles, split by core
-sedcoretool unet train data models/unet_v1                                           # GPU recommended
-sedcoretool unet evaluate project_segmentation_dataset.zip models/unet_v1.onnx --dataset data
-```
+## Documentation
 
-For ichnotaxa, *Models and training → What the classifier looks at → Vision model (DINOv2)* replaces the 12 shape descriptors with the features of a
-pre-trained vision model (88 MB download, cached). Plain-language guide (Spanish):
-[publications/GUIA_APRENDIZAJE_AUTOMATICO.md](publications/GUIA_APRENDIZAJE_AUTOMATICO.md).
+| Document | Content |
+|----------|---------|
+| [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) | How every part works: methods, formulas, default values, file formats, validation and limitations |
+| [CHANGELOG.md](CHANGELOG.md) | Changes in each version |
+| [docs/roadmap.md](docs/roadmap.md) | Planned work |
+| [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) | How to contribute; working rules for contributors and AI coding assistants |
+| [paper/](paper/) | Software paper (in preparation) |
 
 ## Repository layout
 
 ```
-app/                program (HTML + JavaScript); vendor/ = bundled libraries (UTIF, pako, SheetJS) and fonts (IBM Plex, OFL)
-desktop/            desktop packaging (Electron) for Windows, macOS and Linux
-src/sedcoretool/    Python package (src/ichantool/ = alias for the old name)
-tests/              automated tests (JavaScript and Python, incl. regression against v2.1)
-examples/           public examples: idealised core, IODP U1385I-1H test core, geochemistry demo, training project
-tools/              offline build, tutorial and demo data, export of the documentation
-docs/               technical documentation (English), version history and roadmap (Spanish)
-publications/       draft papers and candidate journals
-legacy/             original v2.1 code (2019), unchanged
+app/              the program (HTML and JavaScript ES modules; vendor/ = bundled libraries and fonts)
+desktop/          desktop packaging (Electron) for Windows, macOS and Linux
+src/sedcoretool/  Python package (src/ichantool/ is an alias for the former name)
+tests/            Python, program and end-to-end tests, including the regression against version 2.1
+examples/         public example data: IODP U1385I-1H core, idealised core, multiproxy demo, training project
+tools/            offline build, version sync, release and synthetic-data scripts
+docs/             technical documentation and roadmap
+paper/            software paper
+legacy/           original version 2.1 (2019), unchanged
 ```
 
-## Documentation
+## History and earlier names
 
-- [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) — every algorithm, formula, default value and
-  validation result.
-- [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md) — what changed in each version and why (Spanish).
-- [CHANGELOG.md](CHANGELOG.md) — short English summary of each version.
-- [docs/roadmap.md](docs/roadmap.md) — planned work.
-- [publications/METODOS_Y_DEFENSA.md](publications/METODOS_Y_DEFENSA.md) — methods per planned paper (Spanish).
-- [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), [docs/COORDINACION_IA.md](docs/COORDINACION_IA.md) — development
-  workflow.
+SedCoreTool started in 2019 as **IchAnTool**, a script that turned hand-segmented core images into bioturbation series.
+It was renamed **CorAnTool** in 2026 and **SedCoreTool** from version 0.52. Files and code written under the earlier
+names keep working: older `.corantool` project packages open, and the Python package can still be imported as
+`ichantool`. Version 2.1 is kept unchanged in [`legacy/`](legacy/), archived in Zenodo
+([doi:10.5281/zenodo.3518837](https://doi.org/10.5281/zenodo.3518837)) and tagged `v2.1` in this repository. The former
+repository addresses redirect here.
 
 ## Citing
 
-If you use SedCoreTool, please cite the software (version used and repository); the citation data are in
-`CITATION.cff` (GitHub shows them under *Cite this repository*).
+If you use SedCoreTool, please cite the version you used; GitHub shows the citation under *Cite this repository*
+(from [CITATION.cff](CITATION.cff)).
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE). Bundled libraries and fonts keep their own licences (`app/vendor/LICENSE-*`, `app/vendor/fonts/LICENSE-ibm-plex.txt`).
-
----
-
-## En español (resumen)
-
-SedCoreTool mide la bioturbación y los icnotaxones en imágenes de testigos de sondeo y los combina con otros registros
-(geoquímica, foraminíferos, TOC, color…) en profundidad o edad.
-
-**Uso:** crea un proyecto; añade las imágenes indicando a qué sondeo pertenecen y su techo y muro; realza, detecta o
-dibuja las trazas, excluye lo que no debe contarse y asigna icnotaxones (el programa aprende de tus ejemplos);
-obtén el porcentaje de bioturbación, de cada icnotaxón, BI e ii por intervalos en cm; únelo todo en la columna del
-sondeo con otros registros; clasifica intervalos en el modo Multiproxy; prepara figuras; y comparte el proyecto con
-sus imágenes completas o mediante una carpeta compartida, con comentarios.
-
-**Utilidad:** resultados cuantitativos, reproducibles y documentados en lugar de estimaciones visuales, menos trabajo
-manual y figuras listas para publicar.
-
-**Nombres anteriores:** IchAnTool (2019) y CorAnTool (hasta V0.51). La versión de referencia 2.1 sigue sin cambios
-en Zenodo (doi:10.5281/zenodo.3518837), en la carpeta `legacy/` y en la etiqueta `v2.1`; las direcciones antiguas
-del repositorio redirigen aquí.
+GPL-3.0-or-later — see [LICENSE](LICENSE). Bundled libraries and fonts keep their own licences; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
