@@ -208,6 +208,7 @@ dialog ol { padding-left: 20px; display: grid; gap: 6px; }
 .btn.proj .lbl { color: var(--muted); font-size: 11.5px; }
 .btn.danger { border-color: var(--danger); color: var(--danger); }
 .savestate[data-state="saved"] { color: var(--ok); }
+.savestate[data-state="local"] { color: var(--warn); }
 .savestate[data-state="error"], .savestate[data-state="off"] { color: var(--danger); }
 .plist { max-height: 46vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--r); }
 .prow { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
@@ -423,7 +424,7 @@ details.bk > summary { cursor: pointer; font-weight: 600; }
 .top .acts { display: flex; gap: 6px; flex-wrap: wrap; flex-wrap: nowrap; align-items: center; }
 #helpBtn .ico { display: none; font-weight: 600; }
 .btn.proj #projName { max-width: 26vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.savestate { font-size: 11.5px; color: var(--muted); align-self: center; min-width: 7em; white-space: nowrap; }
+.savestate { font-size: 11.5px; color: var(--muted); align-self: center; min-width: 7em; white-space: nowrap; max-width: 34ch; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 1500px) {
   .btn.proj .lbl, .corebar .lbl, #helpBtn .lbl { display: none; }
   #helpBtn .ico { display: inline; }

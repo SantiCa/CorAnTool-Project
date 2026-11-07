@@ -10,6 +10,11 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.67 — 2026-11-07
+- The save indicator no longer says just "Saved" when no backup folder is chosen: it reads "Saved on this computer · no folder
+  backup" (or "folder backup pending" when the folder needs permission again) in the warning colour, and "Saved" only
+  once the automatic folder backup is active.
+
 ## V0.66 — 2026-11-07
 - No visible change: the multiproxy tool (records, layers, classifiers, maps) moves out of `app.js` into its own file.
 

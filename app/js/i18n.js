@@ -1998,3 +1998,7 @@ Object.assign(D.en, {
   'age.dupDepth': '⚠ Depth {d} has two different ages. For a hiatus, write two depths a small distance apart.',
   'age.rangeIgnored': '⚠ Age range ignored: {n} rows have a blank minimum or maximum or do not contain the age.',
 });
+
+// V0.67: the save indicator says where the data are when there is no backup folder
+Object.assign(D.es, { 'save.local': 'Guardado en este equipo · sin copia en carpeta', 'save.localPending': 'Guardado en este equipo · copia en carpeta pendiente', 'save.localTip': 'Los datos están en el almacenamiento interno del programa, no en una carpeta tuya. Elige una carpeta en Copias de seguridad para tener una copia fuera de él.' });
+Object.assign(D.en, { 'save.local': 'Saved on this computer · no folder backup', 'save.localPending': 'Saved on this computer · folder backup pending', 'save.localTip': 'The data are in the program\'s internal storage, not in a folder of yours. Choose a folder under Backups to keep a copy outside it.' });
