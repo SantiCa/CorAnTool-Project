@@ -1,6 +1,8 @@
 /* Figures: representative traces, interpreted core, logs, location map and range chart. */
 import { $, S, clsById, fmt, hex } from './state.js';
-import { arrowFormHTML, axesFormHTML, busy, clsAbbr, colOrderHTML, colView, colorsFormHTML, compositeData, compositeMarks, coreImages, curCore, depthAtRow, effClassArray, effClassId, esc, fetchImage, geoComputeSamples, geoLand, geoOverlay, geoRT, idListOf, idMode, lastLog, legendOf, logRecords, logStyleOf, mapNetConsent, markDirty, mode, ndFormHTML, needPixels, onStyleInput, pxPerCm, reduceRGBA, renderGeoLogs, renderGeoMap, renderLog, requestRender, rowAtDepth, safe, saveFile, scheduleLog, speciesFormHTML, styleFormHTML, syncColOrder, toast } from './app.js';
+import { arrowFormHTML, axesFormHTML, colOrderHTML, colView, colorsFormHTML, compositeData, coreImages, lastLog, logRecords, logStyleOf, mode, ndFormHTML, onStyleInput, reduceRGBA, renderLog, scheduleLog, speciesFormHTML, styleFormHTML, syncColOrder } from './columns.js';
+import { busy, clsAbbr, compositeMarks, curCore, depthAtRow, effClassArray, effClassId, esc, fetchImage, geoComputeSamples, geoLand, geoOverlay, geoRT, idListOf, idMode, legendOf, mapNetConsent, markDirty, needPixels, pxPerCm, renderGeoLogs, renderGeoMap, requestRender, rowAtDepth, safe, saveFile, toast } from './app.js';
+
 import { UNIT_TO_CM, hasId, interpAge, topAt } from './core.js';
 import { vec } from './learn.js';
 import { buildLogSVG, buildRangeSVG, extraTicks, mergedStyle, noDataGaps, noDataRect, rowsRange, verticalTicks } from './log.js';

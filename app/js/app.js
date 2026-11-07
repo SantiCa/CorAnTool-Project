@@ -1,13 +1,13 @@
 // SedCoreTool web (antes CorAnTool e IchAnTool) — application (UI, state, tools, rendering, files).
 import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, parseAgeModelDetailed, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
-import { withProvenance, ageModelText, bioturbationTable, objectsTable, recordSeries } from './exportio.js';
+import { withProvenance, ageModelText, bioturbationTable, objectsTable } from './exportio.js';
 
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian } from './imageproc.js';
-import { orderCols, LOG_STYLE, ND_STYLE, parseTable, decodeText, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, traceSymbolPath } from './log.js';
+import { parseTable, decodeText, invertModel, toAxis, compositeRows, buildLogSVG, abbrevs, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
-import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
-import { evalColumn, evalCells, cellName, FUNCTIONS, parseFormula, formulaRefs, fillLinear } from './sheet.js';
+
+import { evalColumn, formulaRefs, fillLinear } from './sheet.js';
 import { TaxonModel, evaluateModels, finalTestMetrics, independentExternalExamples, descriptorSig, vec, FEATURES } from './learn.js';
 import { splitPieces, mergeKeeper, sameTaxonGroups, undoPixels, upgradeProject } from './edit.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
@@ -16,9 +16,12 @@ import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } 
 import { VISION_MODEL, visionFeatureId, traceWindow, traceInput, pickEmbedding } from './vision.js';
 import { tidyIntervals, coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, fitSampleTransform, transformSample, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
 import { $, APP, APP_NAMES, CLF_SCOPES, ML_DEFAULT, S, VERSION, clsById, defaultClasses, fetchAsset, fmt, hex, hideMissingExamples, keyOf, sec, uid } from './state.js';
-import { FIG_PANELS, arrowMarksSVG, axisErr, coreRatio, defaultFig, editSVGLabels, figTraces, panelDataURL, renderFigPanel, renderFigure, scheduleFigure, traceCanvas, verticalStyleHTML } from './figures.js';
+import { defaultFig, renderFigPanel, renderFigure, scheduleFigure, traceCanvas, verticalStyleHTML } from './figures.js';
+import { renderData } from './datatab.js';
+import { frameRatio, panelPrefs, placeSplitters, savePanels } from './panels.js';
+import { addRecordFromTable, axesFormHTML, colOrderHTML, colorsFormHTML, columnImages, compositeData, defaultLogView, lastLog, mode, renderLog, renderLogPanel, renderRecList, scheduleLog, sectionCanvas, setMode, syncColOrder } from './columns.js';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.64';
+const DELIVERY = 'V0.65';
 /* V0.17: input of the ichnotaxon classifier — 12 shape/colour descriptors ('shape') or the vector of a pre-trained
    vision model ('vision', DINOv2). Vectors of the two sets are never mixed. */
 const visionOn = () => (S.settings.ml?.features || 'shape') === 'vision';
@@ -939,7 +942,7 @@ export function effClassArray(s) {
   return eff;
 }
 
-function analyze(s) {
+export function analyze(s) {
   if (!s) return;
   const eff = effClassArray(s);
   let h = 2166136261; for (let i = 0; i < eff.length; i++) h = Math.imul(h ^ (eff[i] + 2), 16777619);   // signature of the class of each object
@@ -972,8 +975,8 @@ function setManual(s, b, key, val) {
 
 /* ───────────── rendering ───────────── */
 
-const view = $('view'), vctx = view.getContext('2d');
-const prof = $('profile'), pctx = prof.getContext('2d');
+export const view = $('view'), vctx = view.getContext('2d');
+export const prof = $('profile'), pctx = prof.getContext('2d');
 let imgData = null, rq = false, cursor = null, lassoPts = null, roiDrag = null, boxDrag = null;
 
 /** V0.2: ichnotaxa hidden while interpreting (view only: nothing is deleted; analysis and figures are unchanged). */
@@ -995,7 +998,7 @@ function rebuildLUT(s) {
 
 export function requestRender() { if (!rq) { rq = true; requestAnimationFrame(() => { rq = false; render(); renderProfile(); }); } }
 
-function resizeCanvases() {
+export function resizeCanvases() {
   for (const c of [view, prof]) {
     const w = Math.max(1, Math.round(c.clientWidth)), h = Math.max(1, Math.round(c.clientHeight));
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
@@ -1762,7 +1765,7 @@ function renderClasses() {
     </li>`).join('');
 }
 /** Two-step confirmation for actions that cannot be undone: the first click arms the button (text and colour change) for 4 s. */
-function armed(btn, msg) {
+export function armed(btn, msg) {
   if (!btn) return true;
   if (btn.dataset.armed === '1') { btn.dataset.armed = ''; clearTimeout(btn._armT); btn.textContent = btn._armTxt; btn.classList.remove('danger'); return true; }
   btn._armTxt = btn.textContent; btn.dataset.armed = '1'; btn.textContent = msg || t('confirm.click'); btn.classList.add('danger');
@@ -2493,7 +2496,7 @@ function coreImageParts(c) {
 }
 
 /** Recompute the derived arrays of a core (all sources merged on the union of depths). */
-function refreshCoreData(c) {
+export function refreshCoreData(c) {
   if (c.frozen) return; // read-only copy (windows built from the light index)
   const parts = coreImageParts(c), model = c.ageModel.model;
   if (c.imp) parts.push({ depth: c.imp.depth, age: c.imp.age, vals: c.imp.proxies || {}, src: 'imp' });
@@ -2518,7 +2521,7 @@ function refreshCoreData(c) {
   applyCellEdits(c);   // V0.35
   applyComputedColumns(c);
 }
-function refreshAllCores() { for (const c of S.cores) refreshCoreData(c); }
+export function refreshAllCores() { for (const c of S.cores) refreshCoreData(c); }
 
 /**
  * V0.35: cells edited by hand in the Data sheet. c.edits[column][axisValue] = { v: new value (null = deleted), o: original
@@ -2534,8 +2537,8 @@ function applyCellEdits(c) {
     for (const [key, ed] of Object.entries(e)) { const k = pos.get(key); if (k == null) continue; ed.o = arr[k]; arr[k] = ed.v; }
   }
 }
-const cellEdit = (c, name, x) => c.edits?.[name]?.[String(x)] || null;
-const editCount = (cores) => cores.reduce((n, c) => n + Object.values(c.edits || {}).reduce((m, e) => m + Object.keys(e).length, 0), 0);
+export const cellEdit = (c, name, x) => c.edits?.[name]?.[String(x)] || null;
+export const editCount = (cores) => cores.reduce((n, c) => n + Object.values(c.edits || {}).reduce((m, e) => m + Object.keys(e).length, 0), 0);
 
 /** Computed columns of the Data tab (formulas over the core's columns), applied after merging. */
 function applyComputedColumns(c) {
@@ -3240,468 +3243,6 @@ async function restoreFiles(files) {
   if (nProj || nPre || !rejected) toast(t('bk.restoredN', { p: nProj, s: nPre }));
 }
 
-/* ───────────── composite log ───────────── */
-
-function defaultLogView() {
-  return { axis: 'depth', from: null, to: null, height: 900, imgMode: 'enh', overlay: true, hideExcl: false,
-    tracks: { image: true, total: true, species: true, BI: true, ii: true, manual: true } };
-}
-S.logView = defaultLogView();
-export let mode = 'section', logTimer = 0, lastLog = null;
-
-function setMode(m) {
-  mode = m; setTimeout(updateTip, 0); setTimeout(() => applyPanels(), 0);
-  $('work').classList.toggle('log', m === 'log');
-  $('work').classList.toggle('geo', m === 'geo');
-  $('work').classList.toggle('data', m === 'data');
-  $('work').classList.toggle('fig', m === 'fig');
-  for (const [id, k] of [['modeSection', 'section'], ['modeLog', 'log'], ['modeData', 'data'], ['modeGeo', 'geo'], ['modeFig', 'fig']]) $(id).setAttribute('aria-pressed', String(m === k));
-  if (m === 'data') { renderData(); return; }
-  if (m === 'fig') { busy(async () => { await loadLand(); renderFigPanel(); renderFigure(); }); return; }
-  if (m === 'log') { renderLogPanel(); scheduleLog(0); }
-  else if (m === 'geo') busy(async () => { await loadLand(); renderGeo(); });
-  else requestAnimationFrame(resizeCanvases);
-}
-$('modeSection').addEventListener('click', () => setMode('section'));
-$('modeLog').addEventListener('click', () => setMode('log'));
-$('modeGeo').addEventListener('click', () => setMode('geo'));
-$('modeData').addEventListener('click', () => setMode('data'));
-$('modeFig').addEventListener('click', () => setMode('fig'));
-
-export function scheduleLog(ms = 200) { if (mode !== 'log') return; clearTimeout(logTimer); logTimer = setTimeout(() => busy(renderLog), ms); }
-
-export function compositeData(axisPref = S.logView.axis) {   // V0.32: a figure may ask for its own axis
-  const secs = [...S.sections].sort((a, b) => a.top * UNIT_TO_CM[a.units] - b.top * UNIT_TO_CM[b.units]);
-  const base = secs[0]?.units || 'cm';
-  const f = (s) => UNIT_TO_CM[s.units] / UNIT_TO_CM[base];
-  for (const s of secs) analyze(s);
-  const model = S.age.model, axis = axisPref === 'age' && model ? 'age' : 'depth';
-  const rows = compositeRows(secs.map((s) => ({ name: s.name, bins: s.bins.map((b) => ({ ...b, dTop: b.dTop * f(s), dBottom: b.dBottom * f(s), depth: b.depth * f(s) })) })), { axis, model });
-  return { secs, base, f, model, axis, rows };
-}
-
-/**
- * V0.41: box-filter reduction of a w × h layer to sw × sh without a full-size canvas: pix(i) returns [r, g, b, a] for
- * source pixel i (or null = transparent); colours are averaged with premultiplied alpha, as a canvas downscale does.
- */
-export function reduceRGBA(w, h, sw, sh, pix) {
-  const n = sw * sh, acc = new Float32Array(n * 4), cnt = new Uint32Array(n), cx = new Int32Array(w);
-  for (let x = 0; x < w; x++) cx[x] = Math.min(sw - 1, Math.floor((x * sw) / w));
-  for (let y = 0; y < h; y++) {
-    const oy = Math.min(sh - 1, Math.floor((y * sh) / h)) * sw, row = y * w;
-    for (let x = 0; x < w; x++) {
-      const o = oy + cx[x]; cnt[o]++; const p = pix(row + x); if (!p) continue;
-      const a = p[3], j = o * 4; acc[j] += p[0] * a; acc[j + 1] += p[1] * a; acc[j + 2] += p[2] * a; acc[j + 3] += a;
-    }
-  }
-  const im = new ImageData(sw, sh), d = im.data;
-  for (let o = 0; o < n; o++) { const j = o * 4, A = acc[j + 3]; if (!A) continue; d[j] = acc[j] / A; d[j + 1] = acc[j + 1] / A; d[j + 2] = acc[j + 2] / A; d[j + 3] = A / cnt[o]; }
-  return im;
-}
-
-/**
- * Column strip of a section (≤ 512 px wide). V0.1: the reduced picture (original or treated) is cached apart from the
- * coloured traces, so changing overlay settings only needs the masks, not the picture on disk.
- */
-function sectionCanvas(s) {
-  const lv = S.logView, key = `${s.logVer}|${lv.imgMode}|${lv.overlay}|${lv.hideExcl}|${S.ovAlpha}|${S.settings.predThr}|${S.settings.includePred}|${S.settings.countCandidates}|${s.w}x${s.h}`;
-  if (s._lc?.key === key) return s._lc.canvas;
-  const k = Math.min(1, 512 / s.w), sw = Math.max(1, Math.round(s.w * k)), sh = Math.max(1, Math.round(s.h * k));
-  const bkey = `${lv.imgMode}|${s.ds}|${s.w}x${s.h}|${s.rot}|${JSON.stringify(s.crop)}|${lv.imgMode === 'orig' ? '' : JSON.stringify(s.filters) + JSON.stringify(s.roi)}`;
-  if (s._lb?.key !== bkey) {
-    if (!s.orig) {   // grey strip until the picture is read from disk
-      needPixels(s); const p = document.createElement('canvas'); p.width = sw; p.height = sh;
-      const g = p.getContext('2d'); g.fillStyle = '#cfd4d2'; g.fillRect(0, 0, sw, sh); s._lc = { key: 'pending', canvas: p, k: sw / s.w }; return p;
-    }
-    const src = lv.imgMode === 'orig' ? s.orig : s.enh, px = [0, 0, 0, 255];
-    const b = document.createElement('canvas'); b.width = sw; b.height = sh;
-    b.getContext('2d').putImageData(reduceRGBA(s.w, s.h, sw, sh, (i) => { const j = i * 4; px[0] = src[j]; px[1] = src[j + 1]; px[2] = src[j + 2]; return px; }), 0, 0);   // V0.41
-    s._lb = { key: bkey, canvas: b };
-  }
-  const out = document.createElement('canvas'); out.width = sw; out.height = sh;
-  const oc = out.getContext('2d'); oc.drawImage(s._lb.canvas, 0, 0);
-  if (lv.overlay || lv.hideExcl) {   // traces (alpha a) and blank excluded zones, averaged straight into the strip (V0.41)
-    const L = s.labels, ex = s.exclude, eff = lv.overlay ? effClassArray(s) : null, cols = S.classes.map((q) => hex(q.color)), a = Math.round(255 * Math.max(0.35, S.ovAlpha));
-    const W = 255, px = [0, 0, 0, 0];
-    const im = reduceRGBA(s.w, s.h, sw, sh, (i) => {
-      if (ex[i]) { if (!lv.hideExcl) return null; px[0] = px[1] = px[2] = px[3] = W; return px; }   // V31: excluded zones left blank
-      if (!eff) return null; const id = topAt(L[i], s.stacks); if (!id) return null; const q = eff[id]; if (q < 0) return null;
-      const col = cols[q]; px[0] = col[0]; px[1] = col[1]; px[2] = col[2]; px[3] = a; return px;
-    });
-    const t2 = document.createElement('canvas'); t2.width = sw; t2.height = sh; t2.getContext('2d').putImageData(im, 0, 0);
-    oc.drawImage(t2, 0, 0); t2.width = t2.height = 0;
-  }
-  s._lc = { key, canvas: out, k: sw / s.w };
-  return out;
-}
-
-/** Core image strip for the window, resampled row by row onto the depth or age axis. */
-/**
- * V0.23–V0.25: image panels of a core (core column, Figures › core, Multiproxy): original, enhanced, traces painted,
- * outlined, traces only, black and white, arrows, side by side. o = { panels, w, hideExcl, keep, stretch }:
- * width keeps the photo proportions (keep) × stretch, or w px. Panels other than the plain image need the depth axis.
- */
-export function coreImages(D, from, to, H, o) {
-  const panels = (o.panels?.length ? o.panels : [o.mode === 'orig' ? 'orig' : 'enh']).filter((p) => FIG_PANELS.includes(p));
-  let w = +o.w > 0 ? +o.w : 64;
-  if (o.keep) { if (D.axis === 'depth') { const r = coreRatio(D, from, to); if (r) w = H / r; } w *= +o.stretch > 0 ? +o.stretch : 1; }
-  w = Math.round(Math.max(8, Math.min(600, w)));
-  if (D.axis !== 'depth' || (o.plain && panels.length === 1 && panels[0] === (o.mode === 'orig' ? 'orig' : 'enh'))) return [{ href: stripDataURL(D, from, to, H, w * 2), w }];
-  const tr = panels.includes('arrows') ? figTraces(D, from, to) : null, multi = panels.length > 1;
-  return panels.map((p) => {
-    const im = { href: panelDataURL(D, from, to, H, w, p === 'arrows' ? 'enh' : p, !!o.hideExcl), w, title: multi ? t('fig.p.' + p) : null };
-    if (p === 'arrows') { im.draw = (x, cw, y) => arrowMarksSVG(tr, x, cw, y); im.marks = false; }
-    return im;
-  });
-}
-/** Core column and Multiproxy: the panels and width chosen in the core column. */
-function columnImages(D, from, to, H) {
-  const lv = S.logView, st = lv.style || {};
-  return coreImages(D, from, to, H, { panels: lv.imgPanels, mode: lv.imgMode, hideExcl: lv.hideExcl, keep: (st.imgAspect || 'keep') === 'keep', stretch: st.imgStretch, w: st.imgW, plain: true });
-}
-
-function stripDataURL(D, from, to, H, W) {
-  const Hc = Math.min(4000, Math.round(H * 2)), c = document.createElement('canvas'); c.width = W; c.height = Hc;
-  const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, Hc);
-  const inv = invertModel(D.model);
-  for (let r = 0; r < Hc; r++) {
-    const v = from + ((r + 0.5) / Hc) * (to - from);
-    const d = D.axis === 'age' ? interpAge(inv, v) : v; if (d == null) continue;
-    const s = D.secs.find((q) => d >= q.top * D.f(q) && d < q.bottom * D.f(q)); if (!s) continue;
-    const row = Math.floor(rowAtDepth(s, d / D.f(s))); if (row < s.roi.y0 || row >= s.roi.y1) continue;
-    const cv = sectionCanvas(s), k = s._lc.k;
-    ctx.drawImage(cv, s.roi.x0 * k, Math.min(cv.height - 1, Math.floor(row * k)), Math.max(1, (s.roi.x1 - s.roi.x0) * k), 1, 0, r, W, 1);
-  }
-  return c.toDataURL('image/jpeg', 0.88);
-}
-
-export function logRecords(D) {
-  const inv = invertModel(D.model), out = [];
-  for (const r of S.records) for (const s of r.series) if (s.show) out.push({ name: s.name, color: s.color, reverse: s.reverse, axis: r.axis, x: s.x, y: s.y, pts: s.x.map((x, i) => [toAxis(x, r.axis, D.axis, D.model, inv), s.y[i]]) });
-  // V0.28: width of the age interval (e.g. Bacon 95 %) as one more track, when the age model has it
-  const m = S.age.model;
-  if (m?.min && S.logView.tracks.ageErr !== false) {
-    const name = t('age.errTrack', { u: S.age.units || 'ka' }), y = m.depth.map((_, i) => m.max[i] - m.min[i]);
-    out.push({ name, color: '#6b5e4b', reverse: false, axis: 'depth', x: m.depth, y, pts: m.depth.map((d, i) => [toAxis(d, 'depth', D.axis, D.model, inv), y[i]]) });
-  }
-  return out;
-}
-
-/** V0.23: which image panels the core column shows and how wide the image is. */
-function renderImgPanelsForm() {
-  const lv = S.logView, st = lv.style || {}, on = new Set(lv.imgPanels || []), asp = st.imgAspect || 'keep';
-  $('logImgPanels').innerHTML = `<div class="f"><span>${t('log.panels')}</span><div class="chk2">${FIG_PANELS.map((p) => `<label class="chk"><input type="checkbox" data-imgp="${p}" ${on.has(p) ? 'checked' : ''}><span>${t('fig.p.' + p)}</span></label>`).join('')}</div><p class="note">${t('log.panelsNote')}</p></div>
-    <div class="grid2" style="grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)"><label class="f"><span>${t('log.imgAspect')}</span><select data-st="imgAspect"><option value="keep" ${asp === 'keep' ? 'selected' : ''}>${t('log.asp.keep')}</option><option value="fixed" ${asp === 'fixed' ? 'selected' : ''}>${t('log.asp.fixed')}</option></select></label>
-    ${asp === 'keep' ? `<label class="f"><span>${t('log.imgStretch')}</span><input type="number" data-st="imgStretch" min="0.05" step="0.1" value="${st.imgStretch ?? ''}" placeholder="1"></label>` : `<label class="f"><span>${t('log.imgW')}</span><input type="number" data-st="imgW" min="8" max="600" step="2" value="${st.imgW ?? ''}" placeholder="64"></label>`}</div>`;
-}
-/** V0.23: NO DATA and marker fields of the column style (shared by the core column and the figures). */
-export function ndFormHTML(st) {
-  const q = { ...ND_STYLE, ...st };
-  return `<div class="f"><span>${t('nd.title')}</span><div class="grid2">
-    <label class="f"><span>${t('nd.fill')}</span><select data-st="ndFill">${['hatch', 'solid', 'none'].map((v) => `<option value="${v}" ${q.ndFill === v ? 'selected' : ''}>${t('nd.f.' + v)}</option>`).join('')}</select></label>
-    <label class="f"><span>${t('nd.colors')}</span><span class="row"><input type="color" data-st="ndColor" value="${q.ndColor}"><input type="color" data-st="ndLine" value="${q.ndLine}"></span></label>
-    <label class="f"><span>${t('nd.text')}</span><input type="text" data-st="ndText" value="${esc(q.ndText || '')}" placeholder="${esc(t('log.noData'))}"></label>
-    <span></span></div><div class="chk2"><label class="chk"><input type="checkbox" data-st="ndShow" ${q.ndShow ? 'checked' : ''}><span>${t('nd.show')}</span></label><label class="chk"><input type="checkbox" data-st="ndLabel" ${q.ndLabel ? 'checked' : ''}><span>${t('nd.label')}</span></label><label class="chk"><input type="checkbox" data-st="ndImage" ${q.ndImage ? 'checked' : ''}><span>${t('nd.image')}</span></label></div></div>
-    <div class="f"><span>${t('mk.title')}</span><div class="grid2">
-    <label class="f"><span>${t('mk.size')}</span><input type="number" data-st="markSize" min="0.2" max="5" step="0.1" value="${st.markSize ?? ''}" placeholder="1"></label>
-    <label class="f"><span>${t('mk.stroke')}</span><span class="row"><input type="color" data-st="markStroke" value="${st.markStroke && st.markStroke !== 'none' ? st.markStroke : '#ffffff'}"><input type="number" data-st="markStrokeW" min="0" max="4" step="0.2" value="${st.markStrokeW ?? ''}" placeholder="0.8" style="width:60px" title="${esc(t('mk.strokeW'))}"></span></label></div></div>`;
-}
-/** V0.23: markers and labels of the arrows panel (section figure and core column). */
-export function arrowFormHTML() {
-  const F = S.fig, ex = new Set(F.arrowExcl || []);
-  return `<div class="grid2"><label class="f"><span>${t('ar.src')}</span><select id="figArrowSrc">${['all', 'marks', 'objects'].map((v) => `<option value="${v}" ${(F.arrowSrc || 'all') === v ? 'selected' : ''}>${t('ar.src.' + v)}</option>`).join('')}</select></label>
-    <label class="f"><span>${t('ar.objScale')}</span><input type="number" id="figObjScale" min="0.2" max="3" step="0.1" value="${F.objScale ?? 1}"></label>
-    <label class="f"><span>${t('mk.size')}</span><input type="number" id="figMarkScale" min="0.2" max="5" step="0.1" value="${F.markScale ?? 1}"></label>
-    <label class="f"><span>${t('mk.stroke')}</span><span class="row"><input type="color" id="figMarkStroke" value="${F.markStroke && F.markStroke !== 'none' ? F.markStroke : '#ffffff'}"><input type="number" id="figMarkStrokeW" min="0" max="4" step="0.2" value="${F.markStrokeW ?? 0.8}" style="width:60px" title="${esc(t('mk.strokeW'))}"></span></label>
-    <label class="f"><span>${t('ar.labelSize')}</span><input type="number" id="figLabelSize" min="5" max="30" step="1" value="${F.labelSize ?? 10}"></label>
-    <label class="f"><span>${t('ar.labelColor')}</span><span class="row"><input type="color" id="figLabelColor" value="${F.labelColor || '#1c2422'}"><label class="chk"><input type="checkbox" id="figLabelHalo" ${F.labelHalo !== false ? 'checked' : ''}><span>${t('ar.halo')}</span></label></span></label></div>
-    <div class="f"><span>${t('ar.excl')}</span><div class="chk2">${S.classes.filter((c) => c.id !== 'artifact').map((c) => `<label class="chk"><input type="checkbox" data-arex="${esc(c.id)}" ${ex.has(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div></div>`;
-}
-
-export function renderLog() {
-  $('logStage').querySelector('[data-label-editor]')?.remove();
-  const box = $('logSvg');
-  if (!S.sections.length) { box.innerHTML = `<p class="note" style="padding:24px">${t('log.empty')}</p>`; lastLog = null; return; }
-  const D = compositeData(), lv = S.logView;
-  const [r0, r1] = rowsRange(D.rows);
-  let from = lv.from ?? r0, to = lv.to ?? r1;
-  if (!(to > from)) { from = r0; to = r1; }
-  $('logFrom').value = +from.toPrecision(6); $('logTo').value = +to.toPrecision(6);
-  const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, counts: c.counts })).filter((c) => c.counts);
-  const records = logRecords(D), imgW = 64;
-  const images = lv.tracks.image ? columnImages(D, from, to, lv.height) : null, image = images?.[0] || null;
-  const boundaries = D.secs.map((s) => ({ a: D.axis === 'age' ? interpAge(D.model, s.top * D.f(s)) : s.top * D.f(s), label: s.name })).filter((b) => b.a != null);
-  const { style, label: axisLabel } = logStyleOf(D);
-  const marks = lv.tracks.marks !== false ? compositeMarks(D) : [], idm = idMode();
-  let res;
-  try { res = buildLogSVG({
-    style, title: S.name, subtitle: idm && !['total', 'species', 'BI', 'ii'].some((k) => lv.tracks[k]) ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
-    axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, images, imageWidth: image?.w || imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
-    marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes.filter((c) => D.rows.some((r) => r.classPct?.[c.index] > 0)) : [], marks),
-    ...geoOverlay(D.axis),
-    labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
-    colWidths: (lv.colW ||= {}),
-  }); } catch (e) { console.error(e); box.innerHTML = `<p class="note">${esc(axisErr(e))}</p>`; lastLog = null; return; }
-  box.innerHTML = res.svg;
-  lastLog = { ...D, from, to, classes, records, svg: res.svg };
-  syncColOrder('log', res.columns);   // V0.33
-  editSVGLabels(box, (lv.textEdits ||= {}), (svg) => { if (lastLog) lastLog.svg = svg; });
-  const ov = geoOverlay(D.axis);
-  logInteract(box, res, { from, to, axisLabel, records, bands: ov.bands || [], widths: lv.colW, onResize: () => { markDirty(); renderLog(); if ($('logStyle')) $('logStyle').innerHTML = styleFormHTML(); },
-    extra: (a) => {
-      const r = D.rows.find((q) => q.a0 <= a && a < q.a1); if (!r) return [];
-      const out = [[t('log.total'), `${fmt(r.pct ?? 0, 3)} %`]];
-      if (r.BI != null) out.push(['BI', r.BI]); if (r.ii != null) out.push(['ii', r.ii]);
-      classes.map((c) => [c.name, r.classPct?.[c.index] || 0]).filter((q) => q[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, 4).forEach(([n, v]) => out.push([n, `${fmt(v, 3)} %`]));
-      return out;
-    } });
-}
-
-/* ── V0.5: style of the column and its figure (per core, shared by the column view and the column figure) ── */
-const AGE_TO_KA = { a: 0.001, ka: 1, Ma: 1000 };
-export function logStyleOf(D) {
-  const st = { ...LOG_STYLE, ...(S.logView.style || {}) };
-  let unit, f = 1;
-  if (D.axis === 'age') { unit = st.yUnitAge && AGE_TO_KA[st.yUnitAge] && AGE_TO_KA[S.age.units] ? st.yUnitAge : S.age.units; f = AGE_TO_KA[S.age.units] / (AGE_TO_KA[unit] || AGE_TO_KA[S.age.units] || 1) || 1; }
-  else { unit = st.yUnit && UNIT_TO_CM[st.yUnit] ? st.yUnit : D.base; f = UNIT_TO_CM[D.base] / UNIT_TO_CM[unit]; }
-  return { style: { ...st, yFactor: f }, label: `${t(D.axis === 'age' ? 'r.age' : 'r.depth')} (${unit})` };
-}
-/* ───────────── V0.33: order and visibility of the columns of every chart ───────────── */
-const lastCols = { log: [], geo: [], range: [] };
-export const colView = (kind) => (kind === 'geo' ? S.geo.view : S.logView);
-export function colOrderHTML(kind) {
-  const lv = colView(kind), st = lv.style || {}, hide = new Set(st.colHide || []);
-  const cols = orderCols(lastCols[kind].map((c) => ({ ...c })), { colOrder: st.colOrder });
-  const li = (c) => `<li draggable="true" data-colid="${esc(c.id)}"><span class="grip" aria-hidden="true">⋮⋮</span><label class="chk"><input type="checkbox" data-colshow="${esc(c.id)}" ${hide.has(c.id) ? '' : 'checked'}><span title="${esc(c.title || c.id)}">${esc(c.title || c.id)}</span></label><button type="button" class="btn small ghost" data-colmv="-1" aria-label="${esc(t('co.up'))}">↑</button><button type="button" class="btn small ghost" data-colmv="1" aria-label="${esc(t('co.down'))}">↓</button></li>`;
-  return `<div class="f" data-colord="${kind}"><span>${t('co.title')}</span>${cols.length ? `<ol class="colord">${cols.map(li).join('')}</ol><p class="note">${t('co.note')}</p>` : `<p class="note">${t('co.empty')}</p>`}</div>`;
-}
-/** After a chart is built: remember its columns and refresh the list if the set of columns changed. */
-export function syncColOrder(kind, columns) {
-  if (!columns) return;
-  const key = (a) => a.map((c) => c.id).sort().join('|'), changed = key(columns) !== key(lastCols[kind]);
-  lastCols[kind] = columns;
-  if (changed) document.querySelectorAll(`[data-colord="${kind}"]`).forEach((el) => { el.outerHTML = colOrderHTML(kind); });
-}
-function afterColChange(kind) {
-  markDirty();
-  if (kind === 'geo') setTimeout(renderGeoLogs, 0); else { scheduleLog(); requestRender(); }
-  if (mode === 'fig') scheduleFigure();
-}
-function saveColOrder(box) {
-  const kind = box.dataset.colord, lv = colView(kind); lv.style ||= {};
-  lv.style.colOrder = [...box.querySelectorAll('li[data-colid]')].map((l) => l.dataset.colid);
-  afterColChange(kind);
-}
-document.addEventListener('change', (e) => {
-  const el = e.target; if (el.dataset?.colshow == null) return;
-  const box = el.closest('[data-colord]'), lv = colView(box.dataset.colord); lv.style ||= {};
-  const h = new Set(lv.style.colHide || []); if (el.checked) h.delete(el.dataset.colshow); else h.add(el.dataset.colshow);
-  lv.style.colHide = [...h]; afterColChange(box.dataset.colord);
-});
-document.addEventListener('click', (e) => {
-  const b = e.target.closest?.('[data-colmv]'); if (!b) return;
-  const li = b.closest('li'), box = b.closest('[data-colord]'), d = +b.dataset.colmv;
-  const sib = d < 0 ? li.previousElementSibling : li.nextElementSibling; if (!sib) return;
-  if (d < 0) sib.before(li); else sib.after(li);
-  b.focus(); saveColOrder(box);
-});
-let colDrag = null;
-document.addEventListener('dragstart', (e) => { const li = e.target.closest?.('li[data-colid]'); if (!li) return; colDrag = li; li.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', li.dataset.colid); } catch { /* old browsers */ } });
-document.addEventListener('dragover', (e) => {
-  if (!colDrag) return; const li = e.target.closest?.('li[data-colid]'); if (!li || li === colDrag || li.parentElement !== colDrag.parentElement) return;
-  e.preventDefault(); const r = li.getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) li.before(colDrag); else li.after(colDrag);
-});
-document.addEventListener('dragend', () => { if (!colDrag) return; const box = colDrag.closest('[data-colord]'); colDrag.classList.remove('dragging'); colDrag = null; if (box) saveColOrder(box); });
-
-const COLOR_FIELDS = {
-  log: ['barColor', 'lineColor', 'biColor', 'iiColor', 'manualColor', 'textColor', 'subColor', 'frameColor', 'gridColor', 'boundaryColor', 'bgColor'],
-  range: ['barColor', 'textColor', 'subColor', 'frameColor', 'gridColor', 'bgColor'],
-  geo: ['barColor', 'lineColor', 'textColor', 'subColor', 'frameColor', 'gridColor', 'bgColor'],
-};
-export function colorsFormHTML(style, kind) {
-  const st = { ...LOG_STYLE, ...style };
-  return `<div class="f"><span>${t('color.title')}</span><div class="grid2">${COLOR_FIELDS[kind].map((key) => `<label class="f"><span>${t('color.' + key)}</span><input type="color" data-st="${key}" value="${esc(st[key])}"></label>`).join('')}</div><button type="button" class="btn small" data-colreset="${kind}">${t('color.reset')}</button><p class="note">${t('color.note')}</p></div>`;
-}
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-colreset]'); if (!b) return;
-  const kind = b.dataset.colreset, lv = kind === 'geo' ? S.geo.view : S.logView;
-  lv.style ||= {}; for (const key of COLOR_FIELDS[kind]) delete lv.style[key];
-  markDirty();
-  if (kind === 'geo') { $('geoStyleForm').innerHTML = ''; renderGeoLogs(); }
-  else { renderLogPanel(); scheduleLog(); if (mode === 'fig') { renderFigPanel(); scheduleFigure(); } }
-});
-export function styleFormHTML() {
-  const st = { ...LOG_STYLE, ...(S.logView.style || {}) }, num = (k, lab, step = 'any', min = 0) => `<label class="f"><span>${t(lab)}</span><input type="number" data-st="${k}" step="${step}" min="${min}" value="${st[k] ?? ''}" placeholder="${t('fig.auto2')}"></label>`;
-  const chk = (k, lab) => `<label class="chk"><input type="checkbox" data-st="${k}" ${st[k] ? 'checked' : ''}><span>${t(lab)}</span></label>`;
-  const sel = (k, lab, opts) => `<label class="f"><span>${t(lab)}</span><select data-st="${k}">${opts.map(([v, l]) => `<option value="${v}" ${String(st[k] ?? '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
-  return `${colOrderHTML('log')}<div class="grid2">
-    ${sel('yUnit', 'st.yUnit', [['', t('st.native')], ['m', 'm'], ['cm', 'cm'], ['mm', 'mm']])}
-    ${sel('yUnitAge', 'st.yUnitAge', [['', t('st.native')], ['a', 'a'], ['ka', 'ka'], ['Ma', 'Ma']])}
-    ${num('yStep', 'st.yStep')}${num('yDiv', 'st.yDiv', 1, 1)}
-    ${num('yMajor', 'st.yMajor')}${num('yMinor', 'st.yMinor')}
-    ${num('yLabelLen', 'st.yLabelLen', 1, 1)}${num('yMinorLen', 'st.yMinorLen', 1, 1)}
-    ${num('pctDiv', 'st.pctDiv', 1, 1)}${num('fontSize', 'st.fontSize', 1, 6)}
-    ${sel('totalStyle', 'st.totalStyle', ['barsline', 'bars', 'line', 'points'].map((v) => [v, t('st.ts.' + v)]))}
-    <label class="f"><span>${t('st.totalTitle')}</span><input type="text" data-st="totalTitle" value="${esc(st.totalTitle || '')}" placeholder="${esc(t('log.total'))}"></label>
-    <label class="f"><span>${t('st.speciesTitle')}</span><input type="text" data-st="speciesTitle" value="${esc(st.speciesTitle || '')}" placeholder="${esc(t('log.species'))}"></label></div>
-    <div class="chk2">${chk('frame', 'st.frame')}${chk('grid', 'st.grid')}${chk('boundaries', 'st.boundaries')}${chk('showTitle', 'st.showTitle')}</div>
-    ${colorsFormHTML(st, 'log')}${speciesFormHTML(st)}
-    ${ndFormHTML(st)}
-    ${axesFormHTML()}`;
-}
-/** V0.31: ichnotaxa shown in «By ichnotaxon» (and the distribution chart), stacked or each in its own column. */
-export function speciesFormHTML(st) {
-  const hide = new Set(st.speciesHide || []), names = S.classes.filter((c) => c.counts !== false && c.id !== 'artifact').map((c) => c.name);
-  return `<div class="f"><span>${t('sp.title')}</span>
-    <label class="f"><span>${t('sp.mode')}</span><select data-st="speciesMode"><option value="stack" ${st.speciesMode !== 'separate' ? 'selected' : ''}>${t('sp.stack')}</option><option value="separate" ${st.speciesMode === 'separate' ? 'selected' : ''}>${t('sp.separate')}</option></select></label>
-    <div class="chk2">${names.map((n) => `<label class="chk"><input type="checkbox" data-sph="${esc(n)}" ${hide.has(n) ? '' : 'checked'}><span><i>${esc(n)}</i></span></label>`).join('')}</div></div>`;
-}
-/** V0.6: width and axis format of each column at the right of the core (total, ichnotaxa, BI, ii and records). */
-export function axesFormHTML(only = null, lv = S.logView, recNames = null) {
-  const ax = lv.style?.axes || {}, W = lv.colW || {};
-  const recs = recNames || [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))];
-  const sep = lv.style?.speciesMode === 'separate', spHide = new Set(lv.style?.speciesHide || []);
-  const spCols = sep ? S.classes.filter((c) => c.counts !== false && c.id !== 'artifact' && !spHide.has(c.name)).map((c) => ['sp:' + c.name, c.name, 70]) : [['species', t('log.species'), 150]];
-  const cols = [['total', t('log.total'), 150], ...spCols, ['BI', 'BI', 46], ['ii', 'ii', 46], ...recs.map((n) => ['rec:' + n, n, 120])];
-  const cell = (id, k, ph, step = 'any') => `<input type="number" data-ax="${esc(id)}" data-k="${k}" step="${step}" value="${ax[id]?.[k] ?? ''}" placeholder="${ph}" aria-label="${esc(id + ' ' + k)}" style="width:100%;min-width:54px">`;
-  return `<div class="f"><span>${t('st.axes')}</span><div style="overflow-x:auto"><table class="axtab" style="font-size:11px;border-collapse:collapse;width:100%">
-    <tr><th></th><th>${t('st.ax.w')}</th><th>${t('st.ax.min')}</th><th>${t('st.ax.max')}</th><th>${t('st.ax.div')}</th><th>${t('st.ax.dec')}</th><th>${t('edit.step')}</th><th title="${esc(t('st.ax.revTip'))}">⇄</th><th title="${esc(t('st.ax.logTip'))}">log</th></tr>
-    ${cols.filter(([id]) => !only || only.includes(id)).map(([id, name, w]) => `<tr><td title="${esc(name)}" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</td>
-      <td><input type="number" data-axw="${esc(id)}" min="30" max="600" step="10" value="${W[id] ?? ''}" placeholder="${w}" style="width:100%"></td>
-      <td>${cell(id, 'min', 'auto')}</td><td>${cell(id, 'max', 'auto')}</td><td>${cell(id, 'div', 'auto', 1)}</td><td>${cell(id, 'dec', 'auto', 1)}</td><td>${cell(id, 'step', 'auto')}</td>
-      <td><input type="checkbox" data-ax="${esc(id)}" data-k="rev" ${ax[id]?.rev ? 'checked' : ''}></td>
-      <td><input type="checkbox" data-ax="${esc(id)}" data-k="log" ${ax[id]?.log ? 'checked' : ''}></td></tr>`).join('')}
-    </table></div><p class="note">${t('st.axesNote')}</p></div>`;
-}
-export function onStyleInput(e) {
-  const el = e.target, geo = !!el.closest('[data-stt="geo"]'), lv = geo ? S.geo.view : S.logView;   // V0.22: Multiproxy has its own scales
-  if (geo) setTimeout(renderGeoLogs, 0);
-  if (el.dataset.axw != null) { lv.colW ||= {}; const v = +el.value; if (v >= 30) lv.colW[el.dataset.axw] = Math.min(600, v); else delete lv.colW[el.dataset.axw]; markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure(); return; }
-  if (el.dataset.ax != null) {
-    lv.style ||= {}; lv.style.axes ||= {}; const a = (lv.style.axes[el.dataset.ax] ||= {}), k2 = el.dataset.k;
-    const previous = a[k2];
-    a[k2] = el.type === 'checkbox' ? el.checked : el.value === '' ? null : +el.value;
-    const invalid = (a.min != null && a.max != null && !(a.max > a.min)) || (a.log && ((a.min != null && a.min <= 0) || (a.max != null && a.max <= 0)));
-    if (invalid) { a[k2] = previous; el.setCustomValidity(t('edit.invalidAxis')); el.reportValidity(); return; }
-    el.setCustomValidity('');
-    markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure(); return;
-  }
-  if (el.dataset.sph != null) {   // V0.31: ichnotaxa shown
-    lv.style ||= {}; const h = new Set(lv.style.speciesHide || []); if (el.checked) h.delete(el.dataset.sph); else h.add(el.dataset.sph);
-    lv.style.speciesHide = [...h]; markDirty(); scheduleLog(); requestRender(); if (mode === 'fig') scheduleFigure(); return;
-  }
-  const k = el.dataset.st; if (!k) return;
-  lv.style ||= {};
-  if (el.type === 'checkbox') lv.style[k] = el.checked;
-  else if (el.type === 'number') lv.style[k] = el.value === '' ? null : Math.max(0, +el.value);
-  else lv.style[k] = el.value;
-  markDirty(); scheduleLog(); if (mode === 'fig') scheduleFigure();
-}
-function renderLogPanel() {
-  if ($('logStyle')) $('logStyle').innerHTML = styleFormHTML();
-  const lv = S.logView;
-  $('logAxis').value = lv.axis === 'age' && S.age.model ? 'age' : 'depth';
-  $('logHeight').value = lv.height; $('logHeightOut').textContent = lv.height + ' px';
-  renderImgPanelsForm();
-  $('logImgMode').value = lv.imgMode; $('logOverlay').checked = lv.overlay; $('logHideExcl').checked = !!lv.hideExcl;
-  document.querySelectorAll('#logTracks [data-track]').forEach((el) => (el.checked = ['ageErr', 'marks'].includes(el.dataset.track) ? lv.tracks[el.dataset.track] !== false : !!lv.tracks[el.dataset.track]));
-}
-
-$('logStyle').addEventListener('change', onStyleInput);   // V0.5
-$('geoStyleForm').addEventListener('change', onStyleInput);   // V0.22
-$('geoLayerShow').addEventListener('change', (e) => {   // V0.33: hide or show the active interval family in every chart, without deleting it
-  const id = 'band:fam:' + S.geo.activeLayer;
-  for (const lv of [S.geo.view, S.logView]) { lv.style ||= {}; const h = new Set(lv.style.colHide || []); if (e.target.checked) h.delete(id); else h.add(id); lv.style.colHide = [...h]; }
-  document.querySelectorAll('[data-colshow]').forEach((c) => { if (c.dataset.colshow === id) c.checked = e.target.checked; });
-  markDirty(); setTimeout(renderGeoLogs, 0); scheduleLog();
-});
-$('logPanel').addEventListener('change', (e) => {
-  if (e.target.closest('#logStyle')) return;
-  const el = e.target, lv = S.logView;
-  if (el.closest('#logImgPanels') && el.dataset.st) { onStyleInput(e); renderImgPanelsForm(); return; }   // V0.23
-  if (el.dataset.imgp) { lv.imgPanels = [...$('logImgPanels').querySelectorAll('[data-imgp]:checked')].map((i) => i.dataset.imgp); }
-  else if (el.dataset.track) lv.tracks[el.dataset.track] = el.checked;
-  else if (el.id === 'logAxis') { lv.axis = el.value; lv.from = lv.to = null; }
-  else if (el.id === 'logFrom' || el.id === 'logTo') { const a = parseFloat($('logFrom').value), b = parseFloat($('logTo').value); if (b > a) { lv.from = a; lv.to = b; } }
-  else if (el.id === 'logImgMode') lv.imgMode = el.value;
-  else if (el.id === 'logOverlay') lv.overlay = el.checked;
-  else if (el.id === 'logHideExcl') lv.hideExcl = el.checked;
-  else if (el.id === 'logHeight') lv.height = +el.value;
-  else if (el.closest('#recList')) return;
-  else return;
-  markDirty(); scheduleLog(50);
-});
-$('logHeight').addEventListener('input', (e) => { $('logHeightOut').textContent = e.target.value + ' px'; });
-$('logAll').addEventListener('click', () => { S.logView.from = S.logView.to = null; markDirty(); scheduleLog(0); });
-$('logSVGBtn').addEventListener('click', () => { if (lastLog) saveFile(`${safe(S.name)}_registro.svg`, lastLog.svg, 'image/svg+xml'); });
-$('logCSVBtn').addEventListener('click', () => {
-  if (!lastLog) return;
-  saveFile(`${safe(S.name)}_registro.csv`, withProv(windowCSV({ rows: lastLog.rows, from: lastLog.from, to: lastLog.to, classes: lastLog.classes, records: lastLog.records, units: lastLog.base, ageUnits: S.age.units })), 'text/csv');
-});
-
-/* external records (CSV, TXT, Excel) */
-// V0.27: record colours told apart in print and by colour-blind readers, away from the ochre of bioturbation
-const REC_COLORS = ['#0b5394', '#1b7f6a', '#8c2d5a', '#5c4ea0', '#0e7490', '#3c7d22', '#6b5e4b'];
-let pendingTable = null;
-
-function addRecordFromTable(name, tab, xCol, axis, yCols) {
-  const n0 = S.records.reduce((k, r) => k + r.series.length, 0);
-  const series = recordSeries(tab, xCol, yCols, REC_COLORS, n0);   // V0.44: exportio.js
-  if (!series.length) return false;
-  S.records.push({ id: uid(), name, axis, series });
-  renderRecList(); markDirty(); scheduleLog();
-  return true;
-}
-
-function renderRecList() {
-  $('recList').innerHTML = S.records.map((r) => `
-    <div class="rec" data-id="${r.id}">
-      <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>${esc(r.name)}</b><button class="btn small ghost" data-del="1" aria-label="${t('a11y.delete')}">✕</button></div>
-      <span class="note">${t(r.axis === 'age' ? 'log.age' : 'log.depth')} · ${r.series[0]?.x.length || 0} ${t('log.points')}</span>
-      ${r.series.map((s, i) => `<div class="row srow"><label class="chk"><input type="checkbox" data-s="${i}" data-k="show" ${s.show ? 'checked' : ''}><span>${esc(s.name)}</span></label>
-        <input type="color" data-s="${i}" data-k="color" value="${s.color}" aria-label="${t('a11y.color')}">
-        <label class="chk note"><input type="checkbox" data-s="${i}" data-k="reverse" ${s.reverse ? 'checked' : ''}>${t('log.reverse')}</label></div>`).join('')}
-    </div>`).join('') || `<p class="note">${t('log.noRecords')}</p>`;
-}
-$('recList').addEventListener('change', (e) => {
-  const box = e.target.closest('.rec'), r = S.records.find((x) => x.id === box?.dataset.id); if (!r) return;
-  const s = r.series[+e.target.dataset.s]; if (!s) return;
-  const k = e.target.dataset.k; s[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-  markDirty(); scheduleLog(50);
-});
-$('recList').addEventListener('click', (e) => {
-  if (!e.target.dataset.del) return;
-  if (!armed(e.target, '?')) return;
-  const id = e.target.closest('.rec').dataset.id;
-  S.records.splice(S.records.findIndex((r) => r.id === id), 1); renderRecList(); markDirty(); scheduleLog(0);
-});
-
-$('recFile').addEventListener('change', async (e) => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try {
-    const tab = await readTableFile(f);
-    if (tab.headers.length < 2 || !tab.rows.length) throw new Error(t('rec.short'));
-    pendingTable = tab;
-    const g = guessAxisColumn(tab.headers);
-    $('recName').value = f.name.replace(/\.[^.]+$/, '');
-    $('recX').innerHTML = tab.headers.map((h, i) => `<option value="${i}" ${i === g.col ? 'selected' : ''}>${esc(h)}</option>`).join('');
-    $('recAxis').value = g.axis;
-    const fillCols = () => {
-      const xc = +$('recX').value;
-      $('recCols').innerHTML = tab.headers.map((h, i) => i === xc ? '' : `<label class="chk"><input type="checkbox" value="${i}" ${tab.rows.some((r) => r[i] != null) ? 'checked' : 'disabled'}><span>${esc(h)}</span></label>`).join('');
-    };
-    $('recX').onchange = fillCols; fillCols();
-    $('recDlg').showModal();
-  } catch (err) { toast(t('rec.err', { m: err.message || err })); }
-});
-$('recCancel').addEventListener('click', () => $('recDlg').close());
-$('recAdd').addEventListener('click', () => {
-  if (!pendingTable) return;
-  const cols = [...$('recCols').querySelectorAll('input:checked')].map((i) => +i.value);
-  if (addRecordFromTable($('recName').value.trim() || 'Registro', pendingTable, +$('recX').value, $('recAxis').value, cols)) $('recDlg').close();
-  else toast(t('rec.err', { m: t('rec.short') }));
-});
-
 document.addEventListener('change', (e) => { if (e.target.closest('.side.left:not(#logPanel):not(#geoPanel), .side.right')) markDirty(); });
 
 /* ───────────── multiproxy tool: numeric records, interval layers and automatic interval classification ─────────────
@@ -3759,7 +3300,7 @@ const GEO_PARAMS = {
 const geoCore = (id) => S.cores.find((c) => c.id === id);
 const geoLayer = (id) => S.geo.layers.find((l) => l.id === id);
 const geoLayerOf = (catId) => S.geo.layers.find((l) => l.cats.some((c) => c.id === catId));
-function geoCat(id) {
+export function geoCat(id) {
   if (id == null) return null;
   for (const l of S.geo.layers) { const c = l.cats.find((k) => k.id === id); if (c) return c; }
   if (id === '__ok') return { id, name: t('geo.testOk'), color: '#2e7d4f' };
@@ -4232,7 +3773,7 @@ function openGeoImport(kind, tabs, names) {
   $('geoImpDlg').showModal();
 }
 /** V0.38: table file (CSV/TXT as UTF-8 or Windows-1252, or Excel/ODS); warns about text cells read as empty. */
-async function readTableFile(f) {
+export async function readTableFile(f) {
   let tab;
   if (/\.xlsx?$|\.ods$/i.test(f.name)) {
     if (!window.XLSX) await loadLib('xlsx.full.min.js');
@@ -4348,7 +3889,7 @@ function mergeIntervals(list) {
 /* ── centre: logs, map, model ── */
 let geoTimer = 0, geoLast = null, geoDrag = null;
 function scheduleGeo(ms = 150) { if (mode !== 'geo') return; clearTimeout(geoTimer); geoTimer = setTimeout(renderGeo, ms); }
-function renderGeo() {
+export function renderGeo() {
   if (mode !== 'geo') return;
   if (geoRT.dirty) geoComputeSamples();
   renderGeoPanel();
@@ -4550,7 +4091,7 @@ const medianGap = (pts) => { const x = pts.filter((p) => p[0] != null && p[1] !=
  * and a card with the bands (class) and extra lines; tooltips on track names; drag handles to change track widths.
  * ctx = {from, to, axisLabel, records, bands, widths (object), onResize(), extra(a) → [[label, value], …]}
  */
-function logInteract(box, res, ctx) {
+export function logInteract(box, res, ctx) {
   const svg = box.querySelector('svg'); if (!svg || !res.layout) return;
   box.classList.add('loghover'); box.querySelectorAll('.lgx, .lgrsz').forEach((e) => e.remove());
   const mk = (cls) => { const d = document.createElement('div'); d.className = 'lgx ' + cls; d.hidden = true; box.append(d); return d; };
@@ -4885,7 +4426,7 @@ export function renderGeoMap() {
   return svg;
 }
 export let geoLand = [], geoLastMap = null;
-async function loadLand() { if (geoLand.length) return; try { geoLand = (await (await fetchAsset('data/land-50m.json')).json()).rings; } catch { geoLand = []; } }
+export async function loadLand() { if (geoLand.length) return; try { geoLand = (await (await fetchAsset('data/land-50m.json')).json()).rings; } catch { geoLand = []; } }
 
 /* ───────────── map interpolation (Surfer-like), colour scale and list of cores (V20) ───────────── */
 /** Grid, colour function, contours and colour bar of a value map. pts = map points with .value; ip = interpolation options. */
@@ -4951,81 +4492,6 @@ function coreListUI(boxId, cores, off, save, redraw) {
   box.onchange = (e) => { const id = e.target.dataset.id; if (id == null) return; if (e.target.checked) off.delete(id); else off.add(id); save(); setTimeout(redraw, 0); };
   box.onclick = (e) => { const a = e.target.dataset.cl; if (!a) return; if (a === 'all') off.clear(); else cores.forEach((c) => off.add(c.id)); save(); setTimeout(redraw, 0); };
 }
-
-/* ───────────── resizable / collapsible side panels and resizable maps (V23) ───────────── */
-let panelPrefs = {};
-try { panelPrefs = JSON.parse(localStorage.getItem('ichantool.panels') || '{}'); } catch { panelPrefs = {}; }
-const savePanels = () => { try { localStorage.setItem('ichantool.panels', JSON.stringify(panelPrefs)); } catch { /* storage blocked */ } };
-const panelSides = (m) => (m === 'section' ? ['l', 'r'] : m === 'data' ? [] : ['l']);
-const splitL = document.createElement('div'), splitR = document.createElement('div');
-splitL.className = 'splitter l'; splitR.className = 'splitter r';
-splitL.innerHTML = `<button type="button" data-i18n-title="ui.togglePanel">‹</button>`; splitR.innerHTML = `<button type="button" data-i18n-title="ui.togglePanel">›</button>`;
-$('work').append(splitL, splitR);
-function applyPanels() {
-  const w = $('work'), p = panelPrefs[mode] || {}, sides = panelSides(mode);
-  w.classList.toggle('lcollapsed', sides.includes('l') && !!p.lc); w.classList.toggle('rcollapsed', sides.includes('r') && !!p.rc);
-  if (sides.includes('l') && (p.lc || p.l)) w.style.setProperty('--lw', p.lc ? '0px' : p.l + 'px'); else w.style.removeProperty('--lw');
-  if (sides.includes('r') && (p.rc || p.r)) w.style.setProperty('--rw', p.rc ? '0px' : p.r + 'px'); else w.style.removeProperty('--rw');
-  if (panelPrefs.profW) prof.parentElement.style.setProperty('--pw', panelPrefs.profW + 'px');   // V0.21
-  requestAnimationFrame(() => { placeSplitters(); resizeCanvases?.(); });
-}
-function placeSplitters() {
-  const w = $('work'), sides = panelSides(mode), wide = mode === 'geo' && w.classList.contains('mapwide');
-  const left = [...w.querySelectorAll(':scope > aside.side.left')].find((a) => getComputedStyle(a).display !== 'none');
-  const right = w.querySelector(':scope > aside.side.right');
-  splitL.hidden = !sides.includes('l') || !left || wide || innerWidth <= 860;
-  splitR.hidden = !sides.includes('r') || !right || innerWidth <= 860;
-  if (!splitL.hidden) { splitL.style.left = `${left.offsetLeft + left.offsetWidth}px`; splitL.querySelector('button').textContent = w.classList.contains('lcollapsed') ? '›' : '‹'; }
-  if (!splitR.hidden) { splitR.style.left = `${right.offsetLeft}px`; splitR.querySelector('button').textContent = w.classList.contains('rcollapsed') ? '‹' : '›'; }
-}
-function dragSplitter(el, side) {
-  el.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('button')) return;
-    e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('drag');
-    const w = $('work'), r = w.getBoundingClientRect(), p = (panelPrefs[mode] ||= {});
-    const move = (ev) => {
-      const v = side === 'l' ? ev.clientX - r.left : r.right - ev.clientX, px = Math.round(Math.max(170, Math.min(r.width * 0.6, v)));
-      p[side] = px; p[side + 'c'] = false; w.classList.remove(side === 'l' ? 'lcollapsed' : 'rcollapsed');
-      w.style.setProperty(side === 'l' ? '--lw' : '--rw', px + 'px'); placeSplitters();
-    };
-    const up = () => { el.classList.remove('drag'); el.removeEventListener('pointermove', move); savePanels(); resizeCanvases?.(); if (mode === 'geo' && S.geo.view.tab === 'map') renderGeoMap(); };
-    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up, { once: true });
-  });
-  el.addEventListener('dblclick', (e) => { if (!e.target.closest('button')) { const p = (panelPrefs[mode] ||= {}); delete p[side]; p[side + 'c'] = false; savePanels(); applyPanels(); } });
-  el.querySelector('button').addEventListener('click', () => { const p = (panelPrefs[mode] ||= {}); p[side + 'c'] = !p[side + 'c']; savePanels(); applyPanels(); });
-}
-dragSplitter(splitL, 'l'); dragSplitter(splitR, 'r');
-window.addEventListener('resize', () => placeSplitters());
-try { new ResizeObserver(() => placeSplitters()).observe($('work')); } catch { /* old browsers */ }
-
-// maps: drag the right edge (width) or the bottom edge (height) of the frame; double click restores the default
-let frameSizes = {};
-try { frameSizes = JSON.parse(localStorage.getItem('ichantool.mapFrames') || '{}'); } catch { frameSizes = {}; }
-/** Height/width wanted for the plot area of a map whose frame height was fixed by the user (null = follow the extent). */
-function frameRatio(id) {
-  const z = frameSizes[id], f = $(id); if (!z?.h || !f) return null;
-  const w = f.clientWidth || z.w || 900, sc = w / 900;
-  return Math.max(0.2, (z.h / sc - 44 - 110) / 900);
-}
-function applyFrame(id) {
-  const f = $(id), z = frameSizes[id] || {};
-  if (z.w) f.style.setProperty('--fw', z.w + 'px'); else f.style.removeProperty('--fw');
-  if (z.h) { f.style.setProperty('--fh', z.h + 'px'); f.classList.add('hfixed'); } else { f.style.removeProperty('--fh'); f.classList.remove('hfixed'); }
-}
-for (const h of document.querySelectorAll('.rszh, .rszv')) {
-  const id = h.dataset.frame, horiz = h.classList.contains('rszh');
-  h.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); h.setPointerCapture(e.pointerId);
-    const f = $(id), r = f.getBoundingClientRect(), z = (frameSizes[id] ||= {});
-    const move = (ev) => { if (horiz) z.w = Math.round(Math.max(320, ev.clientX - r.left)); else z.h = Math.round(Math.max(240, ev.clientY - r.top)); applyFrame(id); };
-    const up = () => { h.removeEventListener('pointermove', move); f.classList.remove('sizing'); try { localStorage.setItem('ichantool.mapFrames', JSON.stringify(frameSizes)); } catch { /* storage blocked */ } redrawFrame(id); };
-    f.classList.add('sizing');
-    h.addEventListener('pointermove', move); h.addEventListener('pointerup', up, { once: true });
-  });
-  h.addEventListener('dblclick', () => { const z = (frameSizes[id] ||= {}); if (horiz) delete z.w; else delete z.h; applyFrame(id); try { localStorage.setItem('ichantool.mapFrames', JSON.stringify(frameSizes)); } catch { /* storage blocked */ } redrawFrame(id); });
-}
-function redrawFrame(id) { if (id === 'gmFrame') renderGeoMap(); else redrawAllMap(); }
-applyFrame('gmFrame'); applyFrame('amFrame');
 
 /* ───────────── map customisation, backgrounds and zoom (V15) ───────────── */
 // Backgrounds come as single images in EPSG:4326 (lon/lat) for the exact extent, so they lie on the plate carrée map unchanged.
@@ -5182,7 +4648,7 @@ const allMapGet = () => ({ style: allStyle, view: allView, auto: allAutoBBox });
 let allInterp = { ...INTERP_DEFAULT }, allOff = new Set(), allCoreItems = [], allVl = null;
 try { allInterp = { ...INTERP_DEFAULT, ...JSON.parse(localStorage.getItem('ichantool.allInterp') || '{}') }; allOff = new Set(JSON.parse(localStorage.getItem('ichantool.allOff') || '[]')); } catch { /* storage blocked */ }
 function saveAllInterp() { try { localStorage.setItem('ichantool.allInterp', JSON.stringify(allInterp)); localStorage.setItem('ichantool.allOff', JSON.stringify([...allOff])); } catch { /* storage blocked */ } }
-function redrawAllMap() {
+export function redrawAllMap() {
   allMapSvg = buildAllMap($('amMode').value); $('allMap').innerHTML = allMapSvg;
   mapStyleUI('amStyle', allMapGet, (s2, v) => { allStyle = s2; allView = v; saveAllStyle(); }, redrawAllMap);
   $('amInterp').hidden = $('amMode').value !== 'value';
@@ -5424,7 +4890,7 @@ function tipContext() {
   if (mode === 'geo') return 'geo.' + (S.geo.view.tab || 'logs');
   return mode;
 }
-function updateTip() {
+export function updateTip() {
   const box = $('tipCard'), on = S.settings.tips ?? S.kind === 'tutorial', ctx = tipContext();
   $('tipsToggle').checked = !!on;
   if (!on || !ctx || tourStep >= 0) { box.hidden = true; return; }
@@ -5749,318 +5215,6 @@ function setHomeTab(tab) {
 }
 try { setHomeTab(localStorage.getItem('ichantool.homeTab') || 'projects'); } catch { setHomeTab('projects'); }
 
-/* ───────────── data tab: all data of the project, computed and manual columns, free cells ───────────── */
-
-/* ───────────── data tab: Grapher-like plots (V21) ───────────── */
-const defaultPlot = (n = 1) => ({ name: `${t('pl.plot')} ${n}`, layout: 'strat', cores: S.curCore ? [S.curCore] : [], v: 'depth', ys: [], title: '', width: 900, height: 620, panelWidth: 150,
-  legend: true, grid: true, xmin: null, xmax: null, ymin: null, ymax: null, xlog: false, ylog: false, xinv: false, yinv: false, y2label: '' });
-const plotCol = (c, name) => (name === 'depth' ? c.depth : name === 'age' ? c.age : c.proxies?.[name]) || [];
-function plotColumns() { const s = new Set(); for (const c of S.cores) Object.keys(c.proxies || {}).forEach((k) => s.add(k)); return [...s].sort(); }
-const curPlot = () => { S.plots ||= []; if (!S.plots.length) S.plots.push(defaultPlot()); S.plotCur = Math.min(S.plotCur || 0, S.plots.length - 1); return S.plots[S.plotCur]; };
-let plotLast = null;
-
-function plotSpec(p) {
-  const cores = S.cores.filter((c) => p.cores.includes(c.id)), axisName = (k) => (k === 'depth' ? `${t('log.depth')} (${cores[0]?.units || ''})` : k === 'age' ? `${t('log.age')} (ka)` : k);
-  const num = (v) => (v === '' || v == null ? null : +v);
-  if (p.layout === 'strat') {
-    return { kind: 'strat', spec: { title: p.title, width: p.width, height: p.height, panelWidth: p.panelWidth, legend: p.legend, grid: p.grid, v: { label: axisName(p.v), min: num(p.ymin), max: num(p.ymax), invert: !p.yinv },
-      panels: p.ys.map((y) => ({ label: y.col, log: y.log, invert: y.inv, fit: y.fit, deg: y.deg, window: y.window, series: cores.map((c, k) => ({ name: c.name, core: c.name, x: plotCol(c, p.v), y: plotCol(c, y.col), type: y.type, color: cores.length > 1 ? PLOT_COLORS[k % PLOT_COLORS.length] : (y.color || PLOT_COLORS[0]) })) })) } };
-  }
-  const series = [];
-  p.ys.forEach((y, i) => cores.forEach((c, k) => series.push({ name: cores.length > 1 ? `${y.col} · ${c.name}` : y.col, x: plotCol(c, p.v), y: plotCol(c, y.col), type: y.type, y2: y.y2, fit: y.fit, deg: y.deg, window: y.window,
-    color: cores.length > 1 && p.ys.length === 1 ? PLOT_COLORS[k % PLOT_COLORS.length] : y.color || PLOT_COLORS[(i * Math.max(1, cores.length) + k) % PLOT_COLORS.length], dash: cores.length > 1 && p.ys.length > 1 && k ? '4 2' : null })));
-  return { kind: 'xy', spec: { title: p.title, width: p.width, height: p.height, legend: p.legend, grid: p.grid, series,
-    x: { label: axisName(p.v), min: num(p.xmin), max: num(p.xmax), log: p.xlog, invert: p.xinv },
-    y: { label: p.ys.filter((y) => !y.y2).map((y) => y.col).join(', '), min: num(p.ymin), max: num(p.ymax), log: p.ylog, invert: p.yinv },
-    y2: { label: p.y2label || p.ys.filter((y) => y.y2).map((y) => y.col).join(', ') } } };
-}
-
-function renderDataPlot() {
-  const p = curPlot(), cols = plotColumns(), box = $('dBody');
-  if (!p.ys.length && cols.length) p.ys.push({ col: cols[0], type: 'line', y2: false, fit: 'none', deg: 2, window: 5, log: false, inv: false, color: '' });
-  const opt = (list, v) => list.map(([k, n]) => `<option value="${esc(k)}" ${String(k) === String(v) ? 'selected' : ''}>${esc(n)}</option>`).join('');
-  const axisOpts = [['depth', t('log.depth')], ['age', t('log.age')], ...cols.map((c) => [c, c])];
-  const ck = (k, l) => `<label class="chk"><input type="checkbox" data-p="${k}" ${p[k] ? 'checked' : ''}><span>${t(l)}</span></label>`;
-  const nm = (k, l, w = 80) => `<label class="f"><span>${t(l)}</span><input type="number" step="any" data-p="${k}" value="${p[k] ?? ''}" style="width:${w}px"></label>`;
-  const yRows = p.ys.map((y, i) => `<div class="prow2" data-y="${i}">
-      <select data-yk="col">${opt(cols.map((c) => [c, c]), y.col)}</select>
-      <select data-yk="type">${opt(PLOT_TYPES.map((k) => [k, t('pl.t.' + k)]), y.type)}</select>
-      <select data-yk="fit">${opt(FIT_KINDS.map((k) => [k, t('pl.f.' + k)]), y.fit)}</select>
-      ${y.fit === 'poly' ? `<input type="number" data-yk="deg" min="2" max="6" value="${y.deg}" title="${t('pl.deg')}" style="width:50px">` : ''}${y.fit === 'movavg' ? `<input type="number" data-yk="window" min="3" max="99" step="2" value="${y.window}" title="${t('pl.window')}" style="width:56px">` : ''}
-      ${p.layout === 'xy' ? `<label class="chk"><input type="checkbox" data-yk="y2" ${y.y2 ? 'checked' : ''}><span>Y2</span></label>` : `<label class="chk"><input type="checkbox" data-yk="log" ${y.log ? 'checked' : ''}><span>log</span></label><label class="chk"><input type="checkbox" data-yk="inv" ${y.inv ? 'checked' : ''}><span>${t('pl.inv')}</span></label>`}
-      <input type="color" data-yk="color" value="${y.color || PLOT_COLORS[i % PLOT_COLORS.length]}" title="${t('pl.color')}">
-      <button class="btn small ghost" data-pa="dely" title="${t('pl.del')}">×</button></div>`).join('');
-  box.innerHTML = `<div class="plotwrap"><div class="pctl">
-    <div class="row"><select id="plSel" style="flex:1">${opt(S.plots.map((q, i) => [i, q.name]), S.plotCur)}</select><button class="btn small" data-pa="new">+</button><button class="btn small" data-pa="dup">${t('pl.dup')}</button><button class="btn small ghost" data-pa="del">×</button></div>
-    <label class="f"><span>${t('pl.name')}</span><input type="text" data-p="name" value="${esc(p.name)}"></label>
-    <label class="f"><span>${t('pl.layout')}</span><select data-p="layout">${opt([['strat', t('pl.l.strat')], ['xy', t('pl.l.xy')]], p.layout)}</select></label>
-    <p class="note">${t('pl.l.' + p.layout + 'Help')}</p>
-    <div class="f"><span>${t('pl.cores')}</span><div class="chklist">${S.cores.map((c) => `<label class="chk"><input type="checkbox" data-core="${c.id}" ${p.cores.includes(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div></div>
-    <label class="f"><span>${t(p.layout === 'strat' ? 'pl.vaxis' : 'pl.xaxis')}</span><select data-p="v">${opt(axisOpts, p.v)}</select></label>
-    <div class="f"><span>${t(p.layout === 'strat' ? 'pl.panels' : 'pl.yvars')}</span>${yRows}<button class="btn small" data-pa="addy">+ ${t('pl.addy')}</button></div>
-    <details><summary>${t('pl.axes')}</summary><div class="row" style="margin-top:6px">
-      ${p.layout === 'xy' ? nm('xmin', 'pl.xmin') + nm('xmax', 'pl.xmax') + ck('xlog', 'pl.xlog') + ck('xinv', 'pl.xinv') : ''}
-      ${nm('ymin', p.layout === 'strat' ? 'pl.vmin' : 'pl.ymin') + nm('ymax', p.layout === 'strat' ? 'pl.vmax' : 'pl.ymax')}${p.layout === 'xy' ? ck('ylog', 'pl.ylog') : ''}${ck('yinv', p.layout === 'strat' ? 'pl.vup' : 'pl.yinv')}
-      ${p.layout === 'xy' ? `<label class="f"><span>${t('pl.y2label')}</span><input type="text" data-p="y2label" value="${esc(p.y2label || '')}"></label>` : ''}</div></details>
-    <details><summary>${t('pl.look')}</summary><div class="row" style="margin-top:6px">
-      <label class="f" style="flex-basis:100%"><span>${t('pl.title')}</span><input type="text" data-p="title" value="${esc(p.title || '')}"></label>
-      ${nm('width', 'pl.width') + nm('height', 'pl.height')}${p.layout === 'strat' ? nm('panelWidth', 'pl.pw') : ''}${ck('legend', 'pl.legend')}${ck('grid', 'pl.grid')}</div></details>
-    <div class="row"><button class="btn small primary" data-pa="svg">SVG</button><button class="btn small" data-pa="png">PNG ×3</button><button class="btn small" data-pa="csv">CSV</button></div>
-  </div><div class="pout" id="plOut"></div></div>`;
-  drawDataPlot();
-}
-function drawDataPlot() {
-  const p = curPlot(), out = $('plOut'); if (!out) return;
-  if (!p.cores.length || !p.ys.length) { out.innerHTML = `<p class="note">${t('pl.empty')}</p>`; plotLast = null; return; }
-  const { kind, spec } = plotSpec(p), r = kind === 'strat' ? buildStratPlot(spec) : buildXYPlot(spec);
-  plotLast = { ...r, spec, kind };
-  const f3 = (v) => (v == null || !Number.isFinite(v) ? '—' : +v.toPrecision(4));
-  out.innerHTML = `<div class="psvg">${r.svg}</div>
-    ${r.fits.length ? `<h4>${t('pl.fits')}</h4><table class="dtable mtab"><thead><tr><th>${t('pl.series')}</th><th>${t('pl.eq')}</th><th>R²</th><th>n</th></tr></thead><tbody>${r.fits.map((f) => `<tr><td class="txt">${esc(f.name)}</td><td class="txt">${esc(f.eq)}</td><td>${f3(f.r2)}</td><td>${f.n}</td></tr>`).join('')}</tbody></table>` : ''}
-    <h4>${t('pl.stats')}</h4><table class="dtable mtab"><thead><tr><th>${t('pl.series')}</th><th>n</th><th>${t('pl.mean')}</th><th>${t('pl.sd')}</th><th>${t('pl.min')}</th><th>${t('pl.median')}</th><th>${t('pl.max')}</th>${kind === 'xy' ? '<th>r (X, Y)</th>' : ''}</tr></thead><tbody>${r.stats.map((q) => `<tr><td class="txt">${esc(q.name)}</td><td>${q.n}</td><td>${f3(q.mean)}</td><td>${f3(q.sd)}</td><td>${f3(q.min)}</td><td>${f3(q.median)}</td><td>${f3(q.max)}</td>${kind === 'xy' ? `<td>${f3(q.r)}</td>` : ''}</tr>`).join('')}</tbody></table>`;
-}
-$('dBody').addEventListener('change', (e) => {
-  if ($('dView').value !== 'plot') return;
-  const el = e.target, p = curPlot(), val = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (el.value === '' ? null : +el.value) : el.value;
-  if (el.id === 'plSel') { S.plotCur = +el.value; renderDataPlot(); return; }
-  if (el.dataset.core) { if (el.checked) p.cores.push(el.dataset.core); else p.cores = p.cores.filter((id) => id !== el.dataset.core); }
-  else if (el.dataset.p) { p[el.dataset.p] = val; if (el.dataset.p === 'layout' && val === 'strat' && (p.v !== 'depth' && p.v !== 'age')) p.v = 'depth'; }
-  else if (el.dataset.yk) { const i = +el.closest('[data-y]').dataset.y; p.ys[i][el.dataset.yk] = val; }
-  else return;
-  markDirty();
-  const rebuild = ['layout', 'fit'].includes(el.dataset.p || el.dataset.yk) || el.dataset.p === 'name';
-  if (rebuild) renderDataPlot(); else drawDataPlot();
-});
-$('dBody').addEventListener('click', (e) => {
-  const a = e.target.closest('[data-pa]')?.dataset.pa; if (!a || $('dView').value !== 'plot') return;
-  const p = curPlot(), cols = plotColumns();
-  if (a === 'addy') p.ys.push({ col: cols.find((c) => !p.ys.some((y) => y.col === c)) || cols[0], type: 'line', y2: false, fit: 'none', deg: 2, window: 5, log: false, inv: false, color: '' });
-  else if (a === 'dely') p.ys.splice(+e.target.closest('[data-y]').dataset.y, 1);
-  else if (a === 'new') { S.plots.push(defaultPlot(S.plots.length + 1)); S.plotCur = S.plots.length - 1; }
-  else if (a === 'dup') { S.plots.push({ ...JSON.parse(JSON.stringify(p)), name: p.name + ' (2)' }); S.plotCur = S.plots.length - 1; }
-  else if (a === 'del') { S.plots.splice(S.plotCur, 1); S.plotCur = 0; }
-  else if (a === 'svg') { if (plotLast) saveFile(`${safe(p.name)}.svg`, plotLast.svg, 'image/svg+xml'); return; }
-  else if (a === 'png') { if (plotLast) busy(async () => { const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(plotLast.svg); await img.decode(); const c = document.createElement('canvas'); c.width = img.width * 3; c.height = img.height * 3; const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height); const b = await new Promise((r) => c.toBlob(r, 'image/png')); if (b) await saveFile(`${safe(p.name)}.png`, b, 'image/png'); }); return; }
-  else if (a === 'csv') {
-    const rows = [['core', p.v, 'variable', 'value']];
-    for (const c of S.cores.filter((q) => p.cores.includes(q.id))) for (const y of p.ys) { const X = plotCol(c, p.v), Y = plotCol(c, y.col); for (let i = 0; i < X.length; i++) if (X[i] != null && Y[i] != null) rows.push([c.name, X[i], y.col, Y[i]]); }
-    saveFile(`${safe(p.name)}.csv`, withProv(toCSV(rows)), 'text/csv'); return;
-  }
-  markDirty(); renderDataPlot();
-});
-
-let dataLimit = 400;
-const SRC_ORDER = { imp: 0, rec: 1, img: 2, man: 3, calc: 4 };
-function dataCores() { const v = $('dCore').value; return v === '__all' ? S.cores : S.cores.filter((c) => c.id === (v || S.curCore)); }
-function renderData() {
-  if (mode !== 'data') return;
-  const sel = $('dCore'), cur = sel.value || S.curCore;
-  sel.innerHTML = S.cores.map((c) => `<option value="${c.id}" ${c.id === cur ? 'selected' : ''}>${esc(c.name)}</option>`).join('') + `<option value="__all" ${cur === '__all' ? 'selected' : ''}>${t('data.allCores')}</option>`;
-  refreshAllCores();
-  // V0.35: the sheet replaces the old «computed columns» view; the free cell sheet stays only for projects that use it
-  for (const o of $('dView').options) if (o.value === 'cols' || (o.value === 'cells' && !Object.keys(S.sheet.cells || {}).length)) o.hidden = true;
-  if ($('dView').selectedOptions[0]?.hidden) $('dView').value = 'table';
-  const view = $('dView').value;
-  if (view === 'cols') renderDataCols(); else if (view === 'cells') renderDataCells(); else if (view === 'plot') renderDataPlot(); else renderDataTable();
-}
-function tableModel() {
-  const cores = dataCores(), names = new Map();
-  for (const c of cores) for (const [k, v] of Object.entries(c.src)) if (!names.has(k)) names.set(k, v);
-  const cols = [...names.entries()].sort((a, b) => SRC_ORDER[a[1]] - SRC_ORDER[b[1]] || a[0].localeCompare(b[0]));
-  const layers = $('dLayers').checked ? S.geo.layers.filter((L) => S.geo.intervals.some((q) => q.layer === L.id && cores.some((c) => c.id === q.core))) : [];
-  const rows = [];
-  for (const c of cores) {
-    const n = (c.depth || c.age || []).length;
-    const ivs = new Map(layers.map((L) => [L.id, intervalsOnAxis(S.geo.intervals.filter((q) => q.core === c.id && q.layer === L.id), c.depth ? 'depth' : 'age', c)]));
-    for (let i = 0; i < n; i++) {
-      const x = c.depth ? c.depth[i] : c.age[i];
-      rows.push({ c, i, depth: c.depth?.[i] ?? null, age: c.age?.[i] ?? null, vals: cols.map(([k]) => c.proxies[k]?.[i] ?? null),
-        lay: layers.map((L) => { const q = ivs.get(L.id).find((v) => x >= v.from && x < v.to); return q ? geoCat(q.cat)?.name || '' : ''; }) });
-    }
-  }
-  return { cores, cols, layers, rows };
-}
-/* ───────────── V0.35: Data as a spreadsheet — every value editable (flagged), computed columns ───────────── */
-let dataEditOn = false, dataFormOpen = null, dataLastCell = null;
-function renderDataTable() {
-  const M = tableModel(), multi = M.cores.length > 1, nEd = editCount(M.cores);
-  $('dInfo').textContent = t('data.info', { r: M.rows.length, c: M.cols.length });
-  const colLetter = (i) => cellName(i, 0).replace(/\d+$/, '');
-  const fixed = (multi ? 1 : 0) + 2;
-  const head = `<tr><th class="rn"></th>${multi ? `<th class="txt">${t('geo.core')}</th>` : ''}<th>${t('r.depth')}</th><th>${t('r.age')}</th>${M.cols.map(([k, src], j) => {
-    const calc = S.sheet.columns.findIndex((x) => x.name === k);
-    return `<th class="src-${src}" title="${esc(t('data.src.' + src))}"><span class="tag">${colLetter(fixed + j)} · ${t('data.src.' + src)}</span>${esc(k)}${src === 'calc' && calc >= 0 ? ` <button type="button" class="btn small ghost fx" data-fx="${calc}" title="${esc(t('ds.editFx'))}">ƒ</button>` : ''}</th>`;
-  }).join('')}${M.layers.map((L) => `<th class="src-lay txt"><span class="tag">${t('data.src.lay')}</span>${esc(L.name)}</th>`).join('')}</tr>`;
-  const body = M.rows.slice(0, dataLimit).map((r, ri) => {
-    const x = r.depth ?? r.age;
-    return `<tr><td class="rn">${ri + 1}</td>${multi ? `<td class="txt">${esc(r.c.name)}</td>` : ''}<td class="ax">${fmt(r.depth, 4)}</td><td class="ax">${fmt(r.age, 3)}</td>${r.vals.map((v, j) => {
-      const [k, src] = M.cols[j], ed = src !== 'man' && cellEdit(r.c, k, x), canEdit = dataEditOn && src !== 'calc' && x != null;
-      const tip = ed ? t('ds.modTip', { o: ed.o == null ? '—' : fmt(ed.o, 6), d: (ed.at || '').slice(0, 10) }) : '';
-      return `<td${canEdit ? ' contenteditable spellcheck="false"' : ''} class="${ed ? 'mod' : ''}${src === 'calc' ? ' calc' : ''}" data-core="${r.c.id}" data-col="${esc(k)}" data-src="${src}" data-x="${x}"${tip ? ` title="${esc(tip)}"` : ''}>${v == null ? '' : fmt(v, 6)}</td>`;
-    }).join('')}${r.lay.map((v) => `<td class="txt">${esc(v)}</td>`).join('')}</tr>`;
-  }).join('');
-  const cores = S.cores.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
-  const f = dataFormOpen, fcol = f?.i != null ? S.sheet.columns[f.i] : null;
-  const names = [...new Set(M.cols.map(([k]) => k)), 'depth', 'age'];
-  const form = f ? `<div class="dsform">
-      <div class="row"><label class="f"><span>${t('ds.type')}</span><select id="dsType" ${fcol ? 'disabled' : ''}><option value="calc" ${f.type !== 'man' ? 'selected' : ''}>${t('ds.calc')}</option><option value="man" ${f.type === 'man' ? 'selected' : ''}>${t('ds.man')}</option></select></label>
-      <label class="f" style="flex:1"><span>${t('ds.name')}</span><input type="text" id="dsName" value="${esc(fcol?.name || '')}"></label>
-      <label class="f"><span>${t('data.core')}</span><select id="dsCore">${f.type === 'man' ? '' : `<option value="all">${t('data.allCores')}</option>`}${cores}</select></label></div>
-      ${f.type !== 'man' ? `<label class="f"><span>${t('ds.formula')}</span><input type="text" id="dsFormula" value="${esc(fcol?.formula || '')}" placeholder="[reflectance_L*] / [reflectance_a*]" spellcheck="false"></label>
-      <p class="note">${t('ds.formulaHelp', { f: FUNCTIONS.join(', ') })}</p>
-      <div class="dsnames">${names.map((n) => `<button type="button" class="btn small ghost" data-ins="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : `<p class="note">${t('ds.manHelp')}</p>`}
-      ${f.type !== 'man' ? `<label class="chk"><input type="checkbox" id="dsInterp" ${fcol?.interp === false ? '' : 'checked'}><span>${t('ds.interp')}</span></label>` : ''}
-      ${fcol?.error ? `<p class="note err">${esc(fcol.error)}</p>` : ''}
-      <div class="row"><button type="button" class="btn small primary" id="dsSave">${t(fcol ? 'ds.save' : 'ds.add')}</button>${fcol ? `<button type="button" class="btn small" id="dsDel">${t('ds.del')}</button>` : ''}<button type="button" class="btn small ghost" id="dsCancel">${t('ds.cancel')}</button></div></div>` : '';
-  $('dBody').innerHTML = `<div class="dsbar">
-      <label class="chk ${dataEditOn ? 'on' : ''}"><input type="checkbox" id="dsEdit" ${dataEditOn ? 'checked' : ''}><span>${t('ds.edit')}</span></label>
-      <button type="button" class="btn small" id="dsNewCol">${t('ds.newCol')}</button>
-      <span class="dsmod">${nEd ? t('ds.nMod', { n: nEd }) : ''}</span>
-      ${nEd ? `<button type="button" class="btn small ghost" id="dsRestoreCell" disabled>${t('ds.restoreCell')}</button><button type="button" class="btn small ghost" id="dsRestoreAll">${t('ds.restoreAll')}</button>` : ''}
-    </div>
-    ${dataEditOn ? `<p class="dswarn">${t('ds.warn')}</p>` : ''}${form}
-    <div class="dsgrid"><table class="dtable sheet"><thead>${head}</thead><tbody>${body}</tbody></table></div>
-    ${M.rows.length > dataLimit ? `<p><button class="btn small" id="dMore">${t('data.more', { n: M.rows.length - dataLimit })}</button></p>` : ''}`;
-  if ($('dMore')) $('dMore').onclick = () => { dataLimit += 1000; renderDataTable(); };
-  if (f && $('dsCore')) $('dsCore').value = fcol?.core || (f.type === 'man' ? M.cores[0]?.id : 'all') || 'all';
-}
-$('dBody').addEventListener('change', (e) => {
-  if (e.target.id === 'dsEdit') { dataEditOn = e.target.checked; renderDataTable(); }
-  else if (e.target.id === 'dsType') { dataFormOpen = { type: e.target.value }; renderDataTable(); }
-});
-$('dBody').addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.id === 'dsNewCol') { dataFormOpen = dataFormOpen ? null : { type: 'calc' }; renderDataTable(); }
-  else if (b.dataset.fx != null) { dataFormOpen = { type: 'calc', i: +b.dataset.fx }; renderDataTable(); }
-  else if (b.dataset.ins != null) { const i = $('dsFormula'), ins = /^[\w.]+$/.test(b.dataset.ins) ? b.dataset.ins : `[${b.dataset.ins}]`; const p0 = i.selectionStart ?? i.value.length; i.value = i.value.slice(0, p0) + ins + i.value.slice(i.selectionEnd ?? p0); i.focus(); i.selectionStart = i.selectionEnd = p0 + ins.length; }
-  else if (b.id === 'dsCancel') { dataFormOpen = null; renderDataTable(); }
-  else if (b.id === 'dsDel') { S.sheet.columns.splice(dataFormOpen.i, 1); dataFormOpen = null; refreshAllCores(); geoRT.dirty = true; markDirty(); renderDataTable(); }
-  else if (b.id === 'dsSave') {
-    const name = $('dsName').value.trim(), core = $('dsCore').value; if (!name) { toast(t('ds.needName')); return; }
-    if (dataFormOpen.type === 'man') {
-      const c = S.cores.find((x) => x.id === core); if (!c) return;
-      c.user ||= {}; c.user[name] ||= { d: (c.depth || []).slice(), v: (c.depth || []).map(() => null) };
-      dataEditOn = true; refreshCoreData(c);
-    } else {
-      const formula = $('dsFormula').value.trim(); if (!formula) { toast(t('ds.needFormula')); return; }
-      try { parseFormula(formula); } catch (err) { toast(t('ds.badFormula', { e: err.message })); return; }
-      const interp = $('dsInterp')?.checked !== false;
-      if (dataFormOpen.i != null) Object.assign(S.sheet.columns[dataFormOpen.i], { name, formula, core, interp }); else S.sheet.columns.push({ name, formula, core, interp });
-      refreshAllCores();
-    }
-    dataFormOpen = null; geoRT.dirty = true; markDirty(); renderDataTable();
-  }
-  else if (b.id === 'dsRestoreAll') { if (!armed(b)) return; for (const c of dataCores()) c.edits = {}; refreshAllCores(); geoRT.dirty = true; markDirty(); renderDataTable(); }
-  else if (b.id === 'dsRestoreCell' && dataLastCell) {
-    const { core, col, x } = dataLastCell, c = S.cores.find((q) => q.id === core);
-    if (c?.edits?.[col]) { delete c.edits[col][x]; if (!Object.keys(c.edits[col]).length) delete c.edits[col]; }
-    dataLastCell = null; refreshCoreData(c); geoRT.dirty = true; markDirty(); renderDataTable();
-  }
-});
-$('dBody').addEventListener('focusin', (e) => {
-  const td = e.target.closest?.('td[data-col]'); if (!td) return;
-  td.dataset.before = td.textContent;
-  dataLastCell = td.classList.contains('mod') ? { core: td.dataset.core, col: td.dataset.col, x: td.dataset.x } : null;
-  if ($('dsRestoreCell')) $('dsRestoreCell').disabled = !dataLastCell;
-});
-$('dBody').addEventListener('keydown', (e) => {
-  const td = e.target.closest?.('td[contenteditable]'); if (!td) return;
-  if (e.key === 'Escape') { td.textContent = td.dataset.before || ''; td.blur(); return; }
-  const move = e.key === 'Enter' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0; if (!move) return;
-  e.preventDefault();
-  const tr = move > 0 ? td.parentElement.nextElementSibling : td.parentElement.previousElementSibling, nx = tr?.children[td.cellIndex];
-  if (nx?.isContentEditable) nx.focus(); else td.blur();
-});
-$('dBody').addEventListener('focusout', (e) => {
-  const td = e.target.closest('td[contenteditable]'); if (!td) return;
-  const raw = td.textContent.trim(); if (raw === (td.dataset.before || '').trim()) return;
-  const c = S.cores.find((x) => x.id === td.dataset.core); if (!c) return;
-  const v = raw === '' ? null : +raw.replace(',', '.');
-  if (raw !== '' && !Number.isFinite(v)) { td.textContent = td.dataset.before || ''; toast(t('ds.notNumber')); return; }
-  const col = td.dataset.col, x = td.dataset.x;
-  if (td.dataset.src === 'man') {   // manual column: the value is the data itself
-    const u = c.user?.[col]; if (!u) return; const d = +x, k = u.d.indexOf(d);
-    if (k >= 0) u.v[k] = v; else { u.d.push(d); u.v.push(v); }
-  } else {   // V0.35: any other value is kept as an edit over the original, flagged and reversible
-    c.edits ||= {}; const E = (c.edits[col] ||= {}), prev = E[x];
-    const orig = prev ? prev.o : (td.dataset.before === '' ? null : +td.dataset.before.replace(',', '.'));
-    if (orig != null && v != null && Math.abs(orig - v) <= 1e-12 * Math.max(1, Math.abs(orig))) delete E[x];
-    else E[x] = { v, o: orig, at: new Date().toISOString() };
-    if (!Object.keys(E).length) delete c.edits[col];
-  }
-  refreshCoreData(c); geoRT.dirty = true; markDirty();
-  const ed = cellEdit(c, col, x); td.classList.toggle('mod', !!ed);
-  if (ed) td.title = t('ds.modTip', { o: ed.o == null ? '—' : fmt(ed.o, 6), d: ed.at.slice(0, 10) }); else td.removeAttribute('title');
-  const n = editCount(dataCores()); const m = $('dBody').querySelector('.dsmod'); if (m) m.textContent = n ? t('ds.nMod', { n }) : '';
-  if (n && !$('dsRestoreAll')) renderDataTable();
-});
-function renderDataCols() {
-  const cores = S.cores.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
-  $('dInfo').textContent = '';
-  $('dBody').innerHTML = `<h3>${t('data.calcTitle')}</h3><p class="note">${t('data.calcHelp', { f: FUNCTIONS.join(', ') })}</p>
-    <div style="display:grid;gap:6px;max-width:1100px">${S.sheet.columns.map((col, i) => `<div class="colrow" data-i="${i}"><input type="text" data-k="name" value="${esc(col.name)}"><input type="text" data-k="formula" value="${esc(col.formula)}"><select data-k="core"><option value="all">${t('data.allCores')}</option>${S.cores.map((c) => `<option value="${c.id}" ${c.id === col.core ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select><button class="btn small ghost" data-del="${i}">✕</button>${col.error ? `<span class="note" style="grid-column:1/-1;color:var(--danger)">${esc(col.error)}</span>` : ''}</div>`).join('') || `<p class="note">—</p>`}
-    <div class="colrow"><input type="text" id="ncName" placeholder="${t('data.newName')}"><input type="text" id="ncFormula" placeholder="[XRF Ba/Ti] / TOC_pct"><select id="ncCore"><option value="all">${t('data.allCores')}</option>${cores}</select><button class="btn small primary" id="ncAdd">${t('data.addCalc')}</button></div></div>
-    <h3>${t('data.manTitle')}</h3><p class="note">${t('data.manHelp')}</p>
-    <div class="row"><input type="text" id="nmName" placeholder="${t('data.newName')}"><select id="nmCore">${cores}</select><button class="btn small" id="nmAdd">${t('data.addMan')}</button></div>
-    <div style="display:grid;gap:4px">${S.cores.flatMap((c) => Object.keys(c.user || {}).map((k) => `<div class="row"><span>${esc(c.name)} · <b>${esc(k)}</b> (${c.user[k].v.filter((v) => v != null).length})</span><button class="btn small ghost" data-delman="${c.id}|${esc(k)}">✕</button></div>`)).join('')}</div>`;
-  $('ncAdd').onclick = () => {
-    const name = $('ncName').value.trim(), formula = $('ncFormula').value.trim(); if (!name || !formula) return;
-    S.sheet.columns.push({ name, formula, core: $('ncCore').value }); refreshAllCores(); geoRT.dirty = true; markDirty(); renderDataCols();
-  };
-  $('nmAdd').onclick = () => {
-    const name = $('nmName').value.trim(), c = S.cores.find((x) => x.id === $('nmCore').value); if (!name || !c) return;
-    c.user ||= {}; c.user[name] ||= { d: (c.depth || []).slice(), v: (c.depth || []).map(() => null) };
-    refreshCoreData(c); markDirty(); $('dView').value = 'table'; $('dCore').value = c.id; renderData();
-  };
-}
-$('dBody').addEventListener('change', (e) => {
-  const row = e.target.closest('.colrow[data-i]'); if (!row) return;
-  const col = S.sheet.columns[+row.dataset.i]; col[e.target.dataset.k] = e.target.value; refreshAllCores(); geoRT.dirty = true; markDirty(); renderDataCols();
-});
-$('dBody').addEventListener('click', (e) => {
-  const d = e.target.closest('button')?.dataset; if (!d) return;
-  if ((d.del != null || d.delman) && !armed(e.target, '?')) return;
-  if (d.del != null) { S.sheet.columns.splice(+d.del, 1); refreshAllCores(); geoRT.dirty = true; markDirty(); renderDataCols(); }
-  else if (d.delman) { const [id, k] = d.delman.split('|'), c = S.cores.find((x) => x.id === id); if (c) { delete c.user[k]; refreshCoreData(c); markDirty(); renderDataCols(); } }
-});
-const CELL_COLS = 10, CELL_ROWS = 40;
-function cellResults() {
-  return evalCells(S.sheet.cells, (name, coreName) => {
-    const c = coreName ? S.cores.find((x) => x.name === coreName || x.id === coreName) : curCore();
-    if (!c) throw new Error(`no existe el sondeo «${coreName}»`);
-    if (name === 'depth' || name === 'age') return c[name] || [];
-    if (!c.proxies[name]) throw new Error(`no existe la columna «${name}»`);
-    return c.proxies[name];
-  });
-}
-function renderDataCells() {
-  const R = cellResults(), show = (v) => (v && v.error ? '#ERR' : typeof v === 'number' ? fmt(v, 6) : v ?? '');
-  $('dInfo').textContent = t('data.cellsInfo');
-  let h = `<table class="dtable cells"><thead><tr><th></th>${Array.from({ length: CELL_COLS }, (_, c) => `<th>${cellName(c, 0).replace(/\d+/, '')}</th>`).join('')}</tr></thead><tbody>`;
-  for (let r = 0; r < CELL_ROWS; r++) {
-    h += `<tr><th>${r + 1}</th>`;
-    for (let c = 0; c < CELL_COLS; c++) { const ref = cellName(c, r), raw = S.sheet.cells[ref] ?? '', v = R[ref]; h += `<td class="${v && v.error ? 'err' : ''}" title="${esc(v && v.error ? v.error : raw)}"><input data-ref="${ref}" data-raw="${esc(raw)}" value="${esc(String(raw).startsWith('=') ? show(v) : raw)}"></td>`; }
-    h += '</tr>';
-  }
-  $('dBody').innerHTML = h + `</tbody></table><p class="note">${t('data.cellsHelp')}</p>`;
-}
-$('dBody').addEventListener('focusin', (e) => { const i = e.target.closest('input[data-ref]'); if (i) i.value = i.dataset.raw; });
-$('dBody').addEventListener('focusout', (e) => {
-  const i = e.target.closest('input[data-ref]'); if (!i) return;
-  const v = i.value.trim(); if (v) S.sheet.cells[i.dataset.ref] = v; else delete S.sheet.cells[i.dataset.ref];
-  markDirty(); setTimeout(() => { if (!document.activeElement?.dataset?.ref) renderDataCells(); else { const a = document.activeElement.dataset.ref; renderDataCells(); const n = $('dBody').querySelector(`input[data-ref="${a}"]`); n?.focus(); } }, 0);
-});
-$('dBody').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.dataset.ref) e.target.blur(); });
-for (const id of ['dCore', 'dView', 'dLayers']) $(id).addEventListener('change', () => { dataLimit = 400; renderData(); });
-$('dCsv').addEventListener('click', () => {
-  const M = tableModel();
-  const rows = [['core', 'depth', 'age', ...M.cols.map(([k]) => k), ...M.layers.map((L) => L.name)], ...M.rows.map((r) => [r.c.name, r.depth, r.age, ...r.vals, ...r.lay])];
-  // V0.35: the cells edited by hand are listed in the header (lines starting with # are ignored when the file is read back)
-  const notes = [];
-  for (const c of M.cores) for (const [col, E] of Object.entries(c.edits || {})) for (const [x, ed] of Object.entries(E)) notes.push(`# edited by hand: ${c.name}; ${col}; ${c.depth ? 'depth' : 'age'} ${x}; original ${ed.o ?? ''}; new ${ed.v ?? ''}; ${ed.at || ''}`);
-  saveFile(`${safe(S.name)}_datos.csv`, notes.join('\n') + '\n' + withProv(toCSV(rows)), 'text/csv');
-});
-
 /* ───────────── windows and floating panel (work on a core while watching the map) ───────────── */
 
 document.addEventListener('click', (e) => {
@@ -6128,7 +5282,7 @@ let toastTimer = 0;
  * V0.36: every exported CSV starts with lines (beginning with #, ignored when read back) that say which version and
  * which settings produced it, so a table can be reproduced.
  */
-function withProv(csv) {
+export function withProv(csv) {
   const det = [...new Set(S.cores.flatMap((c) => c.sections.map((x) => (x.detect || DEFAULT_DETECT).method || 'adaptive')))].join('/');
   return withProvenance(csv, { delivery: DELIVERY, format: FORMAT_VERSION, date: new Date().toISOString(), project: S.name, settings: S.settings, detection: det, age: ageModelText(S.age.model, S.age) });   // V0.44: exportio.js
 }

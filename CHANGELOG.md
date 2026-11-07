@@ -10,6 +10,9 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.65 — 2026-11-07
+- No visible change: the composite log, the side panels and the Data tab move out of `app.js` into their own files.
+
 ## V0.64 — 2026-11-07
 - No visible change: the interface code is split into smaller files (shared state and the figures panel now have
   their own modules), a first step towards dividing `app.js`.
