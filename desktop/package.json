@@ -1,7 +1,7 @@
 {
   "name": "sedcoretool",
   "productName": "SedCoreTool",
-  "version": "0.62.0",
+  "version": "0.63.0",
   "description": "SedCoreTool — sediment core analysis: ichnology on core images and multiproxy records",
   "author": {
     "name": "Santiago Casanova-Arenillas",
@@ -20,5 +20,13 @@
     "electron-builder": "26.18.0",
     "onnxruntime-web": "1.31.1"
   },
-  "homepage": "https://github.com/SantiCa/SedCoreTool"
+  "homepage": "https://github.com/SantiCa/SedCoreTool",
+  "overrides": {
+    "app-builder-lib": {
+      "minimatch": "11.0.1"
+    },
+    "@electron/universal": {
+      "minimatch": "11.0.1"
+    }
+  }
 }

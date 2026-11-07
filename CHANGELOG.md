@@ -10,6 +10,12 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.63 — 2026-11-07
+- Security: the build tool electron-builder pulled `minimatch` 9.0.9 and 10.2.6 (Dependabot alert #64, pattern
+  amplification when parsing glob patterns). `desktop/package.json` now forces `minimatch` 11.0.1 for those two
+  branches (`overrides`); `npm audit` reports 0 vulnerabilities and the Linux installers still build. The alert only
+  affected the build tooling, not the installed program.
+
 ## V0.62 — 2026-11-07
 - Column headers stay visible while scrolling in the data tables, the spreadsheet view, the results and comparison tables.
 
