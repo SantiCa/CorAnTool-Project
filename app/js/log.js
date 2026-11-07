@@ -233,7 +233,7 @@ export function wrapTitle(text, w) {
 export const LOG_STYLE = { yFactor: 1, yStep: null, yDiv: null, pctDiv: 4, totalStyle: 'barsline', barColor: '#e7c9a5', lineColor: '#a85f1c',
   bgColor: '#ffffff', textColor: '#1c2422', subColor: '#5b6763', frameColor: '#9aa5a1', gridColor: '#e3e8e6',
   boundaryColor: '#5b6763', biColor: '#c98a4b', iiColor: '#c98a4b', manualColor: '#1c2422',
-  frame: true, grid: true, boundaries: true, totalTitle: '', speciesTitle: '', fontSize: 10, showTitle: true,
+  frame: true, grid: true, boundaries: true, secOrient: 'v', secLabel: 'name', totalTitle: '', speciesTitle: '', fontSize: 10, showTitle: true,
   axes: {} };   // V0.6: per column {min, max, div, dec, rev, log} keyed by column id (total, species, BI, ii, rec:<name>)
 const HEX_COLOR = /^#[0-9a-f]{3}([0-9a-f]{3})?$/i;
 /** Style merged with LOG_STYLE; a colour that is not a hex colour falls back to its default (project files are untrusted). */
@@ -266,6 +266,7 @@ export function buildLogSVG(o) {
   if (t.ii) cols.push({ key: 'ii', id: 'ii', w: wOf('ii', 46), title: 'ii' });
   for (const b of o.bands || []) { const id = 'band:' + (b.key || b.full || b.title); cols.push({ key: 'band', id, w: wOf(id, b.w || 46), title: b.title, full: b.full, band: b }); }
   for (const r of o.records) { const id = 'rec:' + r.name; cols.push({ key: 'rec', id, w: wOf(id, o.recWidth || 120), title: r.name, rec: r }); }
+  if (t.secs && o.boundaries?.length) cols.splice(1, 0, { key: 'secs', id: 'secs', w: wOf('secs', 40), title: L.secs || 'Section' });   // V0.78: empty column with a box per section
   if (o.marks?.length && !(t.image && o.image)) cols.splice(1, 0, { key: 'marks', id: 'marks', w: wOf('marks', 40), title: L.marks || 'Traces' });
   if (o.idList) cols.push({ key: 'idlist', id: 'idlist', w: wOf('idlist', 150), title: L.idList || 'Identified ichnotaxa' });
   // V0.33: column order (style.colOrder, ids) and hidden columns (style.colHide, ids; nothing is deleted); the axis stays first
@@ -409,6 +410,17 @@ export function buildLogSVG(o) {
           out.push(`<text x="${xx}" y="${yy}" fill="${st.textColor}" font-size="9.5">${line.map((k, i) => `<tspan fill="${k.color}" font-weight="700">■</tspan><tspan font-style="${k.plain ? 'normal' : 'italic'}"> ${escXml(short ? k.abbr : k.name)}${i < line.length - 1 ? ', ' : ''}</tspan>`).join('')}</text>`);
           lastY = yy; yy += 11;
         }
+      }
+    } else if (c.key === 'secs') {
+      // V0.78: one box per section with its name or number, vertical or horizontal (as in published core logs)
+      for (const b of o.boundaries) {
+        if (b.a1 == null) continue;
+        const lo = Math.min(b.a, b.a1), hi = Math.max(b.a, b.a1);
+        if (hi <= from || lo >= to) continue;
+        const ya = y(Math.max(lo, from)), yb = y(Math.min(hi, to)), cx = c.x + c.w / 2, cy = (ya + yb) / 2, txt = st.secLabel === 'num' ? String(b.n) : b.label || String(b.n);
+        out.push(`<rect x="${c.x}" y="${ya}" width="${c.w}" height="${f2(Math.max(0.4, yb - ya))}" fill="none" stroke="${st.frameColor}" stroke-width="0.8"/>`);
+        out.push(st.secOrient === 'h' ? `<text x="${f2(cx)}" y="${f2(cy + 3)}" text-anchor="middle" font-size="${st.fontSize}" fill="${st.textColor}">${escXml(txt)}</text>`
+          : `<text transform="translate(${f2(cx + 3)},${f2(cy)}) rotate(-90)" text-anchor="middle" font-size="${st.fontSize}" fill="${st.textColor}">${escXml(txt)}</text>`);
       }
     } else if (c.key === 'marks') {
       for (const m of o.marks) if (m.a >= from && m.a <= to) out.push(traceSymbol(c.x + c.w / 2, y(m.a), m.color, m.symbol));

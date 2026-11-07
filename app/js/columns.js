@@ -15,7 +15,7 @@ import { recordSeries } from './exportio.js';
 
 export function defaultLogView() {
   return { axis: 'depth', from: null, to: null, height: 900, imgMode: 'enh', overlay: true, hideExcl: false,
-    tracks: { image: true, total: true, species: true, BI: true, ii: true, manual: true } };
+    tracks: { image: true, total: true, species: true, BI: true, ii: true, manual: true, secs: false } };
 }
 S.logView = defaultLogView();
 export let mode = 'section', logTimer = 0, lastLog = null;
@@ -201,7 +201,7 @@ export function renderLog() {
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, counts: c.counts })).filter((c) => c.counts);
   const records = logRecords(D), imgW = 64;
   const images = lv.tracks.image ? columnImages(D, from, to, lv.height) : null, image = images?.[0] || null;
-  const boundaries = D.secs.map((s) => ({ a: D.axis === 'age' ? interpAge(D.model, s.top * D.f(s)) : s.top * D.f(s), label: s.name })).filter((b) => b.a != null);
+  const boundaries = D.secs.map((s, i) => { const ax = (v) => (D.axis === 'age' ? interpAge(D.model, v * D.f(s)) : v * D.f(s)); return { a: ax(s.top), a1: ax(s.bottom), label: s.name, n: i + 1 }; }).filter((b) => b.a != null);
   const { style, label: axisLabel } = logStyleOf(D);
   const marks = lv.tracks.marks !== false ? compositeMarks(D) : [], idm = idMode();
   let res;
@@ -210,7 +210,7 @@ export function renderLog() {
     axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, images, imageWidth: image?.w || imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
     marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes.filter((c) => D.rows.some((r) => r.classPct?.[c.index] > 0)) : [], marks),
     ...geoOverlay(D.axis),
-    labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
+    labels: { secs: t('log.secs'), noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
     colWidths: (lv.colW ||= {}),
   }); } catch (e) { console.error(e); box.innerHTML = `<p class="note">${esc(axisErr(e))}</p>`; lastLog = null; return; }
   box.innerHTML = res.svg;
@@ -350,10 +350,11 @@ export function axesFormHTML(only = null, lv = S.logView, recNames = null) {
   const recs = recNames || [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))];
   const sep = lv.style?.speciesMode === 'separate', spHide = new Set(lv.style?.speciesHide || []);
   const spCols = sep ? S.classes.filter((c) => c.counts !== false && c.id !== 'artifact' && !spHide.has(c.name)).map((c) => ['sp:' + c.name, c.name, 70]) : [['species', t('log.species'), 150]];
-  const cols = [['total', t('log.total'), 150], ...spCols, ['BI', 'BI', 46], ['ii', 'ii', 46], ...recs.map((n) => ['rec:' + n, n, 120])];
+  const cols = [['secs', t('log.secs'), 40], ['total', t('log.total'), 150], ...spCols, ['BI', 'BI', 46], ['ii', 'ii', 46], ...recs.map((n) => ['rec:' + n, n, 120])];
   /* V0.75: the settings of the two percentage columns (title, shape of the bioturbation column, divisions) live in their table rows. */
   const pct = (id) => id === 'total' || id === 'species' || id.startsWith('sp:'), pctDiv = Math.round(lv.style?.pctDiv) || 4, stl = lv.style || {};
   const sub = (id) => {
+    if (id === 'secs') return `<tr class="axsub"><td></td><td colspan="8"><span style="display:grid;gap:6px;width:270px;max-width:100%;text-align:left"><label class="f"><span>${t('st.secOrient')}</span><select data-st="secOrient"><option value="v" ${stl.secOrient !== 'h' ? 'selected' : ''}>${t('st.secV')}</option><option value="h" ${stl.secOrient === 'h' ? 'selected' : ''}>${t('st.secH')}</option></select></label><label class="f"><span>${t('st.secLabel')}</span><select data-st="secLabel"><option value="name" ${stl.secLabel !== 'num' ? 'selected' : ''}>${t('st.secName')}</option><option value="num" ${stl.secLabel === 'num' ? 'selected' : ''}>${t('st.secNum')}</option></select></label></span></td></tr>`;
     if (id !== 'total' && id !== 'species') return '';
     const title = id === 'total' ? 'totalTitle' : 'speciesTitle', lab = id === 'total' ? 'st.totalTitle' : 'st.speciesTitle', ph = id === 'total' ? 'log.total' : 'log.species';
     const shape = id === 'total' ? `<label class="f"><span>${t('st.totalStyle')}</span><select data-st="totalStyle">${['barsline', 'bars', 'line', 'points'].map((v) => `<option value="${v}" ${(stl.totalStyle || 'barsline') === v ? 'selected' : ''}>${t('st.ts.' + v)}</option>`).join('')}</select></label>` : '';

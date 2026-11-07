@@ -188,13 +188,13 @@ function coreSVG() {
   const { W: imgW, H } = coreFigSize(D);
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, counts: c.counts })).filter((c) => c.counts);
   const images = S.sections.length && lv.tracks.image ? coreImages(D, from, to, H, { panels: F.corePanels, mode: 'enh', hideExcl: F.coreHideExcl, w: imgW }) : null, image = images?.[0] || null;   // V0.25
-  const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
+  const boundaries = D.secs.map((x, i) => { const ax = (v) => (D.axis === 'age' ? interpAge(D.model, v * D.f(x)) : v * D.f(x)); return { a: ax(x.top), a1: ax(x.bottom), label: x.name, n: i + 1 }; }).filter((b) => b.a != null);
   const LS = logStyleOf(D), marks = lv.tracks.marks !== false ? compositeMarks(D) : [];
   const res = buildLogSVG({
     style: LS.style, colWidths: S.logView.colW || {}, title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: LS.label,
     from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, images, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
     marks, idList: idMode() || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(classes.filter((c) => D.rows.some((r) => r.classPct?.[c.index] > 0)), marks),
-    labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
+    labels: { secs: t('log.secs'), noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
   });
   syncColOrder('log', res.columns);   // V0.33
   return res.svg;
@@ -512,7 +512,7 @@ export function renderFigPanel() {
       <label class="chk"><input type="checkbox" id="figRangeTotal" ${F.rangeTotal ? 'checked' : ''}><span>${t('log.total')}</span></label><p class="note">${t('fig.rangeNote')}</p>`;   // V0.51: taxa shown and column width
   } else if (F.type === 'core') {
     const tr = F.tracks || S.logView.tracks, names = [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))], shown = F.recs || S.records.flatMap((r) => r.series.filter((x) => x.show).map((x) => x.name));
-    const trLab = { image: t('log.image'), total: t('log.total'), species: t('log.species'), BI: 'BI', ii: 'ii', manual: t('log.manual'), marks: t('color.marks') };
+    const trLab = { image: t('log.image'), total: t('log.total'), species: t('log.species'), BI: 'BI', ii: 'ii', secs: t('log.secs'), manual: t('log.manual'), marks: t('color.marks') };
     box.innerHTML = `${figWinHTML()}
       <div class="f"><span>${t('fig.tracks')}</span><div class="chk2">${Object.keys(trLab).map((k) => `<label class="chk"><input type="checkbox" data-ftrack="${k}" ${(k === 'marks' ? tr[k] !== false : tr[k]) ? 'checked' : ''}><span>${esc(trLab[k])}</span></label>`).join('')}</div></div>
       ${names.length ? `<div class="f"><span>${t('fig.recs')}</span><div class="chk2">${names.map((n) => `<label class="chk"><input type="checkbox" data-frec="${esc(n)}" ${shown.includes(n) ? 'checked' : ''}><span>${esc(n)}</span></label>`).join('')}</div></div>` : ''}

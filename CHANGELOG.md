@@ -10,6 +10,11 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.78 — 2026-11-07
+- New optional column «Sections» (Core column and the «Core column» figure): an empty column with one box per section
+  showing its name or number, vertical or horizontal (Scales and style → row «Sections»). It can be shown, hidden and
+  reordered like any other column; off by default.
+
 ## V0.77 — 2026-11-07
 - "Open idealised example" on the home screen no longer appears (and fails silently) when the program has no sample
   data; `npm start` in `desktop/` now copies the sample data so the example buttons work when developing. Errors
