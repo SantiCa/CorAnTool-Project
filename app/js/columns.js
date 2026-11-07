@@ -1,9 +1,11 @@
 /* Composite log of a core: column view, records and the order and visibility of chart columns. */
 import { $, S, fmt, hex, uid } from './state.js';
-import { analyze, armed, busy, compositeMarks, effClassArray, esc, geoOverlay, idListOf, idMode, legendOf, loadLand, logInteract, markDirty, needPixels, readTableFile, renderGeo, renderGeoLogs, requestRender, resizeCanvases, rowAtDepth, safe, saveFile, toast, updateTip, withProv } from './app.js';
+import { analyze, armed, busy, compositeMarks, effClassArray, esc, idListOf, idMode, legendOf, markDirty, needPixels, requestRender, resizeCanvases, rowAtDepth, safe, saveFile, toast, updateTip, withProv } from './app.js';
+import { geoOverlay, loadLand, logInteract, readTableFile, renderGeo, renderGeoLogs } from './multiproxy.js';
 import { applyPanels } from './panels.js';
 import { renderData } from './datatab.js';
 import { FIG_PANELS, arrowMarksSVG, axisErr, coreRatio, editSVGLabels, figTraces, panelDataURL, renderFigPanel, renderFigure, scheduleFigure } from './figures.js';
+
 import { UNIT_TO_CM, interpAge, topAt } from './core.js';
 import { LOG_STYLE, ND_STYLE, buildLogSVG, compositeRows, guessAxisColumn, invertModel, orderCols, rowsRange, toAxis, windowCSV } from './log.js';
 import { t } from './i18n.js';

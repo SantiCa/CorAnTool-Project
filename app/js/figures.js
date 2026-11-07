@@ -1,7 +1,8 @@
 /* Figures: representative traces, interpreted core, logs, location map and range chart. */
 import { $, S, clsById, fmt, hex } from './state.js';
 import { arrowFormHTML, axesFormHTML, colOrderHTML, colView, colorsFormHTML, compositeData, coreImages, lastLog, logRecords, logStyleOf, mode, ndFormHTML, onStyleInput, reduceRGBA, renderLog, scheduleLog, speciesFormHTML, styleFormHTML, syncColOrder } from './columns.js';
-import { busy, clsAbbr, compositeMarks, curCore, depthAtRow, effClassArray, effClassId, esc, fetchImage, geoComputeSamples, geoLand, geoOverlay, geoRT, idListOf, idMode, legendOf, mapNetConsent, markDirty, needPixels, pxPerCm, renderGeoLogs, renderGeoMap, requestRender, rowAtDepth, safe, saveFile, toast } from './app.js';
+import { busy, clsAbbr, compositeMarks, curCore, depthAtRow, effClassArray, effClassId, esc, idListOf, idMode, legendOf, markDirty, needPixels, pxPerCm, requestRender, rowAtDepth, safe, saveFile, toast } from './app.js';
+import { fetchImage, geoComputeSamples, geoLand, geoOverlay, geoRT, mapNetConsent, renderGeoLogs, renderGeoMap } from './multiproxy.js';
 
 import { UNIT_TO_CM, hasId, interpAge, topAt } from './core.js';
 import { vec } from './learn.js';

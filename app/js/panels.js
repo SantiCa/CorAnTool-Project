@@ -1,7 +1,8 @@
 /* Resizable and collapsible side panels, resizable maps. */
 import { $, S } from './state.js';
 import { mode } from './columns.js';
-import { prof, redrawAllMap, renderGeoMap, resizeCanvases } from './app.js';
+import { prof, redrawAllMap, resizeCanvases } from './app.js';
+import { renderGeoMap } from './multiproxy.js';
 
 /* ───────────── resizable / collapsible side panels and resizable maps (V23) ───────────── */
 export let panelPrefs = {};

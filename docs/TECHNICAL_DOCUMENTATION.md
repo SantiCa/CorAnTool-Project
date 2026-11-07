@@ -163,12 +163,14 @@ Program (`app/js/`). The modules marked "pure" do not use the browser (no DOM) a
 | `columns.js` | Composite log of a core: column view, records, order and visibility of chart columns | — |
 | `panels.js` | Resizable and collapsible side panels, resizable maps | — |
 | `datatab.js` | Data tab: all data of the project, Grapher-like plots and the spreadsheet view | — |
+| `multiproxy.js` | Multiproxy tool: numeric records, interval layers, classifiers, composite-log readout, manual classification, maps | — |
 | `figures.js` | Figures panel: representative traces, interpreted core, logs, sections, range chart, location map | — |
 | `app.js` | Interface, tools, drawing, files | — |
 
-The interface modules (`state.js`, `columns.js`, `panels.js`, `datatab.js`, `figures.js`, `app.js`) import from each other; circular imports are safe because
+The interface modules (`state.js`, `columns.js`, `panels.js`, `datatab.js`, `figures.js`, `multiproxy.js`, `app.js`) import from each other; circular imports are safe because
 the imported names are only used inside functions, never while a module is being loaded. A top-level `let` is assigned
-only in the module that declares it.
+only in the module that declares it. Event wiring that must run in a fixed order is wrapped in an `init…()` function
+(for example `initMultiproxy`) that `app.js` calls where that code used to run.
 | `i18n.js` | Interface texts in Spanish and English | — |
 
 Python package (`src/sedcoretool/`): `io.py` (images and masks), `segmentation.py` (masks from a threshold, a

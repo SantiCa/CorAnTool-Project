@@ -1,8 +1,10 @@
 /* Data tab: all data of the project, Grapher-like plots and the spreadsheet view. */
 import { t } from './i18n.js';
 import { $, S, fmt } from './state.js';
-import { armed, busy, cellEdit, curCore, editCount, esc, geoCat, geoRT, markDirty, refreshAllCores, refreshCoreData, safe, saveFile, toast, view, withProv } from './app.js';
+import { armed, busy, cellEdit, curCore, editCount, esc, markDirty, refreshAllCores, refreshCoreData, safe, saveFile, toast, view, withProv } from './app.js';
+import { geoCat, geoRT } from './multiproxy.js';
 import { mode } from './columns.js';
+
 import { FIT_KINDS, PLOT_COLORS, PLOT_TYPES, buildStratPlot, buildXYPlot } from './plot.js';
 
 import { toCSV } from './core.js';

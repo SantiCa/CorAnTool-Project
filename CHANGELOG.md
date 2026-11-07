@@ -10,6 +10,9 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.66 — 2026-11-07
+- No visible change: the multiproxy tool (records, layers, classifiers, maps) moves out of `app.js` into its own file.
+
 ## V0.65 — 2026-11-07
 - No visible change: the composite log, the side panels and the Data tab move out of `app.js` into their own files.
 

@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app"
-ORDER = ["core.js", "edit.js", "imageproc.js", "learn.js", "unet.js", "vision.js", "log.js", "storage.js", "zip.js", "i18n.js", "state.js", "geo.js", "locmap.js", "interp.js", "plot.js", "sheet.js", "exportio.js", "columns.js", "panels.js", "datatab.js", "figures.js", "app.js"]
+ORDER = ["core.js", "edit.js", "imageproc.js", "learn.js", "unet.js", "vision.js", "log.js", "storage.js", "zip.js", "i18n.js", "state.js", "geo.js", "locmap.js", "interp.js", "plot.js", "sheet.js", "exportio.js", "columns.js", "panels.js", "datatab.js", "figures.js", "multiproxy.js", "app.js"]
 EXAMPLES = ROOT / "examples"
 # Files the app loads with fetchAsset(path); embedded so the single file works offline.
 # V0.50: no sample data in the download (no test core, example images, demos nor tutorial): only the public-domain
