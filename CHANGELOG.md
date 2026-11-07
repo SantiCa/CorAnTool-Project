@@ -10,6 +10,11 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.73 — 2026-11-07
+- Figures: several versions of a figure can be kept in the project as tabs above the figure. `+` makes a new tab as a copy
+  of the current figure; double-click renames it; `×` deletes it. Each tab keeps its own type, title, orientation,
+  columns and series, and edits are saved in the active tab. Projects saved before open with a single tab.
+
 ## V0.72 — 2026-11-07
 - Figures: vertical or horizontal orientation is now set separately for each figure type, instead of applying to all of
   them. Projects saved before keep their single orientation for the types you do not change.

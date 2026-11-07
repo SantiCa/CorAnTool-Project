@@ -2010,3 +2010,7 @@ Object.assign(D.es, { 'st.yStep': 'Número de profundidad cada', 'st.yDiv': 'o n
 Object.assign(D.en, { 'st.yStep': 'Depth number every', 'st.yDiv': 'or approx. number of labels', 'st.yMajor': 'Long tick every', 'st.yMedium': 'Medium tick every', 'st.yMinor': 'Short tick every',
   'st.yLabelLen': 'Length of the numbered tick (px)', 'st.yMajorLen': 'Length of the long tick (px)', 'st.yMediumLen': 'Length of the medium tick (px)', 'st.yMinorLen': 'Length of the short tick (px)', 'st.auto': 'auto',
   'st.tickHelp': 'Intervals in axis units. Where several ticks coincide the highest level wins: number > long > medium > short. Ruler: short 1, medium 5, long 10 and number 10.' });
+
+// V0.73: saved versions of a figure as tabs
+Object.assign(D.es, { 'fig.tab.add': 'Nueva pestaña: copia de la figura actual, para guardar otra versión', 'fig.tab.del': 'Borrar esta figura guardada', 'fig.tab.delAsk': '¿Borrar esta pestaña con su figura? No se puede deshacer.', 'fig.tab.rename': 'Doble clic para cambiar el nombre' });
+Object.assign(D.en, { 'fig.tab.add': 'New tab: a copy of the current figure, to keep another version', 'fig.tab.del': 'Delete this saved figure', 'fig.tab.delAsk': 'Delete this tab and its figure? This cannot be undone.', 'fig.tab.rename': 'Double-click to rename' });

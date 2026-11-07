@@ -1,5 +1,5 @@
 /* Figures: representative traces, interpreted core, logs, location map and range chart. */
-import { $, S, clsById, fmt, hex } from './state.js';
+import { $, S, clsById, fmt, hex, uid } from './state.js';
 import { tickFieldsHTML, arrowFormHTML, axesFormHTML, colOrderHTML, colView, colorsFormHTML, compositeData, coreImages, lastLog, logRecords, logStyleOf, mode, ndFormHTML, onStyleInput, reduceRGBA, renderLog, scheduleLog, speciesFormHTML, styleFormHTML, syncColOrder } from './columns.js';
 import { busy, clsAbbr, compositeMarks, curCore, depthAtRow, effClassArray, effClassId, esc, idListOf, idMode, legendOf, markDirty, needPixels, pxPerCm, requestRender, rowAtDepth, safe, saveFile, toast } from './app.js';
 import { fetchImage, geoComputeSamples, geoLand, geoOverlay, geoRT, mapNetConsent, renderGeoLogs, renderGeoMap } from './multiproxy.js';
@@ -17,7 +17,58 @@ export const defaultFig = () => ({ type: 'traces', title: '', caption: '', n: 4,
   arrowSrc: 'all', arrowExcl: [], objScale: 1, markScale: 1, markStroke: '#ffffff', markStrokeW: 0.8, labelSize: 10, labelColor: '#1c2422', labelHalo: true });   // V0.23
 export const FIG_PANELS = ['orig', 'enh', 'fill', 'alpha', 'outline', 'mask', 'bw', 'arrows'];
 S.fig = defaultFig();
+/* V0.73: figures as tabs. S.figTabs = [{ id, name, fig }]; S.fig is always the `fig` of the active tab (S.figTab), so every
+   handler that edits S.fig edits the active tab. An empty name shows the figure type. */
+S.figTabs = [{ id: 'f1', name: '', fig: S.fig }]; S.figTab = 'f1';
 let figSvgCache = '';
+export function resetFigTabs(fig = defaultFig()) { S.fig = fig; S.figTabs = [{ id: uid(), name: '', fig }]; S.figTab = S.figTabs[0].id; }
+export function loadFigTabs(p) {
+  const tabs = Array.isArray(p.figTabs) && p.figTabs.length ? p.figTabs : null;
+  if (!tabs) { resetFigTabs({ ...defaultFig(), ...(p.fig || {}) }); return; }
+  S.figTabs = tabs.map((x) => ({ id: x.id || uid(), name: x.name || '', fig: { ...defaultFig(), ...(x.fig || {}) } }));
+  S.figTab = S.figTabs.some((x) => x.id === p.figTab) ? p.figTab : S.figTabs[0].id;
+  S.fig = S.figTabs.find((x) => x.id === S.figTab).fig;
+}
+export const figTabsData = () => ({ figTabs: S.figTabs.map(({ id, name, fig }) => ({ id, name, fig })), figTab: S.figTab });
+const figTabLabel = (tb) => {
+  if (tb.name) return tb.name;
+  const same = S.figTabs.filter((x) => !x.name && x.fig.type === tb.fig.type), k = same.indexOf(tb) + 1;
+  return t('fig.t.' + tb.fig.type) + (same.length > 1 ? ` (${k})` : '');
+};
+export function renderFigTabs() {
+  const box = $('figTabs'); if (!box) return;
+  const many = S.figTabs.length > 1;
+  box.innerHTML = S.figTabs.map((tb) => `<span class="figtab${tb.id === S.figTab ? ' on' : ''}" role="tab" tabindex="0" aria-selected="${tb.id === S.figTab}" data-ftab="${tb.id}" title="${esc(t('fig.tab.rename'))}"><span class="ftl">${esc(figTabLabel(tb))}</span>${many ? `<button type="button" class="ftx" data-ftabdel="${tb.id}" aria-label="${esc(t('fig.tab.del'))}" title="${esc(t('fig.tab.del'))}">×</button>` : ''}</span>`).join('')
+    + `<button type="button" class="figtabadd" data-ftabadd title="${esc(t('fig.tab.add'))}" aria-label="${esc(t('fig.tab.add'))}">+</button>`;
+}
+function activateFigTab(id) {
+  const tb = S.figTabs.find((x) => x.id === id); if (!tb || id === S.figTab) return;
+  S.figTab = id; S.fig = tb.fig; markDirty(); renderFigPanel(); scheduleFigure();
+}
+$('figTabs').addEventListener('click', (e) => {
+  const del = e.target.closest('[data-ftabdel]'), add = e.target.closest('[data-ftabadd]'), tab = e.target.closest('[data-ftab]');
+  if (e.target.closest('.ftedit')) return;
+  if (add) {
+    const tb = { id: uid(), name: '', fig: JSON.parse(JSON.stringify(S.fig)) };
+    S.figTabs.push(tb); S.figTab = tb.id; S.fig = tb.fig; markDirty(); renderFigPanel(); scheduleFigure();
+  } else if (del) {
+    if (S.figTabs.length < 2 || !confirm(t('fig.tab.delAsk'))) return;
+    const i = S.figTabs.findIndex((x) => x.id === del.dataset.ftabdel); if (i < 0) return;
+    const wasActive = S.figTabs[i].id === S.figTab; S.figTabs.splice(i, 1);
+    if (wasActive) { const n = S.figTabs[Math.min(i, S.figTabs.length - 1)]; S.figTab = n.id; S.fig = n.fig; }
+    markDirty(); renderFigPanel(); scheduleFigure();
+  } else if (tab) activateFigTab(tab.dataset.ftab);
+});
+$('figTabs').addEventListener('keydown', (e) => { const tab = e.target.closest('[data-ftab]'); if (tab && e.target === tab && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); activateFigTab(tab.dataset.ftab); } });
+$('figTabs').addEventListener('dblclick', (e) => {
+  const l = e.target.closest('.ftl'), tab = e.target.closest('[data-ftab]'); if (!l || !tab) return;
+  const tb = S.figTabs.find((x) => x.id === tab.dataset.ftab); if (!tb) return;
+  const inp = document.createElement('input'); inp.className = 'ftedit'; inp.value = tb.name || l.textContent; inp.maxLength = 60;
+  l.replaceWith(inp); inp.focus(); inp.select();
+  let fin = false; const done = (ok) => { if (fin) return; fin = true; if (ok) { tb.name = inp.value.trim(); markDirty(); } renderFigTabs(); };
+  inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') done(true); else if (ev.key === 'Escape') done(false); });
+  inp.addEventListener('blur', () => done(true));
+});
 
 /** Crop of one trace (padding 15 %), scaled to `size` px on its long side, with optional outline in the class colour. */
 /**
@@ -409,6 +460,7 @@ export function verticalStyleHTML(st = S.logView.style || {}, nd = true) {
 const orientOf = (F) => F.orients?.[F.type] ?? F.orient ?? 'v';
 export function renderFigPanel() {
   const F = S.fig, box = $('figOpts');
+  renderFigTabs();
   $('figType').value = F.type; $('figTitle').value = F.title; $('figCaption').value = F.caption;
   $('figOrient').value = orientOf(F) === 'h' ? 'h' : 'v'; $('figOrientBox').hidden = ['map', 'locmap'].includes(F.type);   // V0.51
   if (F.type === 'traces') {

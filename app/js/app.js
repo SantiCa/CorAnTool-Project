@@ -16,13 +16,13 @@ import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } 
 import { VISION_MODEL, visionFeatureId, traceWindow, traceInput, pickEmbedding } from './vision.js';
 import { coresFromLongTable, applyCatalogue, coreAges, intervalsOnAxis, intervalsFromTable, fitModel, buildMapSVG, mapBBox, predictProba, MAP_STYLE, fitBBoxAspect } from './geo.js';
 import { $, APP, APP_NAMES, CLF_SCOPES, ML_DEFAULT, S, VERSION, clsById, defaultClasses, fetchAsset, fmt, hex, hideMissingExamples, keyOf, sec, uid } from './state.js';
-import { defaultFig, renderFigPanel, renderFigure, scheduleFigure, traceCanvas } from './figures.js';
+import { figTabsData, loadFigTabs, renderFigPanel, renderFigure, resetFigTabs, scheduleFigure, traceCanvas } from './figures.js';
 import { renderData } from './datatab.js';
 import { frameRatio, panelPrefs, savePanels } from './panels.js';
 import { addRecordFromTable, defaultLogView, lastLog, mode, renderLog, renderLogPanel, renderRecList, scheduleLog, sectionCanvas, setMode } from './columns.js';
 import { GROUP_COLORS, addImported, addNamedIntervals, attachMapZoom, coreListUI, defaultGeo, exportMapPNG, geoComputeSamples, geoLand, geoLayer, geoMarkDirty, geoRT, geoReset, geoTrain, interpUI, loadGeoDemo, loadLand, mapBackground, mapStyleUI, mapTip, normalizeGeo, renderGeo, renderGeoMap, scheduleGeo, valueLayer, initMultiproxy } from './multiproxy.js';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-export const DELIVERY = 'V0.72';
+export const DELIVERY = 'V0.73';
 /* V0.17: input of the ichnotaxon classifier — 12 shape/colour descriptors ('shape') or the vector of a pre-trained
    vision model ('vision', DINOv2). Vectors of the two sets are never mixed. */
 const visionOn = () => (S.settings.ml?.features || 'shape') === 'vision';
@@ -2635,7 +2635,7 @@ function serialize() {
     app: APP, kind: 'project', version: FORMAT_VERSION, appVersion: VERSION, delivery: DELIVERY, saved: new Date().toISOString(),
     id: S.id, name: S.name, notes: S.notes, comments: S.comments || [], classes: S.classes, active: S.active, settings: S.settings, library: S.library,
     projectKind: S.kind || 'normal', multiSource: S.multiSource || null, models: projectModels(), finalTests: S.finalTests || [],
-    geo, sheet: S.sheet, fig: S.fig, curCore: S.curCore, plots: S.plots || [], plotCur: S.plotCur || 0,
+    geo, sheet: S.sheet, fig: S.fig, ...figTabsData(), curCore: S.curCore, plots: S.plots || [], plotCur: S.plotCur || 0,
     cores: S.cores.map((c) => ({
       id: c.id, name: c.name, lat: c.lat, lon: c.lon, waterDepth: c.waterDepth ?? null, units: c.units, source: c.source || null, notes: c.notes || '', holdout: c.holdout || undefined,
       imp: c.imp, user: c.user || {}, edits: c.edits && Object.keys(c.edits).length ? c.edits : undefined, records: c.records, logView: c.logView, age: { text: c.ageModel.text, units: c.ageModel.units, bacon: c.ageModel.bacon || undefined, center: c.ageModel.center || undefined },
@@ -2687,7 +2687,7 @@ async function loadProject(p) {
     S.classes = p.classes || defaultClasses(); S.active = p.active || 'undet';
     Object.assign(S.settings, p.settings || {}); S.library = p.library || []; S.kind = p.projectKind || 'normal'; S.multiSource = p.multiSource || null; S.plots = p.plots || []; S.plotCur = p.plotCur || 0; S.coreModels = p.models?.cores || {};
     S.sheet = { columns: [], cells: {}, ...(p.sheet || {}) };
-    S.fig = { ...defaultFig(), ...(p.fig || {}) }; S.finalTests = p.finalTests || [];
+    loadFigTabs(p); S.finalTests = p.finalTests || [];
     S.geo = normalizeGeo(p.geo);
     geoReset();
     S.cores = [];
@@ -2726,7 +2726,7 @@ function resetState() {
   const maxMP = S.settings.maxMP || 8;
   S.id = uid(); S.name = t('proj.untitled'); S.notes = ''; S.comments = []; S.finalTests = [];
   MEM.px.length = 0; MEM.mask.length = 0; pxWanted.clear();   // V0.1: pictures of the previous project can be freed
-  S.undo = []; S.selected = 0; S.multi.clear(); S.library = []; S.sheet = { columns: [], cells: {} }; S.fig = defaultFig(); S.kind = 'normal'; S.multiSource = null; S.plots = []; S.plotCur = 0; S.coreModels = {};
+  S.undo = []; S.selected = 0; S.multi.clear(); S.library = []; S.sheet = { columns: [], cells: {} }; resetFigTabs(); S.kind = 'normal'; S.multiSource = null; S.plots = []; S.plotCur = 0; S.coreModels = {};
   S.geo = defaultGeo(); geoReset();
   S.classes = defaultClasses(); S.active = 'undet';
   S.settings = { binCm: 1, minValid: 20, noDataPad: 0, includePred: true, predThr: 0.7, countCandidates: true, novelty: 3, maxMP, clfScope: 'project', ml: { ...ML_DEFAULT } };

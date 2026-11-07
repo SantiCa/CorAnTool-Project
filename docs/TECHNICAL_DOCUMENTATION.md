@@ -1540,6 +1540,13 @@ more than the data.
 The **Figures** mode prepares publication figures from the active core or project. All figures have an optional title
 and caption and are exported as SVG (images embedded) and PNG (×2); the location map also exports JPEG.
 
+**Saved figures (tabs).** The project keeps a list of figures, shown as tabs above the figure (project fields `figTabs`,
+`[{ id, name, fig }]`, and `figTab`, the active one; `fig` repeats the active figure for files read by older versions).
+Each tab holds the complete setting of one figure — type, title, caption, orientation per type, window, columns and
+series — so versions of the same type with different series can be kept. A new tab is a copy of the current figure; an
+empty name shows the figure type. Figures that draw the current Core column or Multiproxy view (`log`, `geolog`, `map`)
+take their column styles from that view, which is shared by all tabs.
+
 ### 20.1 Common options
 - **Depth window** (core units; empty = the whole core) for every figure; in age it is converted with the age model.
 - **Keep the photo proportions:** height = width · L / A (L = length of the window in cm, A = median width in cm of the analysis

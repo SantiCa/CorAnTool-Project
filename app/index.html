@@ -322,6 +322,14 @@ dialog input[type=text] { min-width: 0; }
 .work.fig > * { display: none !important; }
 .work.fig > #figPanel { display: block !important; border-right: 1px solid var(--line); overflow: auto; }
 .work.fig > #figStage { display: block !important; overflow: auto; padding: 16px; min-width: 0; }
+.figtabs { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-end; margin: -4px 0 10px; }
+.figtab { display: inline-flex; align-items: center; gap: 6px; max-width: 30ch; padding: 5px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--muted); font: 12px var(--font-body); cursor: pointer; }
+.figtab .ftl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.figtab.on { background: var(--field); border-color: var(--accent); color: inherit; font-weight: 600; }
+.figtab .ftx, .figtabadd { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 0 3px; border-radius: 4px; }
+.figtab .ftx:hover, .figtabadd:hover { background: var(--accent-soft); }
+.figtabadd { border: 1px dashed var(--line); padding: 4px 10px; color: var(--muted); }
+.ftedit { font: inherit; width: 18ch; padding: 0 2px; }
 #figOut { display: inline-block; background: #fff; border: 1px solid var(--line); border-radius: var(--r); }
 #figOut svg { display: block; max-width: 100%; height: auto; }
 .figcls { border: 1px solid var(--line); border-radius: var(--r); padding: 8px; display: grid; gap: 6px; }
@@ -920,7 +928,7 @@ details.mini[open] { display: grid; gap: 6px; }
         <p class="note" data-i18n="fig.note"></p>
       </div>
     </aside>
-    <section id="figStage"><div id="figOut"></div></section>
+    <section id="figStage"><div class="figtabs" id="figTabs" role="tablist"></div><div id="figOut"></div></section>
 
     <section id="dataView">
       <div class="dctl">
