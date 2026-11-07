@@ -227,6 +227,8 @@ export function wrapTitle(text, w) {
  * titles for the bioturbation and ichnotaxa columns; fontSize and whether title/subtitle are drawn.
  */
 export const LOG_STYLE = { yFactor: 1, yStep: null, yDiv: null, pctDiv: 4, totalStyle: 'barsline', barColor: '#e7c9a5', lineColor: '#a85f1c',
+  bgColor: '#ffffff', textColor: '#1c2422', subColor: '#5b6763', frameColor: '#9aa5a1', gridColor: '#e3e8e6',
+  boundaryColor: '#5b6763', biColor: '#c98a4b', iiColor: '#c98a4b', manualColor: '#1c2422',
   frame: true, grid: true, boundaries: true, totalTitle: '', speciesTitle: '', fontSize: 10, showTitle: true,
   axes: {} };   // V0.6: per column {min, max, div, dec, rev, log} keyed by column id (total, species, BI, ii, rec:<name>)
 export function buildLogSVG(o) {
@@ -268,22 +270,22 @@ export function buildLogSVG(o) {
   const Htot = top + H + 22 + legendH;
   const out = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="${st.fontSize}">`);
-  out.push(`<rect x="0" y="0" width="${W}" height="${Htot}" fill="#ffffff"/>`);
+  out.push(`<rect x="0" y="0" width="${W}" height="${Htot}" fill="${st.bgColor}"/>`);
   out.push(`<defs><clipPath id="plot"><rect x="0" y="${top}" width="${W}" height="${H}"/></clipPath>${noDataDefs(st)}</defs>`);
   // V0.3: intervals without data (excluded or too few valid pixels) are drawn as NO DATA, never as 0
   const gaps = noDataGaps(rows);
   if (st.showTitle) {
-    out.push(`<text x="8" y="16" font-size="${st.fontSize + 3}" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`);
-    if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
+    out.push(`<text x="8" y="16" font-size="${st.fontSize + 3}" font-weight="600" fill="${st.textColor}">${escXml(o.title || '')}</text>`);
+    if (o.subtitle) out.push(`<text x="8" y="31" fill="${st.subColor}">${escXml(o.subtitle)}</text>`);
   }
 
   const fy = +st.yFactor || 1, yTicks = verticalTicks(from, to, H, st);
-  const frame = (c) => { if (st.frame) out.push(`<rect x="${c.x}" y="${top}" width="${c.w}" height="${H}" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`); };
+  const frame = (c) => { if (st.frame) out.push(`<rect x="${c.x}" y="${top}" width="${c.w}" height="${H}" fill="none" stroke="${st.frameColor}" stroke-width="0.8"/>`); };
   // track names: up to two lines that fit the column width (V25); the full name is in the returned layout
   const title = (c) => {
-    if (c.w < 34 && c.title) { out.push(`<text transform="translate(${f2(c.x + c.w / 2 + 3)},80) rotate(-90)" text-anchor="start" font-size="9" font-weight="600" fill="#1c2422">${escXml(c.title)}</text>`); return; }   // V0.27: narrow columns, upright title
+    if (c.w < 34 && c.title) { out.push(`<text transform="translate(${f2(c.x + c.w / 2 + 3)},80) rotate(-90)" text-anchor="start" font-size="9" font-weight="600" fill="${st.textColor}">${escXml(c.title)}</text>`); return; }   // V0.27: narrow columns, upright title
     const ls = wrapTitle(c.title, c.w);
-    out.push(`<text x="${c.x + c.w / 2}" y="${ls.length > 1 ? 46 : 54}" text-anchor="middle" font-weight="600" fill="#1c2422">${ls.map((l, i) => `<tspan x="${c.x + c.w / 2}" dy="${i ? 12 : 0}">${escXml(l)}</tspan>`).join('')}</text>`);
+    out.push(`<text x="${c.x + c.w / 2}" y="${ls.length > 1 ? 46 : 54}" text-anchor="middle" font-weight="600" fill="${st.textColor}">${ls.map((l, i) => `<tspan x="${c.x + c.w / 2}" dy="${i ? 12 : 0}">${escXml(l)}</tspan>`).join('')}</text>`);
   };
   // V0.6: axis of a column; the user may fix min/max, divisions, decimals, invert it or (records) use a log scale
   const xScale = (c, lo, hi, reverse = false, ticks = null) => {
@@ -305,9 +307,9 @@ export function buildLogSVG(o) {
     out.push('</g><g>');
     for (const tv of (ticks || niceTicks(lo, hi, 3)).filter((v) => v >= lo && v <= hi)) {
       const xx = sx(tv);
-      if (st.grid) out.push(`<line x1="${xx}" y1="${top}" x2="${xx}" y2="${top + H}" stroke="#e3e8e6" stroke-width="0.6"/>`);
-      out.push(`<line x1="${xx}" y1="${top - 4}" x2="${xx}" y2="${top}" stroke="#5b6763" stroke-width="0.6"/>`);
-      out.push(`<text x="${xx}" y="${top - 7}" text-anchor="middle" fill="#5b6763" font-size="9">${fmtT(tv)}</text>`);
+      if (st.grid) out.push(`<line x1="${xx}" y1="${top}" x2="${xx}" y2="${top + H}" stroke="${st.gridColor}" stroke-width="0.6"/>`);
+      out.push(`<line x1="${xx}" y1="${top - 4}" x2="${xx}" y2="${top}" stroke="${st.subColor}" stroke-width="0.6"/>`);
+      out.push(`<text x="${xx}" y="${top - 7}" text-anchor="middle" fill="${st.subColor}" font-size="9">${fmtT(tv)}</text>`);
     }
     out.push(`</g><g clip-path="url(#track-${c.x})">`);
     sx.log = lg; return sx;
@@ -315,14 +317,14 @@ export function buildLogSVG(o) {
 
   for (const c of cols) {
     if (c.key === 'axis') {
-      out.push(`<text transform="translate(${c.x + 10},${top + H / 2}) rotate(-90)" text-anchor="middle" fill="#1c2422" font-weight="600">${escXml(o.axisLabel)}</text>`);
+      out.push(`<text transform="translate(${c.x + 10},${top + H / 2}) rotate(-90)" text-anchor="middle" fill="${st.textColor}" font-weight="600">${escXml(o.axisLabel)}</text>`);
       for (const v of yTicks) {
         const yy = y(v);
-        out.push(`<line x1="${c.x + c.w - labelLen(st)}" y1="${yy}" x2="${c.x + c.w}" y2="${yy}" stroke="#1c2422" stroke-width="0.8"/>`);
-        out.push(`<text x="${c.x + c.w - labelLen(st) - 3}" y="${yy + 3}" text-anchor="end" fill="#1c2422">${lbl(v * fy)}</text>`);
+        out.push(`<line x1="${c.x + c.w - labelLen(st)}" y1="${yy}" x2="${c.x + c.w}" y2="${yy}" stroke="${st.textColor}" stroke-width="0.8"/>`);
+        out.push(`<text x="${c.x + c.w - labelLen(st) - 3}" y="${yy + 3}" text-anchor="end" fill="${st.textColor}">${lbl(v * fy)}</text>`);
       }
-      for (const e of extraTicks(from, to, H, st)) out.push(`<line x1="${c.x + c.w - e.len}" y1="${y(e.v)}" x2="${c.x + c.w}" y2="${y(e.v)}" stroke="#1c2422" stroke-width="0.6"/>`);
-      out.push(`<line x1="${c.x + c.w}" y1="${top}" x2="${c.x + c.w}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
+      for (const e of extraTicks(from, to, H, st)) out.push(`<line x1="${c.x + c.w - e.len}" y1="${y(e.v)}" x2="${c.x + c.w}" y2="${y(e.v)}" stroke="${st.textColor}" stroke-width="0.6"/>`);
+      out.push(`<line x1="${c.x + c.w}" y1="${top}" x2="${c.x + c.w}" y2="${top + H}" stroke="${st.textColor}" stroke-width="0.8"/>`);
       continue;
     }
     title(c);
@@ -372,9 +374,9 @@ export function buildLogSVG(o) {
       const sx = xScale(c, 0, 6, false, c.key === 'BI' ? [0, 3, 6] : [1, 3, 6]);
       for (const r of rows) {
         const v = r[c.key];
-        if (v != null && v >= lo && (!sx.log || v > 0)) out.push(`<rect x="${f2(Math.min(sx.base, sx(v)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(v) - sx.base))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="#c98a4b"/>`);
+        if (v != null && v >= lo && (!sx.log || v > 0)) out.push(`<rect x="${f2(Math.min(sx.base, sx(v)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(v) - sx.base))}" height="${f2(Math.max(0.3, y(r.a1) - y(r.a0)))}" fill="${c.key === 'BI' ? st.biColor : st.iiColor}"/>`);
         const m = t.manual ? r[c.key === 'BI' ? 'BIm' : 'iim'] : null;
-        if (m != null) out.push(`<line x1="${sx(m)}" y1="${y(r.a0)}" x2="${sx(m)}" y2="${y(r.a1)}" stroke="#1c2422" stroke-width="2"/>`);
+        if (m != null) out.push(`<line x1="${sx(m)}" y1="${y(r.a0)}" x2="${sx(m)}" y2="${y(r.a1)}" stroke="${st.manualColor}" stroke-width="2"/>`);
       }
     } else if (c.key === 'band') {
       for (const g of c.band.segs) {
@@ -387,13 +389,13 @@ export function buildLogSVG(o) {
       for (const g of o.idList) {
         if (g.a1 <= from || g.a0 >= to || !g.items.length) continue;
         const ya = y(Math.max(g.a0, from)), yb = y(Math.min(g.a1, to));
-        out.push(`<path d="M${c.x + 6} ${ya}h-3V${yb}h3" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`);
+        out.push(`<path d="M${c.x + 6} ${ya}h-3V${yb}h3" fill="none" stroke="${st.frameColor}" stroke-width="0.8"/>`);
         const short = (yb - ya) < g.items.length * 11, lines = short ? [g.items] : g.items.map((k) => [k]);
         let yy = Math.max(ya + 9, lastY + 11);
         for (const line of lines) {
           if (yy > top + H - 2) break;
           let xx = c.x + 10;
-          out.push(`<text x="${xx}" y="${yy}" fill="#1c2422" font-size="9.5">${line.map((k, i) => `<tspan fill="${k.color}" font-weight="700">■</tspan><tspan font-style="${k.plain ? 'normal' : 'italic'}"> ${escXml(short ? k.abbr : k.name)}${i < line.length - 1 ? ', ' : ''}</tspan>`).join('')}</text>`);
+          out.push(`<text x="${xx}" y="${yy}" fill="${st.textColor}" font-size="9.5">${line.map((k, i) => `<tspan fill="${k.color}" font-weight="700">■</tspan><tspan font-style="${k.plain ? 'normal' : 'italic'}"> ${escXml(short ? k.abbr : k.name)}${i < line.length - 1 ? ', ' : ''}</tspan>`).join('')}</text>`);
           lastY = yy; yy += 11;
         }
       }
@@ -418,12 +420,12 @@ export function buildLogSVG(o) {
   }
   for (const b of st.boundaries ? o.boundaries || [] : []) {
     if (b.a <= from || b.a >= to) continue;
-    out.push(`<line x1="${cols[0].x + cols[0].w}" y1="${y(b.a)}" x2="${W - 14}" y2="${y(b.a)}" stroke="#5b6763" stroke-width="0.6" stroke-dasharray="3 3"/>`);
-    if (b.label) out.push(`<text x="${W - 16}" y="${y(b.a) - 2}" text-anchor="end" fill="#5b6763" font-size="8">${escXml(b.label)}</text>`);
+    out.push(`<line x1="${cols[0].x + cols[0].w}" y1="${y(b.a)}" x2="${W - 14}" y2="${y(b.a)}" stroke="${st.boundaryColor}" stroke-width="0.6" stroke-dasharray="3 3"/>`);
+    if (b.label) out.push(`<text x="${W - 16}" y="${y(b.a) - 2}" text-anchor="end" fill="${st.boundaryColor}" font-size="8">${escXml(b.label)}</text>`);
   }
   legendItems.forEach((k, i) => {
     const lx = 8 + (i % perRow) * 170, ly = top + H + 22 + Math.floor(i / perRow) * 16;
-    out.push(`${k.symbol ? traceSymbol(lx + 5, ly + 9, k.color, k.symbol) : `<rect x="${lx}" y="${ly}" width="10" height="10" fill="${k.color}"/>`}<text x="${lx + 14}" y="${ly + 9}" fill="#1c2422">${escXml(k.name)}</text>`);
+    out.push(`${k.symbol ? traceSymbol(lx + 5, ly + 9, k.color, k.symbol) : `<rect x="${lx}" y="${ly}" width="10" height="10" fill="${k.color}"/>`}<text x="${lx + 14}" y="${ly + 9}" fill="${st.textColor}">${escXml(k.name)}</text>`);
   });
   out.push('</svg>');
   return { svg: out.join(''), width: W, height: Htot, plotTop: top, plotHeight: H, columns: allCols,
@@ -449,6 +451,7 @@ export function abbrevs(names) {
  * total: bool (bioturbation % column)}.
  */
 export function buildRangeSVG(o) {
+  const K = { ...LOG_STYLE, ...(o.style || {}) };
   const H = o.height, from = o.from, to = o.to, span = to - from || 1, colW = Math.max(16, Math.min(200, +o.colW || 30)), x0 = 72;   // V0.51: column width
   const longest = Math.max(8, ...o.classes.map((c) => String(c.name).length)), top = 46 + Math.min(150, longest * 5.2 * 0.87);   // room for names at 60°
   const y = (v) => f2(top + ((v - from) / span) * H);
@@ -460,15 +463,15 @@ export function buildRangeSVG(o) {
   cols.forEach((c) => { c.id = 'sp:' + c.name; }); orderCols(cols, o.style || {});
   const totW = o.total ? 90 : 0, W = x0 + totW + (o.total ? 14 : 0) + cols.length * colW + 20 + Math.min(110, longest * 5.2 * 0.5), Htot = top + H + 26;
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Htot}" viewBox="0 0 ${W} ${Htot}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10">`,
-    `<rect width="${W}" height="${Htot}" fill="#ffffff"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="#1c2422">${escXml(o.title || '')}</text>`];
-  if (o.subtitle) out.push(`<text x="8" y="31" fill="#5b6763">${escXml(o.subtitle)}</text>`);
+    `<rect width="${W}" height="${Htot}" fill="${K.bgColor}"/>`, `<text x="8" y="16" font-size="13" font-weight="600" fill="${K.textColor}">${escXml(o.title || '')}</text>`];
+  if (o.subtitle) out.push(`<text x="8" y="31" fill="${K.subColor}">${escXml(o.subtitle)}</text>`);
   for (const v of verticalTicks(from, to, H, o.style)) {
-    out.push(`<line x1="${x0 - labelLen(o.style)}" y1="${y(v)}" x2="${x0}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - labelLen(o.style) - 3}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${lbl(v * (+o.style?.yFactor || 1))}</text>`);
-    out.push(`<line x1="${x0}" y1="${y(v)}" x2="${W - 14}" y2="${y(v)}" stroke="#eef1f0" stroke-width="0.6"/>`);
+    out.push(`<line x1="${x0 - labelLen(o.style)}" y1="${y(v)}" x2="${x0}" y2="${y(v)}" stroke="${K.textColor}" stroke-width="0.8"/><text x="${x0 - labelLen(o.style) - 3}" y="${y(v) + 3}" text-anchor="end" fill="${K.textColor}">${lbl(v * (+o.style?.yFactor || 1))}</text>`);
+    out.push(`<line x1="${x0}" y1="${y(v)}" x2="${W - 14}" y2="${y(v)}" stroke="${K.gridColor}" stroke-width="0.6"/>`);
   }
-  for (const e of extraTicks(from, to, H, o.style)) out.push(`<line x1="${x0 - e.len}" y1="${y(e.v)}" x2="${x0}" y2="${y(e.v)}" stroke="#1c2422" stroke-width="0.6"/>`);
-  out.push(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
-  out.push(`<text transform="translate(16,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.axisLabel || '')}</text>`);
+  for (const e of extraTicks(from, to, H, o.style)) out.push(`<line x1="${x0 - e.len}" y1="${y(e.v)}" x2="${x0}" y2="${y(e.v)}" stroke="${K.textColor}" stroke-width="0.6"/>`);
+  out.push(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${top + H}" stroke="${K.textColor}" stroke-width="0.8"/>`);
+  out.push(`<text transform="translate(16,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="${K.textColor}">${escXml(o.axisLabel || '')}</text>`);
   {   // V0.23: NO DATA intervals across the plot (style: show, fill, colours, label)
     const st = o.style || {}; SYM = { k: +st.markSize > 0 ? +st.markSize : 1, stroke: st.markStroke === 'none' ? 'none' : st.markStroke || '#ffffff', sw: st.markStrokeW != null && +st.markStrokeW >= 0 ? +st.markStrokeW : 0.8 };
     out.push(`<defs>${noDataDefs(st)}</defs>`);
@@ -489,18 +492,18 @@ export function buildRangeSVG(o) {
   };
   let x = x0 + 10;
   if (o.total) {
-    out.push(`<text x="${x + totW / 2}" y="${top - 8}" text-anchor="middle" font-weight="600" fill="#1c2422">${escXml(o.totalLabel || 'Bioturbation (%)')}</text>`);
+    out.push(`<text x="${x + totW / 2}" y="${top - 8}" text-anchor="middle" font-weight="600" fill="${K.textColor}">${escXml(o.totalLabel || 'Bioturbation (%)')}</text>`);
     const sx = rangeScale('total', x, totW, 100);
     out.push(`<g clip-path="url(#range-${x})">`);
-    for (const r of rows) if (r.pct != null && (!sx.log || r.pct > 0)) out.push(`<rect x="${f2(Math.min(sx.base, sx(r.pct)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(r.pct) - sx.base))}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="#e7c9a5"/>`);
+    for (const r of rows) if (r.pct != null && (!sx.log || r.pct > 0)) out.push(`<rect x="${f2(Math.min(sx.base, sx(r.pct)))}" y="${y(r.a0)}" width="${f2(Math.abs(sx(r.pct) - sx.base))}" height="${f2(Math.max(0.4, y(r.a1) - y(r.a0)))}" fill="${K.barColor}"/>`);
     out.push('</g>');
-    out.push(`<rect x="${x}" y="${top}" width="${totW}" height="${H}" fill="none" stroke="#9aa5a1" stroke-width="0.8"/>`);
+    out.push(`<rect x="${x}" y="${top}" width="${totW}" height="${H}" fill="none" stroke="${K.frameColor}" stroke-width="0.8"/>`);
     x += totW + 14;
   }
   for (const c of cols) {
     const cx = x + colW / 2, max = Math.max(1e-9, ...rows.map((r) => r.classPct?.[c.index] || 0));
-    out.push(`<text transform="translate(${cx + 3},${top - 6}) rotate(-60)" font-style="${c.plain ? 'normal' : 'italic'}" font-weight="600" fill="#1c2422">${escXml(c.name)}</text>`);
-    out.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${top + H}" stroke="#d5dbd9" stroke-width="0.6"/>`);
+    out.push(`<text transform="translate(${cx + 3},${top - 6}) rotate(-60)" font-style="${c.plain ? 'normal' : 'italic'}" font-weight="600" fill="${K.textColor}">${escXml(c.name)}</text>`);
+    out.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${top + H}" stroke="${K.gridColor}" stroke-width="0.6"/>`);
     const sx = rangeScale('species', x, colW - 6, max);
     out.push(`<g clip-path="url(#range-${x})">`);
     // V0.51: display = symbols | bars | both | kite (abundance as two symmetric curves) | kiteSymbols

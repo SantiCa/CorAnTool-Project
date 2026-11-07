@@ -10,6 +10,10 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.56 — 2026-11-07
+- Customise figure colours for core columns, ichnotaxon distributions and multiproxy columns, or restore defaults.
+- Show or hide hand-placed identification marks in core columns and whole-core figures without deleting them.
+
 ## V0.55 — 2026-11-07
 - Keep the desktop window open when saving fails, including when a save is already in progress.
 - Reject duplicate age depths and invalid named age ranges; blank age cells are ignored instead of read as zero.

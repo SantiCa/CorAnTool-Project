@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import { parseTable, guessAxisColumn, niceTicks, invertModel, toAxis, compositeRows, buildLogSVG, windowCSV, wrapTitle, abbrevs, buildRangeSVG, verticalTicks, traceSymbolPath } from '../../app/js/log.js';
 import { downsampleRGBA } from '../../app/js/imageproc.js';
 
+test('editable colours apply to core and range figures without showing hidden marks', () => {
+  const style = { biColor: '#111112', iiColor: '#222223', manualColor: '#333334', textColor: '#444445', bgColor: '#555556', frameColor: '#666667', barColor: '#777778' };
+  const rows = [{ a0: 0, a1: 1, pct: 30, classPct: [30], BI: 2, ii: 3, BIm: 1, iim: 2 }];
+  const classes = [{ name: 'A', color: '#123456', index: 0 }];
+  const result = buildLogSVG({ from: 0, to: 1, height: 100, rows, classes, tracks: { BI: true, ii: true, manual: true }, records: [], marks: [], idList: null, style });
+  const { svg } = result;
+  for (const color of ['#111112', '#222223', '#333334', '#444445', '#555556', '#666667']) assert.ok(svg.includes(color));
+  assert.doesNotMatch(svg, /#c98a4b|#1c2422|Identified ichnotaxa/);
+  assert.ok(!result.layout.some((c) => c.key === 'marks' || c.key === 'idlist'));
+  const range = buildRangeSVG({ from: 0, to: 1, height: 100, rows, classes, total: true, style }).svg;
+  for (const color of ['#777778', '#555556', '#444445']) assert.ok(range.includes(color));
+});
+
 test('parseTable: comma, semicolon with decimal comma, whitespace, comments', () => {
   assert.deepEqual(parseTable('depth,L*\n0.1,41.7\n0.2,45.5\n').rows, [[0.1, 41.7], [0.2, 45.5]]);
   assert.deepEqual(parseTable('# c\nprof;Ca\n1,5;3,25\n').rows, [[1.5, 3.25]]);

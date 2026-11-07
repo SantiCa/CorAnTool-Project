@@ -22,7 +22,7 @@ const APP = 'SedCoreTool', APP_NAMES = ['SedCoreTool', 'CorAnTool', 'IchAnTool']
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.55';
+const DELIVERY = 'V0.56';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -3469,12 +3469,12 @@ function renderLog() {
   const images = lv.tracks.image ? columnImages(D, from, to, lv.height) : null, image = images?.[0] || null;
   const boundaries = D.secs.map((s) => ({ a: D.axis === 'age' ? interpAge(D.model, s.top * D.f(s)) : s.top * D.f(s), label: s.name })).filter((b) => b.a != null);
   const { style, label: axisLabel } = logStyleOf(D);
-  const marks = compositeMarks(D), idm = idMode();
+  const marks = lv.tracks.marks !== false ? compositeMarks(D) : [], idm = idMode();
   let res;
   try { res = buildLogSVG({
     style, title: S.name, subtitle: idm && !['total', 'species', 'BI', 'ii'].some((k) => lv.tracks[k]) ? t('id.subtitle', { n: marks.length, from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }) : t('log.subtitle', { n: D.secs.length, b: fmt(S.settings.binCm || 1, 3), from: fmt(from, 4), to: fmt(to, 4), u: D.axis === 'age' ? S.age.units : D.base }),
     axisLabel, from, to, height: lv.height, rows: D.rows, classes, tracks: lv.tracks, image, images, imageWidth: image?.w || imgW, records, boundaries,   // V0.2: identification marks and quantified tracks can be shown together
-    marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes : [], marks),
+    marks, idList: idm || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(lv.overlay || lv.tracks.species ? classes.filter((c) => D.rows.some((r) => r.classPct?.[c.index] > 0)) : [], marks),
     ...geoOverlay(D.axis),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
     colWidths: (lv.colW ||= {}),
@@ -3550,6 +3550,23 @@ document.addEventListener('dragover', (e) => {
 });
 document.addEventListener('dragend', () => { if (!colDrag) return; const box = colDrag.closest('[data-colord]'); colDrag.classList.remove('dragging'); colDrag = null; if (box) saveColOrder(box); });
 
+const COLOR_FIELDS = {
+  log: ['barColor', 'lineColor', 'biColor', 'iiColor', 'manualColor', 'textColor', 'subColor', 'frameColor', 'gridColor', 'boundaryColor', 'bgColor'],
+  range: ['barColor', 'textColor', 'subColor', 'frameColor', 'gridColor', 'bgColor'],
+  geo: ['barColor', 'lineColor', 'textColor', 'subColor', 'frameColor', 'gridColor', 'bgColor'],
+};
+function colorsFormHTML(style, kind) {
+  const st = { ...LOG_STYLE, ...style };
+  return `<div class="f"><span>${t('color.title')}</span><div class="grid2">${COLOR_FIELDS[kind].map((key) => `<label class="f"><span>${t('color.' + key)}</span><input type="color" data-st="${key}" value="${esc(st[key])}"></label>`).join('')}</div><button type="button" class="btn small" data-colreset="${kind}">${t('color.reset')}</button><p class="note">${t('color.note')}</p></div>`;
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-colreset]'); if (!b) return;
+  const kind = b.dataset.colreset, lv = kind === 'geo' ? S.geo.view : S.logView;
+  lv.style ||= {}; for (const key of COLOR_FIELDS[kind]) delete lv.style[key];
+  markDirty();
+  if (kind === 'geo') { $('geoStyleForm').innerHTML = ''; renderGeoLogs(); }
+  else { renderLogPanel(); scheduleLog(); if (mode === 'fig') { renderFigPanel(); scheduleFigure(); } }
+});
 function styleFormHTML() {
   const st = { ...LOG_STYLE, ...(S.logView.style || {}) }, num = (k, lab, step = 'any', min = 0) => `<label class="f"><span>${t(lab)}</span><input type="number" data-st="${k}" step="${step}" min="${min}" value="${st[k] ?? ''}" placeholder="${t('fig.auto2')}"></label>`;
   const chk = (k, lab) => `<label class="chk"><input type="checkbox" data-st="${k}" ${st[k] ? 'checked' : ''}><span>${t(lab)}</span></label>`;
@@ -3562,11 +3579,10 @@ function styleFormHTML() {
     ${num('yLabelLen', 'st.yLabelLen', 1, 1)}${num('yMinorLen', 'st.yMinorLen', 1, 1)}
     ${num('pctDiv', 'st.pctDiv', 1, 1)}${num('fontSize', 'st.fontSize', 1, 6)}
     ${sel('totalStyle', 'st.totalStyle', ['barsline', 'bars', 'line', 'points'].map((v) => [v, t('st.ts.' + v)]))}
-    <label class="f"><span>${t('st.colors')}</span><span class="row"><input type="color" data-st="barColor" value="${st.barColor}"><input type="color" data-st="lineColor" value="${st.lineColor}"></span></label>
     <label class="f"><span>${t('st.totalTitle')}</span><input type="text" data-st="totalTitle" value="${esc(st.totalTitle || '')}" placeholder="${esc(t('log.total'))}"></label>
     <label class="f"><span>${t('st.speciesTitle')}</span><input type="text" data-st="speciesTitle" value="${esc(st.speciesTitle || '')}" placeholder="${esc(t('log.species'))}"></label></div>
     <div class="chk2">${chk('frame', 'st.frame')}${chk('grid', 'st.grid')}${chk('boundaries', 'st.boundaries')}${chk('showTitle', 'st.showTitle')}</div>
-    ${speciesFormHTML(st)}
+    ${colorsFormHTML(st, 'log')}${speciesFormHTML(st)}
     ${ndFormHTML(st)}
     ${axesFormHTML()}`;
 }
@@ -3625,7 +3641,7 @@ function renderLogPanel() {
   $('logHeight').value = lv.height; $('logHeightOut').textContent = lv.height + ' px';
   renderImgPanelsForm();
   $('logImgMode').value = lv.imgMode; $('logOverlay').checked = lv.overlay; $('logHideExcl').checked = !!lv.hideExcl;
-  document.querySelectorAll('#logTracks [data-track]').forEach((el) => (el.checked = el.dataset.track === 'ageErr' ? lv.tracks.ageErr !== false : !!lv.tracks[el.dataset.track]));
+  document.querySelectorAll('#logTracks [data-track]').forEach((el) => (el.checked = ['ageErr', 'marks'].includes(el.dataset.track) ? lv.tracks[el.dataset.track] !== false : !!lv.tracks[el.dataset.track]));
 }
 
 $('logStyle').addEventListener('change', onStyleInput);   // V0.5
@@ -4483,7 +4499,7 @@ function renderGeoLogs() {
     colWidths: (g.view.colW ||= {}), recWidth: g.view.trackW || 120, style: g.view.style || {},
   });
   syncColOrder('geo', res.columns);   // V0.33
-  if (!$('geoStyleBox').open || !$('geoStyleForm').innerHTML) $('geoStyleForm').innerHTML = colOrderHTML('geo') + verticalStyleHTML(g.view.style || {}) + axesFormHTML(['total', ...records.map((r) => 'rec:' + r.name)], g.view, records.map((r) => r.name));
+  if (!$('geoStyleBox').open || !$('geoStyleForm').innerHTML) $('geoStyleForm').innerHTML = colOrderHTML('geo') + verticalStyleHTML(g.view.style || {}) + colorsFormHTML(g.view.style || {}, 'geo') + axesFormHTML(['total', ...records.map((r) => 'rec:' + r.name)], g.view, records.map((r) => r.name));
   box.innerHTML = res.svg;
   geoLast = { core, from, to, top: res.plotTop, height: res.plotHeight, axis, layout: res.layout, width: res.width };
   $('geoTrackW').value = g.view.trackW || 120;
@@ -6269,11 +6285,11 @@ function coreSVG() {
   const classes = S.classes.map((c, i) => ({ name: c.name, color: c.color, symbol: c.symbol || 'triDown', index: i, counts: c.counts })).filter((c) => c.counts);
   const images = S.sections.length && lv.tracks.image ? coreImages(D, from, to, H, { panels: F.corePanels, mode: 'enh', hideExcl: F.coreHideExcl, w: imgW }) : null, image = images?.[0] || null;   // V0.25
   const boundaries = D.secs.map((x) => ({ a: D.axis === 'age' ? interpAge(D.model, x.top * D.f(x)) : x.top * D.f(x), label: x.name })).filter((b) => b.a != null);
-  const LS = logStyleOf(D);
+  const LS = logStyleOf(D), marks = lv.tracks.marks !== false ? compositeMarks(D) : [];
   const res = buildLogSVG({
     style: LS.style, colWidths: S.logView.colW || {}, title: curCore()?.name || S.name, subtitle: t('fig.coreSub', { n: D.secs.length }), axisLabel: LS.label,
     from, to, height: H, rows: D.rows, classes, tracks: { ...lv.tracks, image: !!image }, image, images, imageWidth: imgW, records: figRecords(D), boundaries, ...geoOverlay(D.axis),
-    marks: compositeMarks(D), idList: idMode() || compositeMarks(D).length ? idListOf(D.rows, compositeMarks(D)) : null, legendClasses: legendOf(classes, compositeMarks(D)),
+    marks, idList: idMode() || marks.length ? idListOf(D.rows, marks) : null, legendClasses: legendOf(classes.filter((c) => D.rows.some((r) => r.classPct?.[c.index] > 0)), marks),
     labels: { noData: t('log.noData'), total: t('log.total'), species: t('log.species'), image: t('log.image'), marks: t('id.marks'), idList: t('id.list') },
   });
   syncColOrder('log', res.columns);   // V0.33
@@ -6585,9 +6601,9 @@ function renderFigPanel() {
       <label class="chk"><input type="checkbox" id="figRangeTotal" ${F.rangeTotal ? 'checked' : ''}><span>${t('log.total')}</span></label><p class="note">${t('fig.rangeNote')}</p>`;   // V0.51: taxa shown and column width
   } else if (F.type === 'core') {
     const tr = F.tracks || S.logView.tracks, names = [...new Set(S.records.flatMap((r) => r.series.map((x) => x.name)))], shown = F.recs || S.records.flatMap((r) => r.series.filter((x) => x.show).map((x) => x.name));
-    const trLab = { image: t('log.image'), total: t('log.total'), species: t('log.species'), BI: 'BI', ii: 'ii', manual: t('log.manual') };
+    const trLab = { image: t('log.image'), total: t('log.total'), species: t('log.species'), BI: 'BI', ii: 'ii', manual: t('log.manual'), marks: t('color.marks') };
     box.innerHTML = `${figWinHTML()}
-      <div class="f"><span>${t('fig.tracks')}</span><div class="chk2">${Object.keys(trLab).map((k) => `<label class="chk"><input type="checkbox" data-ftrack="${k}" ${tr[k] ? 'checked' : ''}><span>${esc(trLab[k])}</span></label>`).join('')}</div></div>
+      <div class="f"><span>${t('fig.tracks')}</span><div class="chk2">${Object.keys(trLab).map((k) => `<label class="chk"><input type="checkbox" data-ftrack="${k}" ${(k === 'marks' ? tr[k] !== false : tr[k]) ? 'checked' : ''}><span>${esc(trLab[k])}</span></label>`).join('')}</div></div>
       ${names.length ? `<div class="f"><span>${t('fig.recs')}</span><div class="chk2">${names.map((n) => `<label class="chk"><input type="checkbox" data-frec="${esc(n)}" ${shown.includes(n) ? 'checked' : ''}><span>${esc(n)}</span></label>`).join('')}</div></div>` : ''}
       <div class="grid2"><label class="f"><span>${t('fig.coreImgW')}</span><input type="number" id="figCoreImgW" min="10" max="600" step="10" value="${F.coreImgW || 70}"></label>
       <label class="f"><span>${t('log.height')}</span><input type="number" id="figCoreH" min="200" max="6000" step="100" value="${F.coreH}"></label></div>
@@ -6602,7 +6618,7 @@ function renderFigPanel() {
   } else if (F.type === 'locmap') box.innerHTML = locmapPanelHTML();
   else box.innerHTML = `<p class="note">${t(F.type === 'map' ? 'fig.mapNote' : 'fig.logNote')}</p>`;
   if (F.type === 'log' || F.type === 'geolog') box.insertAdjacentHTML('afterbegin', `<label class="chk"><input type="checkbox" id="figLogHideExcl" ${S.logView.hideExcl ? 'checked' : ''}><span>${t('log.hideExcl')}</span></label>`);   // V0.51: every figure with the core
-  if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? colOrderHTML('range') + speciesFormHTML(S.logView.style || {}) + axesFormHTML(['total', 'species']) : '')}</details>`);
+  if (['sections', 'range', 'log'].includes(F.type)) box.insertAdjacentHTML('beforeend', `<details class="mini"><summary>${t('st.title')}</summary>${F.type === 'log' ? styleFormHTML() : verticalStyleHTML() + (F.type === 'range' ? colOrderHTML('range') + colorsFormHTML(S.logView.style || {}, 'range') + speciesFormHTML(S.logView.style || {}) + axesFormHTML(['total', 'species']) : '')}</details>`);
 }
 
 /** Editable SVG labels. Keys include source text and occurrence; offsets use the parent SVG coordinates. */

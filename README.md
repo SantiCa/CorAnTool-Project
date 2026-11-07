@@ -29,7 +29,7 @@ with the same analysis definitions is available for scripting and batch processi
   (random forest, neural network, k-nearest neighbours, naive Bayes, k-means) validated by leaving whole cores out;
   maps by age window with several interpolation methods and projections.
 - **Publication figures.** Core column, ichnotaxa distribution, representative traces, core sections and core
-  location maps, as SVG, PNG or JPEG, with editable axes and labels.
+  location maps, as SVG, PNG or JPEG, with editable colours, axes and labels.
 - **Reproducible and shareable.** Every parameter is stored in the project together with the original images;
   exported tables record the version and settings used. Projects can be shared as a single file or through a shared
   folder, with comments.

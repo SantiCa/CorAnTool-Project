@@ -952,6 +952,9 @@ stored in the project, so any result can be reproduced.
 
 ## 14. Identification mode (presence only)
 
+Hand-placed marks can be hidden in the core column and the whole-core figure without deleting them. When hidden,
+their triangles and mark-only legend entries are omitted; the identified-ichnotaxa list remains in identification mode.
+
 For cores where bioturbation cannot be quantified but ichnotaxa can be recognised, **Identification mode**
 (`settings.idMode`, a checkbox in the section bar) records presence instead of area.
 
@@ -974,6 +977,8 @@ For cores where bioturbation cannot be quantified but ichnotaxa can be recognise
 # Part IV — The program: core column, data and multiproxy analysis
 
 ## 15. Core column
+
+The hand-placed marks track is visible by default and can be turned off independently of the recorded marks.
 
 Implementation: `log.js::compositeRows, buildLogSVG, windowCSV, orderCols, verticalTicks` and
 `app.js::renderLog`. The core column shows the whole core: images, interpreted traces, bioturbation, indices,
@@ -1013,6 +1018,10 @@ section (`logView.imgPanels`), with a width in the real proportion of the core p
 `imgStretch`) or a fixed width (`imgW`).
 
 ### 15.5 Columns and scales
+
+Colours can be edited and restored to defaults: bioturbation bars `#e7c9a5` and line `#a85f1c`, BI and ii bars
+`#c98a4b`, manual indices and text `#1c2422`, subtitle and section boundaries `#5b6763`, frames `#9aa5a1`,
+grid `#e3e8e6`, and background `#ffffff`. Ichnotaxon, record and interval category colours remain data-specific.
 
 | Column | Content | Horizontal scale |
 |--------|---------|------------------|
@@ -1592,6 +1601,8 @@ latitude and longitude.
 - **Output:** SVG, PNG or JPEG at ×1–×6 (≈ 96–576 dpi).
 
 ### 20.8 Axes, ticks and editing labels
+
+The editable colours affect drawing and exported figures, not the underlying measurements or annotations.
 - `log.js::verticalTicks` shares the vertical ticks between the core column, the sections figure and the distribution
   figure. Data coordinates stay in the original unit; labels show `v · yFactor`, with
   `yFactor = UNIT_TO_CM[original unit] / UNIT_TO_CM[shown unit]` for depth.

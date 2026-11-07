@@ -1959,3 +1959,20 @@ Object.assign(D.en, {
   'fig.rangeDisplay.kite': 'Abundance as symmetric curves', 'fig.rangeDisplay.kiteSymbols': 'Symmetric curves and symbols',
   'fig.rangeSubKite': 'Abundance of each ichnotaxon (% of area) as symmetric curves', 'fig.rangeSubKiteSym': 'Abundance as symmetric curves and identified traces',
 });
+
+Object.assign(D.es, {
+  'color.title': 'Colores', 'color.barColor': 'Barras de bioturbación', 'color.lineColor': 'Línea de bioturbación',
+  'color.biColor': 'Barras de BI', 'color.iiColor': 'Barras de ii', 'color.manualColor': 'Índice manual',
+  'color.textColor': 'Textos y ejes', 'color.subColor': 'Subtítulo y marcas de escala', 'color.frameColor': 'Marcos',
+  'color.gridColor': 'Cuadrícula', 'color.boundaryColor': 'Límites de sección', 'color.bgColor': 'Fondo',
+  'color.reset': 'Colores por defecto', 'color.marks': 'Marcas a mano (triángulos)',
+  'color.note': 'Los colores de cada icnotaxón se cambian en Icnotaxones, los de los registros en su lista de Columna del sondeo y los de las categorías de intervalos en Multiproxy.',
+});
+Object.assign(D.en, {
+  'color.title': 'Colours', 'color.barColor': 'Bioturbation bars', 'color.lineColor': 'Bioturbation line',
+  'color.biColor': 'BI bars', 'color.iiColor': 'ii bars', 'color.manualColor': 'Manual index',
+  'color.textColor': 'Text and axes', 'color.subColor': 'Subtitle and scale ticks', 'color.frameColor': 'Frames',
+  'color.gridColor': 'Grid', 'color.boundaryColor': 'Section boundaries', 'color.bgColor': 'Background',
+  'color.reset': 'Default colours', 'color.marks': 'Hand-placed marks (triangles)',
+  'color.note': 'Change ichnotaxon colours in Ichnotaxa, record colours in the Core column record list, and interval category colours in Multiproxy.',
+});

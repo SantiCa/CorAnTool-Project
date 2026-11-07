@@ -18,6 +18,22 @@ try {
   await p.evaluate(() => document.getElementById('openTest').click());
   await until(() => window.ichantool?.S.sections.length === 6 && window.ichantool.S.sections.every((s) => s.objects.size > 0));
   await until(() => document.getElementById('saveState').dataset.state === 'saved');
+  // The column controls change only the drawing and can restore their defaults.
+  const ui = await p.evaluate(async () => {
+    const I = window.ichantool; I.setMode('log');
+    const mark = document.querySelector('#logTracks [data-track="marks"]');
+    const initial = mark.checked; mark.checked = false; mark.dispatchEvent(new Event('change', { bubbles: true }));
+    const hidden = I.S.logView.tracks.marks === false;
+    const color = document.querySelector('#logStyle [data-st="biColor"]');
+    color.value = '#123456'; color.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const applied = document.querySelector('#logSvg svg')?.outerHTML.includes('#123456');
+    document.querySelector('#logStyle [data-colreset="log"]').click();
+    const reset = I.S.logView.style.biColor == null;
+    document.querySelector('#logTracks [data-track="marks"]').click(); I.setMode('section');
+    return { initial, hidden, applied, reset };
+  });
+  if (!Object.values(ui).every(Boolean)) fail(`column controls: ${JSON.stringify(ui)}`);
   const first = await p.evaluate(() => window.ichantool.S.sections[window.ichantool.S.cur].objects.size);
   await p.evaluate(() => window.ichantool.runDetection()); await W(3000);
   const again = await p.evaluate(() => window.ichantool.S.sections[window.ichantool.S.cur].objects.size);
@@ -54,10 +70,12 @@ try {
   console.log(`web–V2 in the browser: ${v2.n} intervals, BI and ii identical, max Δ ${v2.max.toFixed(2)} points, mean ${v2.mean.toFixed(2)}`);
   // Simulate a failed desktop save: the page must remain open with its changes pending.
   const failure = await p.evaluate(async () => {
-    const I = window.ichantool; I.setMode('section');
+    const I = window.ichantool; document.getElementById('projClose').click(); I.setMode('section');
     const s = I.S.sections[I.S.cur], id = s.objects.keys().next().value;
     I.S.selected = id; document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
-    const tx = IDBDatabase.prototype.transaction, close = window.close, desktop = window.corantoolDesktop;
+    if (s.objects.has(id)) throw new Error('failed to create an unsaved edit');
+    const tx = IDBDatabase.prototype.transaction, close = window.close, desktop = window.corantoolDesktop, logError = console.error;
+    console.error = (error) => { if (error?.message !== 'simulated quota exceeded') logError(error); };
     let closed = false; window.close = () => { closed = true; }; window.corantoolDesktop = {};
     IDBDatabase.prototype.transaction = function (stores, mode, ...args) {
       if (mode === 'readwrite') throw new DOMException('simulated quota exceeded', 'QuotaExceededError');
@@ -66,7 +84,7 @@ try {
     window.dispatchEvent(new Event('beforeunload', { cancelable: true }));
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const result = { closed, state: document.getElementById('saveState').dataset.state };
-    IDBDatabase.prototype.transaction = tx; window.close = close; window.corantoolDesktop = desktop;
+    IDBDatabase.prototype.transaction = tx; window.close = close; window.corantoolDesktop = desktop; console.error = logError;
     return result;
   });
   if (failure.closed || failure.state !== 'error') fail(`failed save did not keep the window open: ${JSON.stringify(failure)}`);
