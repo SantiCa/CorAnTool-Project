@@ -22,7 +22,7 @@ import { frameRatio, panelPrefs, savePanels } from './panels.js';
 import { addRecordFromTable, defaultLogView, lastLog, mode, renderLog, renderLogPanel, renderRecList, scheduleLog, sectionCanvas, setMode } from './columns.js';
 import { GROUP_COLORS, addImported, addNamedIntervals, attachMapZoom, coreListUI, defaultGeo, exportMapPNG, geoComputeSamples, geoLand, geoLayer, geoMarkDirty, geoRT, geoReset, geoTrain, interpUI, loadGeoDemo, loadLand, mapBackground, mapStyleUI, mapTip, normalizeGeo, renderGeo, renderGeoMap, scheduleGeo, valueLayer, initMultiproxy } from './multiproxy.js';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-export const DELIVERY = 'V0.76';
+export const DELIVERY = 'V0.77';
 /* V0.17: input of the ichnotaxon classifier — 12 shape/colour descriptors ('shape') or the vector of a pre-trained
    vision model ('vision', DINOv2). Vectors of the two sets are never mixed. */
 const visionOn = () => (S.settings.ml?.features || 'shape') === 'vision';
@@ -348,7 +348,7 @@ async function loadExample() {
       S.sections.push(s); syncSettingsForm(); selectSection(S.sections.length - 1, true);
       await detectSection(s); updateProjHeader(); renderRecList(); setAge(); await saveToDB();
       return true;
-    } catch { /* try next */ }
+    } catch (e) { console.error('loadExample', e); }
   }
   return false;
 }

@@ -25,7 +25,7 @@ async function assetExists(path) {
 }
 /** V0.50: example and demo buttons only where their files exist. */
 export async function hideMissingExamples() {
-  for (const [id, path] of [['loadExample', 'data/idealized_core_0-500cm.jpg'], ['openTest', 'U1385I-1H/records/397-U1385I-1H_MS.csv'], ['geoDemo', 'geochem_demo/intervals.csv'], ['openTutorial', 'tutorial/cores.csv']]) {
+  for (const [id, path] of [['loadExample', 'data/idealized_core_0-500cm.jpg'], ['openIdeal', 'data/idealized_core_0-500cm.jpg'], ['openTest', 'U1385I-1H/records/397-U1385I-1H_MS.csv'], ['geoDemo', 'geochem_demo/intervals.csv'], ['openTutorial', 'tutorial/cores.csv']]) {
     const el = $(id); if (el && !(await assetExists(path))) el.hidden = true;
   }
 }

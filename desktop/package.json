@@ -1,7 +1,7 @@
 {
   "name": "sedcoretool",
   "productName": "SedCoreTool",
-  "version": "0.76.0",
+  "version": "0.77.0",
   "description": "SedCoreTool — sediment core analysis: ichnology on core images and multiproxy records",
   "author": {
     "name": "Santiago Casanova-Arenillas",
@@ -12,7 +12,7 @@
   "main": "main.js",
   "scripts": {
     "prepare-web": "node scripts/prepare.js",
-    "start": "node scripts/prepare.js && electron .",
+    "start": "node scripts/prepare.js --with-examples && electron .",
     "dist": "node scripts/build.js"
   },
   "devDependencies": {

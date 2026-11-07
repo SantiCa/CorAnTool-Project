@@ -4,7 +4,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..', '..'), WEB = path.resolve(__dirname, '..', 'web');
-const EXAMPLES = ['data/land-50m.json'];
+// V0.77: `npm start` (development) passes --with-examples to also copy the sample data, so the example buttons work.
+const EXAMPLES = process.argv.includes('--with-examples') ? ['data', 'U1385I-1H', 'geochem_demo', 'tutorial'] : ['data/land-50m.json'];
 fs.rmSync(WEB, { recursive: true, force: true });
 fs.cpSync(path.join(ROOT, 'app'), path.join(WEB, 'app'), { recursive: true, filter: (p) => !/README\.md$/.test(p) });
 for (const d of EXAMPLES) if (fs.existsSync(path.join(ROOT, 'examples', d))) { fs.mkdirSync(path.dirname(path.join(WEB, 'examples', d)), { recursive: true }); fs.cpSync(path.join(ROOT, 'examples', d), path.join(WEB, 'examples', d), { recursive: true }); }

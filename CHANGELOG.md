@@ -10,6 +10,11 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.77 — 2026-11-07
+- "Open idealised example" on the home screen no longer appears (and fails silently) when the program has no sample
+  data; `npm start` in `desktop/` now copies the sample data so the example buttons work when developing. Errors
+  loading the example are logged in the console.
+
 ## V0.76 — 2026-11-07
 - Language: the parts that stayed in Spanish in English now follow the language: formula errors (Data tab and computed
   columns), the test core (name, age-model note, magnetic susceptibility record), the map background credits and the
