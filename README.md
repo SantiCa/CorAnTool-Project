@@ -97,8 +97,15 @@ The built-in help and guided tour explain each step. The downloads contain no sa
 sedcoretool analyze core.png --top 0 --bottom 500 --units cm --bin-px 100 -o core.csv
 
 # colour-coded mask, e.g. the *_mask.png and *_palette.json exported by the program
-sedcoretool analyze core_mask.png --top 0 --bottom 500 --palette palette.json -o core.xlsx
+sedcoretool analyze core_mask.png --top 0 --bottom 500 --palette palette.json --bin-cm 1 -o core.xlsx
+
+# several sections and cores: list the images, fill in top/bottom, then run them all (CSV, Excel or LAS)
+sedcoretool manifest scans/ -o scans/sections.csv
+sedcoretool batch scans/sections.csv --palette palette.json --bin-cm 1 -o results.las
 ```
+
+An exclusion image of the same size (white = excluded: cracks, gaps, samples) can be given with `--exclude`, or as
+the `exclude` column of the manifest.
 
 ```python
 from sedcoretool import analyze_mask, load_image, mask_from_palette

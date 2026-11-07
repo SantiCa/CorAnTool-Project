@@ -14,10 +14,10 @@ Planned work, grouped by area. Completed work is listed in the [changelog](../CH
 ## Python package
 - [x] Installable package with API and command line; regression against version 2.1
 - [x] Per-ichnotaxon percentages, overlapping traces, configurable index schemes, age model, CSV and Excel export
-- [ ] Interval thickness in centimetres on the command line (`--bin-cm`, already available in the API)
-- [ ] Exclusion layer, as in the program
-- [ ] Batch processing of folders and of multi-section cores (splices, gaps)
-- [ ] LAS export for well-log software
+- [x] Interval thickness in centimetres on the command line (`--bin-cm`, already available in the API)
+- [x] Exclusion layer, as in the program
+- [x] Batch processing of folders and of multi-section cores (splices, gaps)
+- [x] LAS export for well-log software
 
 ## Segmentation and identification
 - [x] Learned segmentation (U-Net): training-data export, training, evaluation on independent cores, inference in the

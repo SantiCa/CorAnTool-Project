@@ -6,11 +6,71 @@ import argparse
 import json
 from pathlib import Path
 
+import numpy as np
+
 from . import __version__
-from .export import to_csv, to_excel
+from .batch import load_exclusion, run_manifest, write_manifest_template
+from .export import join_sections, to_csv, to_excel, to_las
 from .io import load_image, load_mask
 from .pipeline import analyze_mask
 from .segmentation import mask_from_palette, mask_from_threshold
+
+
+def _safe(name: str) -> str:
+    return "".join(c if c.isalnum() or c in "-_" else "_" for c in name) or "core"
+
+
+def _mask_args(a: argparse.ArgumentParser) -> None:
+    bins = a.add_mutually_exclusive_group()
+    bins.add_argument("--bin-cm", type=float, default=None, help="interval thickness in cm (as in the program)")
+    bins.add_argument("--bin-px", type=float, default=None, help="pixel rows per interval (default 1)")
+    g = a.add_mutually_exclusive_group()
+    g.add_argument("--threshold", type=float, default=5,
+                   help="gray value <= threshold is bioturbation (default 5, v2.1 behaviour)")
+    g.add_argument("--palette", type=Path, help="JSON {class: '#rrggbb'} for colour-coded images")
+    g.add_argument("--label-mask", action="store_true", help="image is already an integer label mask")
+    a.add_argument("--tolerance", type=int, default=10, help="colour tolerance for --palette")
+    a.add_argument("--exclude-value", type=int, default=None,
+                   help="with --label-mask: pixels with this value are excluded (e.g. 255 in U-Net datasets)")
+    a.add_argument("--min-valid", type=float, default=0.2,
+                   help="intervals with less than this fraction of valid pixels have no data (default 0.2)")
+
+
+def _mask_reader(args):
+    """Function image path -> (mask, class names, exclusion or None) for the chosen input type."""
+    palette = json.loads(args.palette.read_text(encoding="utf-8")) if args.palette else None
+    if args.exclude_value is not None and not args.label_mask:
+        raise SystemExit("--exclude-value needs --label-mask")
+
+    def read(path: Path):
+        if args.label_mask:
+            mask = load_mask(path)
+            if args.exclude_value is None:
+                return mask, None, None
+            ex = mask == args.exclude_value
+            return np.where(ex, 0, mask), None, ex
+        if palette is not None:
+            return (*mask_from_palette(load_image(path, "RGB"), palette, args.tolerance), None)
+        return (*mask_from_threshold(load_image(path), args.threshold), None)
+    return read
+
+
+def _bins(args) -> dict:
+    return {"bin_cm": args.bin_cm, "bin_px": args.bin_px or 1, "min_valid": args.min_valid}
+
+
+def _write(sections, out: Path, overlap: str | None, well: str = "") -> Path:
+    ext = out.suffix.lower()
+    if ext == ".las":
+        return to_las(sections, out, well=well, overlap=overlap or "upper")
+    if overlap and overlap != "keep":
+        rows = join_sections(sections, overlap=overlap)
+        if ext == ".xlsx":
+            rows.to_excel(out, index=False)
+        else:
+            rows.to_csv(out, index=False)
+        return out
+    return (to_excel if ext == ".xlsx" else to_csv)(sections, out)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,16 +82,23 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("image", type=Path)
     a.add_argument("--top", type=float, required=True, help="depth of the image top")
     a.add_argument("--bottom", type=float, required=True, help="depth of the image bottom")
-    a.add_argument("--units", default="cm")
-    a.add_argument("--bin-px", type=int, default=1, help="pixel rows per data point")
+    a.add_argument("--units", default="cm", choices=["mm", "cm", "m"])
     a.add_argument("--name", default=None, help="section name (default: file stem)")
-    g = a.add_mutually_exclusive_group()
-    g.add_argument("--threshold", type=float, default=5,
-                   help="gray value <= threshold is bioturbation (default 5, v2.1 behaviour)")
-    g.add_argument("--palette", type=Path, help="JSON {class: '#rrggbb'} for colour-coded images")
-    g.add_argument("--label-mask", action="store_true", help="image is already an integer label mask")
-    a.add_argument("--tolerance", type=int, default=10, help="colour tolerance for --palette")
-    a.add_argument("-o", "--output", type=Path, help="output .csv or .xlsx (default: <image>_sedcoretool.csv)")
+    a.add_argument("--exclude", type=Path, help="exclusion image of the same size: white = excluded")
+    _mask_args(a)
+    a.add_argument("-o", "--output", type=Path, help="output .csv, .xlsx or .las (default: <image>_sedcoretool.csv)")
+
+    b = sub.add_parser("batch", help="analyse every section listed in a manifest CSV (one or several cores)")
+    b.add_argument("manifest", type=Path, help="CSV: image, top, bottom [, core, units, name, exclude]")
+    _mask_args(b)
+    b.add_argument("--overlap", choices=["keep", "upper", "error"], default=None,
+                   help="overlapping sections: keep all, keep the upper one, or stop (default: keep; upper for LAS)")
+    b.add_argument("-o", "--output", type=Path, required=True,
+                   help="output .csv, .xlsx or .las (LAS: one file per core, <name>_<core>.las if several)")
+
+    t = sub.add_parser("manifest", help="write a manifest CSV listing the images of a folder (fill in the depths)")
+    t.add_argument("folder", type=Path)
+    t.add_argument("-o", "--output", type=Path, help="default: <folder>/sections.csv")
 
     # V0.15: U-Net
     u = sub.add_parser("unet", help="learned segmentation: prepare, train, evaluate, predict").add_subparsers(dest="unet", required=True)
@@ -80,18 +147,29 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "analyze":
-        if args.label_mask:
-            mask, names = load_mask(args.image), None
-        elif args.palette:
-            palette = json.loads(args.palette.read_text(encoding="utf-8"))
-            mask, names = mask_from_palette(load_image(args.image, "RGB"), palette, args.tolerance)
-        else:
-            mask, names = mask_from_threshold(load_image(args.image), args.threshold)
-        section = analyze_mask(mask, args.top, args.bottom, units=args.units, bin_px=args.bin_px,
-                               class_names=names, name=args.name or args.image.stem)
+        mask, names, ex = _mask_reader(args)(args.image)
+        if args.exclude:
+            ex2 = load_exclusion(args.exclude)
+            ex = ex2 if ex is None else (ex | ex2)
+        section = analyze_mask(mask, args.top, args.bottom, units=args.units, class_names=names, exclude=ex,
+                               name=args.name or args.image.stem, **_bins(args))
         out = args.output or args.image.with_name(args.image.stem + "_sedcoretool.csv")
-        (to_excel if out.suffix.lower() == ".xlsx" else to_csv)([section], out)
+        _write([section], out, None)
         print(f"{len(section.data)} data points -> {out}")
+    elif args.command == "batch":
+        read = _mask_reader(args)
+        cores = run_manifest(args.manifest, to_mask=read, **_bins(args))
+        out = args.output
+        if out.suffix.lower() == ".las" and len(cores) > 1:
+            for core, secs in cores.items():
+                f = _write(secs, out.with_name(f"{out.stem}_{_safe(core)}.las"), args.overlap, core)
+                print(f"{core}: {len(secs)} sections -> {f}")
+        else:
+            secs = [s for v in cores.values() for s in v]
+            _write(secs, out, args.overlap, next(iter(cores)))
+            print(f"{len(cores)} core(s), {len(secs)} sections, {sum(len(s.data) for s in secs)} data points -> {out}")
+    elif args.command == "manifest":
+        print(f"fill in top and bottom -> {write_manifest_template(args.folder, args.output)}")
     elif args.command == "unet":
         return _unet(args)
     return 0

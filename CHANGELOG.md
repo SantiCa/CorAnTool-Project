@@ -10,6 +10,16 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.60 — 2026-11-07
+- Python package: exclusion layer (`exclude=` in `analyze_mask`, `--exclude` image or `--exclude-value` on the command
+  line); intervals with too few valid pixels have no data (`min_valid`, 20 % as in the program). Percentages are now
+  computed as the ratio of sums, as in the program (identical results without exclusions).
+- New `sedcoretool batch` and `sedcoretool manifest`: analyse many section images and several cores from one CSV
+  manifest; sections are joined by depth with gaps kept and a choice for overlaps (keep, upper, error).
+- LAS 2.0 export (`-o file.las`, `export.to_las`), one file per core.
+- `--bin-cm` on the command line; output tables gain `depth_top`, `depth_bottom` and `valid_pct`; BI and ii are empty
+  (not −1) where there is no data.
+
 ## V0.59 — 2026-11-07
 - Text, subtitle and background colours can also be changed in the multiproxy map and the location map; the
   sections figure, the trace gallery and figure titles and captions follow the core-column colours.

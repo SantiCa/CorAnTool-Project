@@ -109,12 +109,12 @@ predict), which the desktop program calls when the user trains a model (§9).
 |------|:-------:|:--------------:|
 | Bioturbation %, per-class %, BI, ii, depth and age per interval | ✓ | ✓ (same definitions) |
 | Image enhancement, automatic detection, drawing and editing traces | ✓ | — |
-| Exclusion layer (cracks, gaps, samples) | ✓ | — |
+| Exclusion layer (cracks, gaps, samples) | ✓ (drawn) | ✓ (exclusion image or mask value) |
 | Identifying ichnotaxa (k-NN, Random Forest, Bayes, vision features) | ✓ | — |
 | U-Net: run a trained model | ✓ | ✓ |
 | U-Net: prepare data, train, evaluate | desktop program (it calls the Python package) | ✓ |
 | Core column, external records, Data tab, multiproxy analysis, maps, figures | ✓ | — |
-| Batch processing from scripts and the command line | — | ✓ |
+| Batch processing from scripts and the command line, multi-section cores, LAS export | — | ✓ |
 
 The analysis definitions shared by both — interval limits, percentages, indices, depth mapping and the U-Net
 tiling — are implemented twice (`src/sedcoretool/` and `app/js/core.js`, `app/js/unet.js`) and the tests check that
@@ -271,15 +271,14 @@ PNG mask, U-Net training data, trace figures, clicking on a trace) uses the uppe
 
 **Intervals without data (program).** If an interval has less than `minValid` (20 % by default) of its pixels
 valid — that is, `Σ V_r < minValid · N · width` — it has no data: percentages, BI and ii are empty (never 0) and
-the column draws it as NO DATA. Optionally (`noDataPad`, cm; 0 by default) the intervals of the same section that
-overlap `[top − pad, bottom + pad]` of an interval without data are also marked as without data. This only applies
-in the program, because the Python package has no exclusion layer.
+the column draws it as NO DATA. In Python the same rule applies (`min_valid=0.2`): percentages are `NaN` and BI/ii
+empty. Optionally, in the program only (`noDataPad`, cm; 0 by default), the intervals of the same section that
+overlap `[top − pad, bottom + pad]` of an interval without data are also marked as without data.
 
 ### 3.3 Equivalence with the reference version 2.1
 Version 2.1 computed the percentage of every row and then the **mean** of the rows of each interval. When every row
 has the same number of valid pixels (no exclusions), the mean of the row percentages equals the ratio of sums of
-§3.2, so both give identical results. The Python package still averages row percentages; since it has no
-exclusion layer, this is the same number.
+§3.2, so both give identical results. The program and the Python package both use the ratio of sums.
 
 The depth assigned by version 2.1, `(i − N/2) · Δz + top` with `i = (j+1)N`, is the same as in §3.2. The two
 differences are that version 2.1 lost the last interval (it is now kept) and had no exclusion layer.
@@ -1909,18 +1908,22 @@ Masks follow one contract: a 2-D integer array where `0` = matrix and `1…n` = 
 | `mask_from_threshold(img, threshold=5, class_name="bioturbation")` | `segmentation.py` | Binary mask: grey ≤ threshold is bioturbation (bioturbation painted black, as in version 2.1). |
 | `mask_from_palette(img, palette, tolerance=10)` | `segmentation.py` | Multi-class mask from a colour-coded image: `palette = {"Zoophycos": "#ff0000", …}`; a pixel belongs to a class when each RGB channel is within `tolerance` of the class colour (the first matching class wins). The `*_mask.png` and `*_palette.json` exported by the program are read this way. |
 | `mask_from_unet(img, model, px_per_cm=None, threshold=0.5)` | `segmentation.py` | Mask from a trained U-Net (`.onnx` with its `.json` next to it), with the rules of §9.1. |
-| `analyze_mask(mask, top, bottom, *, units="cm", bin_px=1, bin_cm=None, class_names=None, schemes=(BI, ii), keep_partial=True, name="section_1")` | `pipeline.py` | Intervals, percentages and indices (§3–§4). `bin_cm` sets the interval thickness in cm (as in the program); otherwise `bin_px` rows per interval (may be fractional, ≥ 1). |
+| `analyze_mask(mask, top, bottom, *, units="cm", bin_px=1, bin_cm=None, class_names=None, schemes=(BI, ii), exclude=None, min_valid=0.2, keep_partial=True, name="section_1")` | `pipeline.py` | Intervals, percentages and indices (§3–§4). `bin_cm` sets the interval thickness in cm (as in the program); otherwise `bin_px` rows per interval (may be fractional, ≥ 1). `exclude`: boolean array of the mask's size, `True` = excluded pixel (§3.2); intervals with less than `min_valid` of their pixels valid have no data. `units`: mm, cm or m. |
 | `analyze_image(path, top, bottom, *, threshold=5, **kwargs)` | `pipeline.py` | Version 2.1-compatible entry point: painted image → `mask_from_threshold` → `analyze_mask`. |
-| `CoreSection` | `pipeline.py` | Result of one section: `name, top, bottom, units, bin_px, class_names, data` (pandas DataFrame) and `metadata` (`image_rows`, `image_cols`, `px_per_unit`). `add_age(model_depth, model_age, extrapolate=False)` adds an `age` column (§5). |
+| `CoreSection` | `pipeline.py` | Result of one section: `name, top, bottom, units, bin_px, class_names, data` (pandas DataFrame) and `metadata` (`image_rows`, `image_cols`, `px_per_unit`, `excluded_pct`). `add_age(model_depth, model_age, extrapolate=False)` adds an `age` column (§5). |
 | `IndexScheme(name, tiers, reference)` | `indices.py` | An index defined as data: tiers `(lower, upper, value)`, half-open `[lower, upper)`. `BI_TAYLOR_GOLDRING` and `II_DROSER_BOTTJER` are the defaults. |
 | `pixel_depths(n_rows, top, bottom)`, `depth_to_age(depth, model_depth, model_age, extrapolate=False)` | `depth.py` | Depth of each row centre (§2.3) and linear age model (§5). |
 | `to_csv(sections, path)`, `to_excel(sections, path)` | `export.py` | All sections in one table; Excel adds one sheet per section (needs `openpyxl`). |
+| `join_sections(sections, units=None, overlap="keep")` | `export.py` | Sections of one core as one series sorted by depth (§25.6). |
+| `to_las(sections, path, well="", units=None, overlap="upper")` | `export.py` | LAS 2.0 file of one core (§25.6). |
+| `read_manifest(path)`, `run_manifest(path, to_mask=None, **analysis)`, `write_manifest_template(folder, out=None)`, `load_exclusion(path)` | `batch.py` | Batch processing from a manifest (§25.6); `run_manifest` returns `{core: [sections, top to bottom]}`. |
 | `plot_section(section, ax=None, show_indices=True)` | `plotting.py` | Quick-look figure of bioturbation %, BI and ii against depth (needs `matplotlib`). |
 
-The output table (`CoreSection.data`) has one row per interval with the columns `section`, `depth` (centre of the
-interval), `bioturbation_pct`, one `<class>_pct` per class when there is more than one class, and one column per
-index scheme (`BI`, `ii`); `add_age` adds `age`. Index values outside the tiers are `−1` and ages outside the model
-`NaN` (§4).
+The output table (`CoreSection.data`) has one row per interval with the columns `section`, `depth_top`,
+`depth_bottom`, `depth` (centre of the interval), `valid_pct` (percentage of the interval's pixels not excluded),
+`bioturbation_pct`, one `<class>_pct` per class when there is more than one class, and one column per index scheme
+(`BI`, `ii`, nullable integers); `add_age` adds `age`. Intervals without data have `NaN` percentages and empty indices;
+ages outside the model are `NaN` (§4). Batch processing adds a first column `core`.
 
 Example:
 
@@ -1939,16 +1942,21 @@ to_csv([section], "S1_bioturbation.csv")
 ### 25.3 Command line: `sedcoretool analyze`
 
 ```bash
-sedcoretool analyze IMAGE --top 0 --bottom 500 [--units cm] [--bin-px 1] [--name NAME]
-                    [--threshold 5 | --palette palette.json | --label-mask] [--tolerance 10] [-o out.csv|out.xlsx]
+sedcoretool analyze IMAGE --top 0 --bottom 500 [--units cm|mm|m] [--bin-cm 1 | --bin-px 1] [--name NAME]
+                    [--threshold 5 | --palette palette.json | --label-mask [--exclude-value 255]] [--tolerance 10]
+                    [--exclude excl.png] [--min-valid 0.2] [-o out.csv|out.xlsx|out.las]
 ```
 
 - `--threshold` (default 5): grey ≤ threshold is bioturbation (painted images, version 2.1 behaviour).
 - `--palette`: colour-coded image with a JSON `{class: "#rrggbb"}` (for example the program's `*_mask.png` and
   `*_palette.json`); `--tolerance` per RGB channel.
 - `--label-mask`: the image is already an integer label mask.
-- `--bin-px`: pixel rows per interval (the command line uses rows; the library also accepts `bin_cm`).
-- Output: CSV, or Excel if the name ends in `.xlsx`; by default `<image>_sedcoretool.csv`.
+- `--bin-cm`: interval thickness in cm, as in the program; or `--bin-px`: pixel rows per interval (default 1).
+- `--exclude`: exclusion image of the same size, white (grey > 127) = excluded. `--exclude-value`: with
+  `--label-mask`, pixels with this value are excluded (255 in the U-Net datasets of §9.2). Both can be combined.
+- `--min-valid` (default 0.2): intervals with less valid pixels have no data (§3.2).
+- Output: CSV, Excel if the name ends in `.xlsx`, LAS 2.0 if it ends in `.las` (§25.6); by default
+  `<image>_sedcoretool.csv`.
 
 `sedcoretool --version` prints the version.
 
@@ -1965,12 +1973,43 @@ The U-Net workflow (§9.2), with its defaults:
 
 ### 25.5 Differences from the program
 - The package starts from a mask: it has no enhancement, detection, editing tools or ichnotaxa classifier.
-- It has **no exclusion layer** and no minimum of valid pixels per interval: every pixel of the image counts.
-- Its CSV files have no `#` provenance lines and no `depth_top`/`depth_bottom` columns.
+- The exclusion layer is read from an image (or a mask value), not drawn; `noDataPad` is not available.
+- Its CSV files have no `#` provenance lines.
 - It does not read project files.
 
-Within those limits, results are identical to the program's for the same mask, interval limits and depth scale
-(§31.1).
+Within those limits, results are identical to the program's for the same mask, exclusion, interval limits and
+depth scale (§31.1).
+
+### 25.6 Batch processing, multi-section cores and LAS
+Implementation: `batch.py`, `export.py::join_sections, to_las`.
+
+**Manifest.** A CSV with one row per section image and the columns `image`, `top`, `bottom` (required) and `core`
+(default: the manifest's file name), `units` (default cm), `name` (default: the image's file stem), `exclude`
+(exclusion image). Relative paths are read from the manifest's folder. `sedcoretool manifest FOLDER [-o
+sections.csv]` lists the images of a folder with empty depths (and `<stem>_excl.png` as exclusion when it exists);
+the depths are filled in by hand.
+
+```bash
+sedcoretool batch sections.csv [--bin-cm 1 | --bin-px N] [--threshold 5 | --palette p.json | --label-mask
+                  [--exclude-value 255]] [--min-valid 0.2] [--overlap keep|upper|error] -o out.csv|out.xlsx|out.las
+```
+
+Every section is analysed as in §3 with the same options. CSV and Excel hold all cores and sections (Excel adds one
+sheet per section); with `.las`, one file per core (`<name>_<core>.las` when there are several).
+
+**Joining sections** (as §15.1): sections are sorted by top depth, depths are converted to the units of the
+uppermost section and intervals are joined **without recomputing them**. Gaps between sections are kept as they are.
+Where sections overlap (a splice), `--overlap keep` (default for CSV/Excel) keeps every interval, `upper` keeps the
+upper section and drops the intervals of a lower section whose centre lies strictly inside a section above, and
+`error` stops. With `upper` or `error`, CSV and Excel are written as one joined table.
+
+**LAS 2.0.** One core per file, depth = interval centre, `WRAP NO`, `NULL −999.25` for no data. `STEP` is the spacing
+between interval centres when it is constant (relative tolerance 10⁻⁶) and 0 otherwise (gaps, mixed thicknesses).
+Curves: `DEPT`, `DTOP`, `DBOT`, `AGE` (if present), `VALID` (%), `BIOT` (%), one `<CLASS>_PCT` per class, and one
+curve per index (`BI`, `II`). Mnemonics are upper case, with characters other than letters, digits and `_` replaced
+by `_`, at most 24 characters and made unique; the original class name is in the curve description. Overlapping
+sections are joined with `overlap="upper"` by default, because depth must increase strictly. The `~Parameter`
+section lists the number of sections and their names.
 
 ---
 
