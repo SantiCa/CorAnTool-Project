@@ -10,6 +10,11 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.70 — 2026-11-07
+- Figures: the hatched or solid fill of intervals without data was blank in the preview of "Core column (current window)"
+  (and of the multiproxy log) when that view had been opened before, because both copies of the drawing shared the same
+  internal names. Each figure now has its own names.
+
 ## V0.69 — 2026-11-07
 - Depth scale of the core column and of the figures: besides the numbered ticks, the long and the short ticks there is now
   a medium tick, each level with its own interval and its own length, so a ruler-style scale is possible (for example

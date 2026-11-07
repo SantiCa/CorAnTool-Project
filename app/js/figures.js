@@ -705,6 +705,7 @@ export function renderFigure() {
     else if (F.type === 'locmap') svg = locmapSVG();
     else { if (geoRT.dirty) geoComputeSamples(); svg = renderGeoMap() || null; }
     if (svg && F.orient === 'h' && !['map', 'locmap'].includes(F.type)) svg = orientSVG(svg);   // V0.51
+    if (svg) svg = scopeIds(svg);   // V0.70
   } catch (e) { console.error(e); $('figOut').innerHTML = `<p class="note" style="padding:20px">${esc(axisErr(e))}</p>`; return; }
   figSvgCache = svg ? wrapFigure(svg, F.title, F.caption) : '';
   // V0.27: an empty figure is a blank sheet with what to do next
@@ -712,6 +713,16 @@ export function renderFigure() {
   $('figOut').querySelector('[data-figauto]')?.addEventListener('click', () => $('figAuto')?.click());
   F.textEdits ||= {};
   editSVGLabels($('figOut'), (F.textEdits[F.type] ||= {}), (edited) => { figSvgCache = edited; });
+}
+/**
+ * V0.70: the ids of a figure get a prefix. The same SVG (column view, geo logs) also exists, hidden, in another tab, and a
+ * `url(#id)` that resolves to an element inside a hidden SVG paints nothing (the no-data hatching came out blank).
+ */
+export function scopeIds(svg) {
+  const ids = [...new Set([...svg.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]))];
+  if (!ids.length) return svg;
+  const q = ids.map((i) => i.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).sort((x, y) => y.length - x.length).join('|');
+  return svg.replace(new RegExp(`(\\sid="|url\\(#|href="#)(${q})(?=["')])`, 'g'), (m, a2, id) => `${a2}fig-${id}`);
 }
 let figTimer = 0;
 export const scheduleFigure = () => { clearTimeout(figTimer); figTimer = setTimeout(renderFigure, 150); };
