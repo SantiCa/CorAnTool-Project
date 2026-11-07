@@ -1712,8 +1712,9 @@ Implementation: `storage.js` and the *projects* block of `app.js`.
   the previous one. If loading fails halfway, the state is cleared, nothing is saved and the user is warned. The
   initial state (before any project) is never saved.
 - When the page is hidden or closed, pending changes are saved (`visibilitychange`, `pagehide`); in the desktop
-  program, closing with unsaved changes waits for the save to finish. If it fails, the window remains open and the
-  unsaved state remains visible; changes made during a save are also kept pending.
+  program, closing with unsaved changes waits for the save to finish. If it fails (or the storage is unavailable),
+  the window remains open and a dialog offers to retry, export the project as a `.sedcoretool` package or close
+  without saving; changes made during a save are also kept pending.
 - Every 10 saves the storage quota is checked (`navigator.storage.estimate`) and the user is warned above 80 %.
 - Errors that are not caught, and those of long operations, are shown in a notice (at most one every 5 s) instead of
   being lost in the console.
@@ -1872,10 +1873,10 @@ U-Net workflow. It needs Python ≥ 3.10 and depends only on NumPy, Pillow and p
 The package is not yet on PyPI; it is installed from the repository:
 
 ```bash
-pip install "sedcoretool @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
+pip install "sedcoretool @ git+https://github.com/SantiCa/SedCoreTool.git"
 # optional extras: excel (openpyxl), plot (matplotlib), unet (onnxruntime, torch, segmentation-models-pytorch, onnx)
-pip install "sedcoretool[excel,plot] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
-pip install "sedcoretool[unet] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
+pip install "sedcoretool[excel,plot] @ git+https://github.com/SantiCa/SedCoreTool.git"
+pip install "sedcoretool[unet] @ git+https://github.com/SantiCa/SedCoreTool.git"
 ```
 
 From a copy of the repository: `pip install -e ".[dev]"`. Installing gives the module `sedcoretool`, the command

@@ -10,6 +10,11 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.57 — 2026-11-07
+- When the desktop program cannot save on closing, a dialog offers to retry, export the project or close without
+  saving, instead of silently refusing to close.
+- Repository links point to the renamed repository `SantiCa/SedCoreTool`.
+
 ## V0.56 — 2026-11-07
 - Customise figure colours for core columns, ichnotaxon distributions and multiproxy columns, or restore defaults.
 - Show or hide hand-placed identification marks in core columns and whole-core figures without deleting them.

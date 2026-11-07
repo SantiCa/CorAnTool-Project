@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REPO = "https://github.com/SantiCa/SedCoreTool-Project"
+REPO = "https://github.com/SantiCa/SedCoreTool"
 
 
 def delivery() -> str:

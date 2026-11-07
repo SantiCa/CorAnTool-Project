@@ -1,6 +1,6 @@
 # SedCoreTool
 
-[![Tests](https://github.com/SantiCa/SedCoreTool-Project/actions/workflows/tests.yml/badge.svg)](https://github.com/SantiCa/SedCoreTool-Project/actions/workflows/tests.yml)
+[![Tests](https://github.com/SantiCa/SedCoreTool/actions/workflows/tests.yml/badge.svg)](https://github.com/SantiCa/SedCoreTool/actions/workflows/tests.yml)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
 **SedCoreTool** (*Sediment Core Tool*) quantifies bioturbation and ichnotaxa in sediment-core images and combines them
@@ -57,9 +57,9 @@ open `http://localhost:8000/app/`.
 ### The Python package
 
 ```bash
-pip install "sedcoretool @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
+pip install "sedcoretool @ git+https://github.com/SantiCa/SedCoreTool.git"
 # optional extras: excel (Excel export), plot (matplotlib), unet (U-Net training)
-pip install "sedcoretool[excel,plot] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
+pip install "sedcoretool[excel,plot] @ git+https://github.com/SantiCa/SedCoreTool.git"
 ```
 
 Requires Python 3.10 or later. The package is not on PyPI yet.

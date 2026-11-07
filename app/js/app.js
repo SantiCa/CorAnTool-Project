@@ -22,7 +22,7 @@ const APP = 'SedCoreTool', APP_NAMES = ['SedCoreTool', 'CorAnTool', 'IchAnTool']
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.56';
+const DELIVERY = 'V0.57';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2804,7 +2804,7 @@ function markDirty() {
   clearTimeout(saveTimer); if (storageOK) saveTimer = setTimeout(saveToDB, 1500);
 }
 
-let savePromise = null;
+let savePromise = null, lastSaveError = null;
 /** Save the open project; saves never overlap (a new save waits for the one in progress). */
 let blankStart = true;   // V31: nothing is saved until the user creates or opens a project
 async function saveToDB() {
@@ -2824,7 +2824,7 @@ async function saveToDB() {
       try { localStorage.setItem('ichantool.last', S.id); } catch { /* storage blocked */ }
       setSaveState(dirty ? 'dirty' : 'saved'); scheduleBackup();
     } catch (e) {
-      dirty = true; setSaveState('error'); console.error(e);
+      dirty = true; lastSaveError = e; setSaveState('error'); console.error(e);
       if (e?.name === 'QuotaExceededError') toast(t('save.quota'));
     }
   })();
@@ -2857,8 +2857,30 @@ window.addEventListener('pagehide', () => { if (dirty) saveToDB(); });
 window.addEventListener('beforeunload', (e) => {
   if ((!dirty && !savePromise) || closeOK || readOnlyProject || blankStart) return;
   e.preventDefault(); e.returnValue = '';
-  if (window.corantoolDesktop) flushSave().then(() => { if (!dirty) { closeOK = true; window.close(); } }).catch((err) => console.error(err));
+  if (window.corantoolDesktop) desktopClose();
 });
+/** V0.57 desktop: save, then close; if the changes cannot be saved, ask instead of refusing to close in silence. */
+function desktopClose() {
+  if (document.querySelector('dialog.saveFail')) return;
+  flushSave().then(() => { if (dirty) saveFailDialog(lastSaveError); else { closeOK = true; window.close(); } }).catch((err) => { console.error(err); saveFailDialog(err); });
+}
+function saveFailDialog(err) {
+  const dlg = document.createElement('dialog'); dlg.className = 'saveFail';
+  const reason = !storageOK ? t('close.noStorage') : err?.name === 'QuotaExceededError' ? t('save.quota') : err?.message || '';
+  dlg.innerHTML = `<form method="dialog" style="display:grid;gap:10px;max-width:460px"><h3 style="margin:0">${esc(t('close.failTitle'))}</h3><p style="margin:0">${esc(t('close.failText'))}</p>${reason ? `<p class="note" style="margin:0">${esc(reason)}</p>` : ''}
+    <div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" value="cancel">${esc(t('cl.cancel'))}</button><button class="btn" value="discard">${esc(t('close.discard'))}</button><button class="btn" value="export">${esc(t('close.export'))}</button><button class="btn primary" value="retry" autofocus>${esc(t('close.retry'))}</button></div></form>`;
+  document.body.appendChild(dlg);
+  dlg.addEventListener('close', async () => {
+    const v = dlg.returnValue; dlg.remove();
+    if (v === 'retry') desktopClose();
+    else if (v === 'discard') { closeOK = true; window.close(); }
+    else if (v === 'export') {
+      try { await saveFile(`${safe(S.name)}.sedcoretool`, await packageProjects([serialize()]), 'application/zip'); toast(t('close.exported'), 8000); }
+      catch (e2) { console.error(e2); toast(t('close.exportFail'), 8000); }
+    }
+  });
+  dlg.showModal();
+}
 
 function updateProjHeader() {
   $('projName').textContent = S.name;

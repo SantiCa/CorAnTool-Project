@@ -83,11 +83,11 @@ try {
     };
     window.dispatchEvent(new Event('beforeunload', { cancelable: true }));
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const result = { closed, state: document.getElementById('saveState').dataset.state };
+    const dlg = document.querySelector('dialog.saveFail'), result = { closed, state: document.getElementById('saveState').dataset.state, dialog: !!dlg?.open }; dlg?.remove();
     IDBDatabase.prototype.transaction = tx; window.close = close; window.corantoolDesktop = desktop; console.error = logError;
     return result;
   });
-  if (failure.closed || failure.state !== 'error') fail(`failed save did not keep the window open: ${JSON.stringify(failure)}`);
+  if (failure.closed || failure.state !== 'error' || !failure.dialog) fail(`failed save did not keep the window open and ask: ${JSON.stringify(failure)}`);
   if (errs.length) fail('page errors: ' + errs.join(' | '));
   console.log(process.exitCode ? 'E2E finished with failures' : `E2E ok (${first} traces in the first section; reload identical)`);
 } catch (e) { fail(e.message); } finally { await b.close(); }

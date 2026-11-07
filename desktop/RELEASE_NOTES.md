@@ -12,7 +12,7 @@ program starts empty and you open your own images and tables.
 - Ichnotaxa distribution as symmetric curves; horizontal orientation for figures.
 - Final test on cores reserved from training.
 
-The full list of changes is in [CHANGELOG.md](https://github.com/SantiCa/SedCoreTool-Project/blob/master/CHANGELOG.md).
+The full list of changes is in [CHANGELOG.md](https://github.com/SantiCa/SedCoreTool/blob/master/CHANGELOG.md).
 
 ### Downloads
 
@@ -39,4 +39,4 @@ Export a copy of your projects. The program does not update itself; install the 
 - The first download of the vision model and map backgrounds need an internet connection.
 - Training a U-Net needs Python 3.10 or later on the computer and installs a 2–3 GB module once.
 
-Documentation: [technical documentation](https://github.com/SantiCa/SedCoreTool-Project/blob/master/docs/TECHNICAL_DOCUMENTATION.md).
+Documentation: [technical documentation](https://github.com/SantiCa/SedCoreTool/blob/master/docs/TECHNICAL_DOCUMENTATION.md).

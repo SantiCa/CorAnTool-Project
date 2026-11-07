@@ -1976,3 +1976,14 @@ Object.assign(D.en, {
   'color.reset': 'Default colours', 'color.marks': 'Hand-placed marks (triangles)',
   'color.note': 'Change ichnotaxon colours in Ichnotaxa, record colours in the Core column record list, and interval category colours in Multiproxy.',
 });
+// V0.57: closing the desktop program when the changes could not be saved
+Object.assign(D.es, {
+  'close.failTitle': 'No se han podido guardar los últimos cambios', 'close.failText': 'Si cierras ahora se perderán. Puedes reintentar, exportar el proyecto a un archivo .sedcoretool o cerrar sin guardar.',
+  'close.noStorage': 'El almacenamiento del programa no está disponible.', 'close.retry': 'Reintentar', 'close.export': 'Exportar proyecto',
+  'close.discard': 'Cerrar sin guardar', 'close.exported': 'Proyecto exportado. Ya puedes cerrar sin guardar.', 'close.exportFail': 'No se pudo exportar el proyecto.',
+});
+Object.assign(D.en, {
+  'close.failTitle': 'The latest changes could not be saved', 'close.failText': 'Closing now will lose them. You can retry, export the project to a .sedcoretool file, or close without saving.',
+  'close.noStorage': 'The program storage is not available.', 'close.retry': 'Retry', 'close.export': 'Export project',
+  'close.discard': 'Close without saving', 'close.exported': 'Project exported. You can now close without saving.', 'close.exportFail': 'The project could not be exported.',
+});
