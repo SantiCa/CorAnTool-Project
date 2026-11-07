@@ -159,7 +159,13 @@ Program (`app/js/`). The modules marked "pure" do not use the browser (no DOM) a
 | `vision.js` | Pre-trained vision model (DINOv2): input window and embedding | partly |
 | `worker.js` | Background worker that runs enhancement and detection off the interface thread | — |
 | `storage.js` | Project library in IndexedDB | — |
+| `state.js` | Shared program state (`S`) and small helpers used by the interface modules | — |
+| `figures.js` | Figures panel: representative traces, interpreted core, logs, sections, range chart, location map | — |
 | `app.js` | Interface, tools, drawing, files | — |
+
+The interface modules (`state.js`, `figures.js`, `app.js`) import from each other; circular imports are safe because
+the imported names are only used inside functions, never while a module is being loaded. A top-level `let` is assigned
+only in the module that declares it.
 | `i18n.js` | Interface texts in Spanish and English | — |
 
 Python package (`src/sedcoretool/`): `io.py` (images and masks), `segmentation.py` (masks from a threshold, a

@@ -10,6 +10,10 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.64 — 2026-11-07
+- No visible change: the interface code is split into smaller files (shared state and the figures panel now have
+  their own modules), a first step towards dividing `app.js`.
+
 ## V0.63 — 2026-11-07
 - Security: the build tool electron-builder pulled `minimatch` 9.0.9 and 10.2.6 (Dependabot alert #64, pattern
   amplification when parsing glob patterns). `desktop/package.json` now forces `minimatch` 11.0.1 for those two
