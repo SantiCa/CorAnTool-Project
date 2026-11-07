@@ -10,9 +10,23 @@ export const LOO_MAX = 1500;
 
 export const vec = (f) => FEATURES.map((k) => (Number.isFinite(f?.[k]) ? f[k] : 0));
 
-/** External examples cannot be proven independent of a reserved core, including copies in other projects. */
-export function independentExternalExamples(examples, hasHoldout) {
-  return hasHoldout ? [] : examples;
+/** Signature of a descriptor vector (3 decimals): identical traces give identical signatures. */
+export const descriptorSig = (x) => x.map((v) => (+v).toFixed(3)).join(',');
+/**
+ * External examples (library, other projects) that may come from a reserved core are left out of training and model
+ * selection: same core id in any project (copies keep the id), same core name, or a descriptor vector identical to a
+ * reserved trace (catches copies whose origin is unknown). reserved = {ids, names (lower case), sigs} or null.
+ */
+export function independentExternalExamples(examples, reserved, xOf = (e) => e.x) {
+  if (!reserved || !(reserved.ids.size + reserved.names.size + reserved.sigs.size)) return examples;
+  return examples.filter((e) => {
+    const parts = String(e.key || '').split('|');
+    if (parts.length >= 3 && reserved.ids.has(parts[1])) return false;
+    const name = String(e.core ?? String(e.from ?? e.where ?? '').split(' · ').pop()).trim().toLowerCase();
+    if (name && reserved.names.has(name)) return false;
+    const x = xOf(e);
+    return !(Array.isArray(x) && reserved.sigs.has(descriptorSig(x)));
+  });
 }
 
 export class Classifier {

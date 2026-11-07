@@ -135,7 +135,13 @@ export function binRows(counts, { top, bottom, binPx, minValid = 0 }) {
  * (depth/prof…, age/edad/median/mean, min/lower, max/upper); without a header the 3rd and 4th columns are an age
  * range only if every row has min ≤ age ≤ max. m.bacon flags a pasted Bacon table (depth, min, max, median, mean).
  */
-export function parseAgeModel(text) {
+export function parseAgeModel(text) { return parseAgeModelDetailed(text).model; }
+/**
+ * Same as parseAgeModel, also returning why a text was rejected: {model, issue}. issue = {kind: 'dupDepth', depth}
+ * when one depth has two different ages (repeated identical rows are merged). A hiatus must be written as two
+ * depths a small distance apart.
+ */
+export function parseAgeModelDetailed(text) {
   const lines = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
   const split = (l) => (/[;\t]/.test(l) ? l.split(/\s*[;\t]\s*/).map((x) => x.replace(/\s+/g, '').replace(',', '.')) : l.includes(',') ? l.split(/\s*,\s*/) : l.split(/\s+/));
   let iD = 0, iA = 1, iMin = 2, iMax = 3, named = false, bacon = false;
@@ -153,18 +159,24 @@ export function parseAgeModel(text) {
     const p = split(line).map((v) => v === '' ? NaN : Number(v));
     if (Number.isFinite(p[iD]) && Number.isFinite(p[iA])) pts.push([p[iD], p[iA], iMin >= 0 ? p[iMin] : NaN, iMax >= 0 ? p[iMax] : NaN]);
   }
-  pts.sort((a, b) => a[0] - b[0]);
-  if (pts.length < 2) return null;
-  if (pts.some((p, i) => i && p[0] === pts[i - 1][0])) return null;
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const same = (p, q) => p.every((v, k) => v === q[k] || (Number.isNaN(v) && Number.isNaN(q[k])));
+  for (let i = pts.length - 1; i > 0; i--) if (pts[i][0] === pts[i - 1][0]) {
+    if (same(pts[i], pts[i - 1])) pts.splice(i, 1);
+    else return { model: null, issue: { kind: 'dupDepth', depth: pts[i][0] } };
+  }
+  if (pts.length < 2) return { model: null, issue: null };
   const m = { depth: pts.map((p) => p[0]), age: pts.map((p) => p[1]) };
   // V0.28: age range (e.g. the 95 % interval of a Bacon model), only if every row has one that contains the age
   const lo = (p) => Math.min(p[2], p[3]), hi = (p) => Math.max(p[2], p[3]);
-  if (named && iMin >= 0 && iMax >= 0 && pts.some((p) => !Number.isFinite(p[2]) || !Number.isFinite(p[3]) || p[1] < lo(p) || p[1] > hi(p))) return null;
-  if (pts.every((p) => Number.isFinite(p[2]) && Number.isFinite(p[3]) && (named || (lo(p) <= p[1] && p[1] <= hi(p))))) { m.min = pts.map(lo); m.max = pts.map(hi); }
+  // a named range column with blank or inconsistent cells is ignored (the model is kept without range) and reported
+  const badRange = pts.filter((p) => !Number.isFinite(p[2]) || !Number.isFinite(p[3]) || p[1] < lo(p) || p[1] > hi(p)).length;
+  if (!badRange) { m.min = pts.map(lo); m.max = pts.map(hi); }
+  else if (named && iMin >= 0 && iMax >= 0) m.rangeIgnored = badRange;
   if (bacon) m.bacon = true;
   // reversals (age decreasing downwards) make depth↔age conversion ambiguous: flagged for the interface
   m.reversals = m.age.reduce((k, a, i) => k + (i && a < m.age[i - 1] ? 1 : 0), 0);
-  return m;
+  return { model: m, issue: null };
 }
 
 /** Linear interpolation; null outside the model (no extrapolation). */

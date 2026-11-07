@@ -1927,7 +1927,7 @@ Object.assign(D.en, {
 });
 // V0.49: final test on reserved cores
 Object.assign(D.es, {
-  'ft.title': 'Prueba final con sondeos reservados', 'ft.intro': 'Los sondeos marcados no entrenan ni intervienen al elegir modelos. Mientras haya sondeos reservados, se excluyen todos los ejemplos de biblioteca y de otros proyectos porque su independencia no está garantizada. La prueba final debe usarse una sola vez.',
+  'ft.title': 'Prueba final con sondeos reservados', 'ft.intro': 'Los sondeos marcados no entrenan ni intervienen al elegir modelos. Mientras haya sondeos reservados, se excluyen los ejemplos de biblioteca y de otros proyectos que puedan proceder de ellos: mismo sondeo (identificador o nombre) o descriptores idénticos a una traza reservada. La prueba final debe usarse una sola vez.',
   'ft.run': 'Hacer la prueba final', 'ft.ichnoHint': 'Predice con el modelo en uso las trazas identificadas de los sondeos reservados.',
   'ft.confirm': 'La prueba final solo es independiente si no cambias el modelo después de ver su resultado. Cada repetición queda registrada. ¿Hacerla ahora?',
   'ft.none': 'Todavía no hay pruebas finales.', 'ft.when': 'Fecha', 'ft.what': 'Modelo y sondeos reservados',
@@ -1936,7 +1936,7 @@ Object.assign(D.es, {
   'ft.reserved': '«{c}» reservado para la prueba final: ya no entrena ni interviene al elegir el modelo.', 'ft.released': '«{c}» vuelve a usarse para entrenar.',
 });
 Object.assign(D.en, {
-  'ft.title': 'Final test on reserved cores', 'ft.intro': 'Marked cores do not train or select models. While cores are reserved, all library and other-project examples are excluded because their independence cannot be guaranteed. Use the final test only once.',
+  'ft.title': 'Final test on reserved cores', 'ft.intro': 'Marked cores do not train or select models. While cores are reserved, library and other-project examples that may come from them are excluded: same core (identifier or name) or descriptors identical to a reserved trace. Use the final test only once.',
   'ft.run': 'Run the final test', 'ft.ichnoHint': 'Predicts the identified traces of the reserved cores with the model in use.',
   'ft.confirm': 'The final test is independent only if you do not change the model after seeing its result. Every repetition is logged. Run it now?',
   'ft.none': 'No final tests yet.', 'ft.when': 'Date', 'ft.what': 'Model and reserved cores',
@@ -1986,4 +1986,15 @@ Object.assign(D.en, {
   'close.failTitle': 'The latest changes could not be saved', 'close.failText': 'Closing now will lose them. You can retry, export the project to a .sedcoretool file, or close without saving.',
   'close.noStorage': 'The program storage is not available.', 'close.retry': 'Retry', 'close.export': 'Export project',
   'close.discard': 'Close without saving', 'close.exported': 'Project exported. You can now close without saving.', 'close.exportFail': 'The project could not be exported.',
+});
+// V0.58: final test exclusions and age model checks
+Object.assign(D.es, {
+  'ft.dropped': '{n} ejemplos externos excluidos por poder proceder de un sondeo reservado.',
+  'age.dupDepth': '⚠ La profundidad {d} tiene dos edades distintas. Para un hiato, escribe dos profundidades separadas por una distancia pequeña.',
+  'age.rangeIgnored': '⚠ Rango de edad ignorado: {n} filas tienen el mínimo o el máximo vacío o no contienen la edad.',
+});
+Object.assign(D.en, {
+  'ft.dropped': '{n} external examples excluded because they may come from a reserved core.',
+  'age.dupDepth': '⚠ Depth {d} has two different ages. For a hiatus, write two depths a small distance apart.',
+  'age.rangeIgnored': '⚠ Age range ignored: {n} rows have a blank minimum or maximum or do not contain the age.',
 });

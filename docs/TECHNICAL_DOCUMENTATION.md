@@ -350,9 +350,12 @@ describing the ichnofabric. This is why the program also stores the manual index
 
 ## 5. Age model
 
-Empty depth or age cells are ignored rather than converted to zero. Duplicate depths invalidate the model; named
-minimum and maximum columns must contain the central age. The Python API requires at least two finite pairs and
-unique depths. Age reversals remain flagged by the program rather than silently corrected.
+Empty depth or age cells are ignored rather than converted to zero. Repeated identical rows are merged; a depth with
+two different ages invalidates the model and the program names that depth (a hiatus is written as two depths a small
+distance apart, so that depth → age stays a function). The age range (minimum and maximum columns) is used only if
+every row has both values and they contain the central age; otherwise the model is kept without range and the number
+of offending rows is reported. The Python API (`depth_to_age`) applies the same rules and requires at least two
+finite pairs. Age reversals remain flagged by the program rather than silently corrected.
 
 Implementation: `depth.py::depth_to_age` (Python) and `core.js::parseAgeModel, interpAge, interpAgeRange,
 baconToAgeText` (program).
@@ -1347,8 +1350,11 @@ otherwise of the labels.
 Choosing a model by looking at its cross-validation makes that cross-validation optimistic. For an unbiased estimate,
 cores can be **reserved** for a final test (`core.holdout`, stored in the project):
 
-- **Ichnotaxa:** traces of reserved cores never enter any set of examples. While any core is reserved, all library
-  and other-project examples are excluded because copies or older imported models may lack reliable source identity.
+- **Ichnotaxa:** traces of reserved cores never enter any set of examples. While any core is reserved, a library or
+  other-project example is excluded if it may come from a reserved core: its key has the identifier of a reserved core
+  (copies of a project keep core identifiers), its source core has the same name (case-insensitive), or its descriptor
+  vector, rounded to 3 decimals, equals that of a trace of a reserved core (catches copies of unknown origin, such as
+  older imported models). The number of excluded examples is shown with the reserved cores.
   Exported new model examples retain their source keys; old models remain importable.
 - **Multiproxy:** reserved samples are excluded from fitting, including k-means. Global scaling and missing-value
   imputation are fitted on training samples and reused for prediction; cross-validation fits them per fold. Per-core

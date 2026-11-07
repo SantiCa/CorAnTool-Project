@@ -1,5 +1,5 @@
 // SedCoreTool web (antes CorAnTool e IchAnTool) — application (UI, state, tools, rendering, files).
-import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
+import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, topAt, hasId, stackIndex, codeFor, withId, withoutId, renameId, compactStacks, rowCounts, binRows, parseAgeModel, parseAgeModelDetailed, interpAge, toCSV, rleEncode, rleDecode } from './core.js';
 import { withProvenance, ageModelText, bioturbationTable, objectsTable, recordSeries } from './exportio.js';
 import { LOCMAP_DEFAULTS, lmUtmZone, lmFitBBox, lmZoom, buildLocMapSVG } from './locmap.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
@@ -8,7 +8,7 @@ import { storageAvailable, listProjects, getProject, putProject, putMeta, delete
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
 import { evalColumn, evalCells, cellName, FUNCTIONS, parseFormula, formulaRefs, fillLinear } from './sheet.js';
-import { Classifier, TaxonModel, evaluateModels, finalTestMetrics, independentExternalExamples, vec, FEATURES } from './learn.js';
+import { Classifier, TaxonModel, evaluateModels, finalTestMetrics, independentExternalExamples, descriptorSig, vec, FEATURES } from './learn.js';
 import { splitPieces, mergeKeeper, sameTaxonGroups, undoPixels, upgradeProject } from './edit.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
@@ -22,7 +22,7 @@ const APP = 'SedCoreTool', APP_NAMES = ['SedCoreTool', 'CorAnTool', 'IchAnTool']
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.57';
+const DELIVERY = 'V0.58';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -92,7 +92,7 @@ const mlOpt = () => { const m = { ...ML_DEFAULT, ...(S.settings.ml || {}) };
     rf: { trees: m.trees, maxDepth: m.maxDepth, minLeaf: m.minLeaf, balanced: m.balanced }, nb: { priors: m.priors } }; };
 const mkModel = () => new TaxonModel(mlOpt());
 const clfs = { core: new TaxonModel(), project: new TaxonModel(), all: new TaxonModel() };
-let clf = clfs.project, otherExamples = [], mlExcluded = new Set(), mlEval = null;
+let clf = clfs.project, otherExamples = [], mlReservedDropped = 0, mlExcluded = new Set(), mlEval = null;
 getPref('ml.excluded').then((v) => { mlExcluded = new Set(v || []); }).catch(() => {});
 const sec = () => S.sections[S.cur];
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -870,13 +870,19 @@ function mlSets() {
   const grp = (k) => String(k).split('|').slice(0, 3).join('|');
   // V0.49: traces of reserved cores (final test) never train nor enter model selection, wherever they come from
   const held = new Set(S.cores.filter((c) => c.holdout).map((c) => `${S.id}|${c.id}|`)), notHeld = (e) => ![...held].some((h) => String(e.key || '').startsWith(h));
-  const lib = independentExternalExamples(S.library, held.size > 0).filter((e) => e.name && Array.isArray(xOfLib(e)) && notHeld(e)).map((e, i) => ({ key: e.key || `lib|${i}`, g: grp(e.key || `lib|${i}`), y: e.name, x: xOfLib(e), lib: e }));
+  // V0.58: external examples that may come from a reserved core (same core id or name, or identical descriptors) are left out
+  const heldCores = S.cores.filter((c) => c.holdout);
+  const reserved = heldCores.length ? { ids: new Set(heldCores.map((c) => c.id)), names: new Set(heldCores.map((c) => String(c.name || '').trim().toLowerCase()).filter(Boolean)),
+    sigs: new Set(ownExamples(heldCores, true, true).map((e) => descriptorSig(e.x))) } : null;
+  const libFree = independentExternalExamples(S.library, reserved, xOfLib), otherFree = independentExternalExamples(otherExamples, reserved, xOfLib);
+  mlReservedDropped = S.library.length - libFree.length + otherExamples.length - otherFree.length;
+  const lib = libFree.filter((e) => e.name && Array.isArray(xOfLib(e)) && notHeld(e)).map((e, i) => ({ key: e.key || `lib|${i}`, g: grp(e.key || `lib|${i}`), y: e.name, x: xOfLib(e), lib: e }));
   const cur = S.cores.find((c) => c.id === S.curCore), exCore = ownExamples(cur ? [cur] : []), exProj = ownExamples(S.cores);
   const keys = new Set([...exProj, ...lib].map((e) => e.key));
   // the same trace can exist in two projects (shared core, duplicated or imported project): identical descriptors are
   // used once, otherwise it would count twice and could be both trained on and tested in the evaluation
   const sig = (e) => e.x.map((v) => (+v).toFixed(3)).join(','), seen = new Set(exProj.concat(lib).map(sig));
-  const other = independentExternalExamples(otherExamples, held.size > 0).map((e) => ({ ...e, x: xOfLib(e) })).filter((e) => Array.isArray(e.x) && !mlExcluded.has(e.key) && !keys.has(e.key) && notHeld(e)).filter((e) => { const k = sig(e); if (seen.has(k)) return false; seen.add(k); return true; }).map((e) => ({ ...e, g: grp(e.key) }));
+  const other = otherFree.map((e) => ({ ...e, x: xOfLib(e) })).filter((e) => Array.isArray(e.x) && !mlExcluded.has(e.key) && !keys.has(e.key) && notHeld(e)).filter((e) => { const k = sig(e); if (seen.has(k)) return false; seen.add(k); return true; }).map((e) => ({ ...e, g: grp(e.key) }));
   // V0.17: only vectors of the current feature set and length
   const D = exProj[0]?.x.length ?? lib[0]?.x.length ?? other[0]?.x.length, ok = (e) => e.x.length === D;
   return { core: exCore.concat(lib).filter(ok), project: exProj.concat(lib).filter(ok), all: exProj.concat(lib, other).filter(ok) };
@@ -923,7 +929,8 @@ function finalTestsHTML(kind) {
   return `<table class="tbl"><tr><th>${t('ft.when')}</th><th>${t('ft.what')}</th><th>${t('geo.bacc')}</th><th>${t('geo.acc')}</th><th>n</th></tr>${list.map((q) => `<tr><td>${esc(q.at.slice(0, 16).replace('T', ' '))}${q.repeat ? ` <span class="warn" title="${esc(t('ft.repeatTip'))}">(${q.repeat + 1}.ª)</span>` : ''}</td><td>${esc(q.target)} · ${esc(q.method)}${q.scope ? ' · ' + esc(q.scope) : ''}${q.classifier ? ' · ' + esc(q.classifier) : ''}<br><span class="note">${esc(q.cores.join(', '))}</span></td><td><b>${fmt(q.balanced * 100, 1)} %</b></td><td>${fmt(q.accuracy * 100, 1)} %</td><td>${q.n}</td></tr>`).join('')}</table>`;
 }
 function holdoutHTML() {
-  return `<div class="chk2">${S.cores.map((c) => `<label class="chk"><input type="checkbox" data-holdout="${esc(c.id)}" ${c.holdout ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>`;
+  if (S.cores.some((c) => c.holdout)) mlSets();   // updates the count of external examples left out
+  return `${mlReservedDropped ? `<p class="note">${t('ft.dropped', { n: mlReservedDropped })}</p>` : ''}<div class="chk2">${S.cores.map((c) => `<label class="chk"><input type="checkbox" data-holdout="${esc(c.id)}" ${c.holdout ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>`;
 }
 document.addEventListener('change', (e) => {
   const id = e.target?.dataset?.holdout; if (id == null) return;
@@ -972,7 +979,7 @@ function learnNow() {
 async function refreshOtherExamples() {
   if (!storageOK) return;
   const lites = await listLite().catch(() => []);
-  otherExamples = lites.filter((l) => l.id !== S.id && l.kind !== 'multi').flatMap((l) => (l.examples || []).map((e, i) => ({ key: e.key || `${l.id}|${i}`, y: e.name, x: e.x, xv: e.xv, thumb: e.thumb || null, where: `${l.name} · ${e.core || ''}`, project: l.id })));
+  otherExamples = lites.filter((l) => l.id !== S.id && l.kind !== 'multi').flatMap((l) => (l.examples || []).map((e, i) => ({ key: e.key || `${l.id}|${i}`, y: e.name, x: e.x, xv: e.xv, thumb: e.thumb || null, where: `${l.name} · ${e.core || ''}`, core: e.core || '', project: l.id })));
   scheduleLearn();
 }
 let allModelTimer = 0;
@@ -2335,10 +2342,12 @@ for (const [id, dir] of [['rotL', -1], ['rotR', 1]]) $(id).addEventListener('cli
 });
 
 function setAge() {
-  S.age.text = $('ageText').value; S.age.units = $('ageUnits').value; S.age.model = parseAgeModel(S.age.text);
+  S.age.text = $('ageText').value; S.age.units = $('ageUnits').value;
+  const parsed = parseAgeModelDetailed(S.age.text); S.age.model = parsed.model;
   const m = S.age.model;
-  $('ageStatus').textContent = m ? t('age.ok', { n: m.depth.length, a: fmt(Math.min(...m.age), 3), b: fmt(Math.max(...m.age), 3), u: S.age.units }) + (m.reversals ? ' ' + t('age.reversal', { n: m.reversals }) : '') + (m.bacon ? ' ' + t('age.baconPasted') : '') : t('age.none');
-  $('ageStatus').classList.toggle('warn', !!(m?.reversals || m?.bacon));
+  $('ageStatus').textContent = m ? t('age.ok', { n: m.depth.length, a: fmt(Math.min(...m.age), 3), b: fmt(Math.max(...m.age), 3), u: S.age.units }) + (m.reversals ? ' ' + t('age.reversal', { n: m.reversals }) : '') + (m.bacon ? ' ' + t('age.baconPasted') : '') + (m.rangeIgnored ? ' ' + t('age.rangeIgnored', { n: m.rangeIgnored }) : '')
+    : parsed.issue?.kind === 'dupDepth' ? t('age.dupDepth', { d: fmt(parsed.issue.depth, 4) }) : t('age.none');
+  $('ageStatus').classList.toggle('warn', !!(m?.reversals || m?.bacon || m?.rangeIgnored || parsed.issue));
   const c = curCore(); if (c) c.ageText = S.age.text;
   scheduleAnalysis(); markDirty(); scheduleLog(); if (geoRT) geoRT.dirty = true;
   $('logAxis').querySelector('[value=age]').disabled = !m;
@@ -5704,7 +5713,7 @@ $('mlBody').addEventListener('click', (e) => {
   if (el.id === 'mlPickNone') { mlPicked.clear(); renderMl(); return; }
   if (el.id === 'mlAddLib') {
     const have = new Set(S.library.map((q) => q.key));
-    for (const q of otherExamples) if (mlPicked.has(q.key) && !have.has(q.key)) S.library.push({ key: q.key, name: q.y, x: q.x, xv: q.xv, thumb: q.thumb, from: q.where });
+    for (const q of otherExamples) if (mlPicked.has(q.key) && !have.has(q.key)) S.library.push({ key: q.key, name: q.y, x: q.x, xv: q.xv, thumb: q.thumb, from: q.where, core: q.core });
     if (!S.classes.length) return;
     for (const q of S.library) if (!S.classes.some((c) => c.name === q.name)) S.classes.splice(S.classes.length - 1, 0, { id: 'c' + uid(), name: q.name, color: GROUP_COLORS[S.classes.length % GROUP_COLORS.length], counts: true });
     toast(t('ml.added', { n: mlPicked.size })); mlPicked.clear(); markDirty(); renderClasses(); learnNow(); return;

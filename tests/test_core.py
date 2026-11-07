@@ -56,8 +56,10 @@ def test_depth_and_age():
     assert age[1] == 50 and np.isnan(age[2])
     with pytest.raises(ValueError):
         pixel_depths(4, 5, 5)
-    with pytest.raises(ValueError, match="unique"):
-        depth_to_age([0], [0, 0], [0, 10])
+    with pytest.raises(ValueError, match="two different ages"):
+        depth_to_age([0], [0, 0, 5], [0, 10, 20])
+    # identical repeated rows are merged
+    assert depth_to_age([5], [0, 0, 10], [0, 0, 100])[0] == pytest.approx(50)
     with pytest.raises(ValueError, match="finite"):
         depth_to_age([0], [0, 1], [0, np.nan])
 

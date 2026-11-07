@@ -1,10 +1,17 @@
 import test from 'node:test';
-import { independentExternalExamples } from '../../app/js/learn.js';
+import { independentExternalExamples, descriptorSig } from '../../app/js/learn.js';
 
-test('reserved cores disable external examples with unknown or copied origins', () => {
-  const external = [{ key: 'other|copied|section|1' }, { x: [1, 2] }];
-  assert.equal(independentExternalExamples(external, false).length, 2);
-  assert.equal(independentExternalExamples(external, true).length, 0);
+test('reserved cores exclude only external examples that may come from them', () => {
+  const reserved = { ids: new Set(['c1']), names: new Set(['gc-07']), sigs: new Set([descriptorSig([0.1234, 2])]) };
+  const external = [
+    { key: 'p2|c1|s|1', x: [9, 9] },                 // copy of the reserved core in another project (same id)
+    { key: 'p2|c9|s|1', core: 'GC-07', x: [8, 8] },  // same core name
+    { from: 'old model', x: [0.12341, 2] },          // identical descriptors, unknown origin
+    { key: 'p2|c9|s|2', core: 'GC-12', x: [1, 2] },  // independent
+    { from: 'Project B · GC-12', x: [3, 4] },        // independent
+  ];
+  assert.equal(independentExternalExamples(external, null).length, 5);
+  assert.deepEqual(independentExternalExamples(external, reserved).map((e) => e.x), [[1, 2], [3, 4]]);
 });
 import assert from 'node:assert/strict';
 import { Classifier, FEATURES } from '../../app/js/learn.js';

@@ -23,10 +23,15 @@ def depth_to_age(depth: np.ndarray, model_depth: np.ndarray, model_age: np.ndarr
     ma = np.asarray(model_age, dtype=float)
     if md.ndim != 1 or ma.ndim != 1 or len(md) < 2 or len(md) != len(ma) or not np.isfinite(md).all() or not np.isfinite(ma).all():
         raise ValueError("age model requires at least two finite depth-age pairs")
-    order = np.argsort(md)
+    order = np.lexsort((ma, md))
     md, ma = md[order], ma[order]
+    keep = np.ones(len(md), dtype=bool)
+    keep[1:] = (np.diff(md) != 0) | (np.diff(ma) != 0)  # identical repeated rows are merged
+    md, ma = md[keep], ma[keep]
     if np.any(np.diff(md) == 0):
-        raise ValueError("age model depths must be unique")
+        raise ValueError("one depth has two different ages; write a hiatus as two depths a small distance apart")
+    if len(md) < 2:
+        raise ValueError("age model requires at least two finite depth-age pairs")
     d = np.asarray(depth, dtype=float)
     age = np.interp(d, md, ma)
     if extrapolate:

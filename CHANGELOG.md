@@ -10,6 +10,12 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.58 — 2026-11-07
+- Reserving cores for the final test now excludes only the library and other-project examples that may come from
+  them (same core identifier or name, or identical trace descriptors), and shows how many were excluded.
+- Age models: repeated identical rows are merged; a depth with two different ages is reported by depth; an
+  incomplete age range is ignored with a warning instead of rejecting the whole model.
+
 ## V0.57 — 2026-11-07
 - When the desktop program cannot save on closing, a dialog offers to retry, export the project or close without
   saving, instead of silently refusing to close.
