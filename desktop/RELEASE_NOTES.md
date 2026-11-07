@@ -1,4 +1,4 @@
-## SedCoreTool V0.54
+## SedCoreTool V0.61
 
 SedCoreTool quantifies bioturbation and ichnotaxa in sediment-core images and combines them with other down-core
 records and described intervals. Version 0.x, in active development. The downloads contain no sample data: the
@@ -7,10 +7,12 @@ program starts empty and you open your own images and tables.
 ### Highlights
 - New name: **SedCoreTool** (formerly CorAnTool and IchAnTool). Projects saved with earlier versions and `.corantool`
   packages still open.
-- Projects saved section by section, robust table import, accessibility and performance improvements.
-- Core location map figure (WGS 84, Web Mercator, UTM) with grid, scale bar, north arrow and optional Esri backgrounds.
-- Ichnotaxa distribution as symmetric curves; horizontal orientation for figures.
-- Final test on cores reserved from training.
+- Editable colours in every figure, including the multiproxy and location maps; invalid stored colours fall back to
+  the defaults.
+- Final test on reserved cores excludes only the training examples that may come from them.
+- Age models tolerate repeated rows and incomplete ranges.
+- If saving fails on closing, the program asks whether to retry, export the project or close without saving.
+- Python package: exclusion layer, batch analysis of many sections and cores from a CSV manifest, LAS 2.0 export.
 
 The full list of changes is in [CHANGELOG.md](https://github.com/SantiCa/SedCoreTool/blob/master/CHANGELOG.md).
 
@@ -18,10 +20,10 @@ The full list of changes is in [CHANGELOG.md](https://github.com/SantiCa/SedCore
 
 | System | File |
 |---|---|
-| Windows 10/11, x64 | `SedCoreTool-V0.54-windows-setup.exe` or `SedCoreTool-V0.54-windows-portable.exe` |
-| macOS 13 or later, Intel and Apple Silicon | `SedCoreTool-V0.54-mac-universal.dmg` |
-| Linux, x64 | `SedCoreTool-V0.54-linux-x86_64.AppImage` or `SedCoreTool-V0.54-linux-amd64.deb` |
-| Any system, in a browser | `SedCoreTool_V0.54.html` (single file, works offline) |
+| Windows 10/11, x64 | `SedCoreTool-V0.61-windows-setup.exe` or `SedCoreTool-V0.61-windows-portable.exe` |
+| macOS 13 or later, Intel and Apple Silicon | `SedCoreTool-V0.61-mac-universal.dmg` |
+| Linux, x64 | `SedCoreTool-V0.61-linux-x86_64.AppImage` or `SedCoreTool-V0.61-linux-amd64.deb` |
+| Any system, in a browser | `SedCoreTool_V0.61.html` (single file, works offline) |
 | Verification | `SHA256SUMS.txt` and `RELEASE_MANIFEST.json` |
 
 Windows: run the installer or open the portable version. macOS: drag the application to Applications. Linux: make

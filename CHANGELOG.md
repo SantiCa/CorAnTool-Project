@@ -10,6 +10,10 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.61 — 2026-11-07
+- Release notes brought up to date; `tools/sync_version.py` now also writes the version into
+  `desktop/RELEASE_NOTES.md` and `--check` fails if it differs, so a release can no longer carry old file names.
+
 ## V0.60 — 2026-11-07
 - Python package: exclusion layer (`exclude=` in `analyze_mask`, `--exclude` image or `--exclude-value` on the command
   line); intervals with too few valid pixels have no data (`min_valid`, 20 % as in the program). Percentages are now

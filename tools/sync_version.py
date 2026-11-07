@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """V0.40: single version source. Reads DELIVERY from app/js/app.js (V0.<n>) and writes version 0.<n>.0 to
-pyproject.toml, src/sedcoretool/__init__.py, CITATION.cff and desktop/package.json. `--check` only reports mismatches
+pyproject.toml, src/sedcoretool/__init__.py, CITATION.cff, desktop/package.json and the V0.<n> names in
+desktop/RELEASE_NOTES.md (V0.61). `--check` only reports mismatches
 (exit 1), as the test suite does. Run after changing DELIVERY."""
 import json
 import re
@@ -53,6 +54,15 @@ def main(check: bool) -> int:
                 L["version"] = v
                 root.update({"version": v, "license": "GPL-3.0-or-later"})
                 lk.write_text(json.dumps(L, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    notes = ROOT / "desktop/RELEASE_NOTES.md"
+    if notes.exists():
+        tag = "V" + ".".join(v.split(".")[:2])
+        txt = notes.read_text(encoding="utf-8")
+        out = re.sub(r"V0\.\d+", tag, txt)
+        if out != txt:
+            bad.append("desktop/RELEASE_NOTES.md")
+            if not check:
+                notes.write_text(out, encoding="utf-8")
     if check and bad:
         print(f"version {v} not set in: {', '.join(bad)} (run tools/sync_version.py)")
         return 1
