@@ -10,6 +10,10 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.71 — 2026-11-07
+- No visible change: the save indicator keeps its internal state "saved" (used by the end-to-end test); the warning
+  colour for "no folder backup" is a separate attribute.
+
 ## V0.70 — 2026-11-07
 - Figures: the hatched or solid fill of intervals without data was blank in the preview of "Core column (current window)"
   (and of the multiproxy log) when that view had been opened before, because both copies of the drawing shared the same
