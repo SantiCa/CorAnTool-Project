@@ -13,7 +13,7 @@ también se aplican a Codex. No mantener una segunda copia de esas reglas.
 | Trabajo | Punto de entrada |
 |---|---|
 | Código y pruebas | `app/js/`, `src/sedcoretool/`, `tests/`, `package.json`, `pyproject.toml` |
-| Revisión científica | Función concreta y su sección en `docs/DOCUMENTACION_TECNICA.md`; regresión v2.1 |
+| Revisión científica | Función concreta y su sección en `docs/TECHNICAL_DOCUMENTATION.md`; regresión v2.1 |
 | Documentación y publicaciones | Documento solicitado; `publications/METODOS_Y_DEFENSA.md` si afecta a afirmaciones científicas |
 | Integración | Diff de la entrega, tabla y secciones recientes de `docs/HISTORIAL_VERSIONES.md`, `CLAUDE.md` |
 

@@ -1,7 +1,7 @@
 # Guía: qué hace el aprendizaje automático en SedCoreTool (V0.17)
 
 Explicación en lenguaje sencillo, para el autor y para quien lea los artículos. Los detalles con fórmulas
-están en `docs/DOCUMENTACION_TECNICA.md` (§7.5, §10 y §10.6 quater). Qué se puede afirmar en cada artículo
+están en `docs/TECHNICAL_DOCUMENTATION.md` (§9, §12 y §12.6). Qué se puede afirmar en cada artículo
 está en `METODOS_Y_DEFENSA.md`.
 
 ## 1. Las dos preguntas que responde el programa

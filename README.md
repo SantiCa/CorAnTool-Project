@@ -120,82 +120,121 @@ their buttons appear when the app is run from a copy of the repository.
 
 ---
 
-## Web version and single offline file
+## The program and the Python package: which one do I need?
 
-The same program runs in a browser: serve the repository with any static server (`python -m http.server`, then open
-`/app/`), or build one HTML file that opens by double-click and works offline with
-`python tools/build_standalone.py` (→ `dist/SedCoreTool_V<n>.html`).
+SedCoreTool has two parts that compute bioturbation in exactly the same way:
 
-## Python package
+| | **The program** | **The Python package `sedcoretool`** |
+|---|---|---|
+| What it is | An application with windows: images, tools, column, multiproxy, figures | A library and a command-line tool, without windows |
+| What it starts from | Your core photographs | A **mask**: an image where bioturbation is already marked (painted black, colour-coded per ichnotaxon, exported from the program, or predicted by a U-Net) |
+| What it does | Everything described above: enhance, detect, draw, exclude, identify ichnotaxa, column, records, multiproxy, maps, figures, projects | Turns masks into depth/age series of bioturbation %, % per ichnotaxon, BI and ii; trains and evaluates U-Net models |
+| Who it is for | Anyone analysing cores | People who write scripts or process many images at once |
+| How to get it | Installers on the Releases page, the offline HTML file, or a copy of the repository in a browser | `pip install` (below) |
+
+Most users only need **the program**. The Python package is for batch processing and for training U-Net models (the
+desktop program uses it behind the scenes when you train a model on your computer).
+
+### The program without installing it
+
+The program is a web application, so the same code also runs in a browser, with all data kept on your computer:
+
+- **Offline single file:** download `SedCoreTool_V0.<n>.html` from Releases and open it with a double click
+  (Chrome, Edge or Firefox). No server, no internet needed. You can also build it yourself with
+  `python tools/build_standalone.py` (→ `dist/SedCoreTool_V0.<n>.html`).
+- **From a copy of the repository:** run `python -m http.server` in the repository folder and open
+  `http://localhost:8000/app/`. This also shows the example buttons.
+
+The desktop program adds more memory, a data folder on disk and training of U-Net models on your graphics card.
+
+### The Python package
+
+Install it from GitHub (it is not on PyPI yet; Python ≥ 3.10):
 
 ```bash
+pip install "sedcoretool @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
+# with Excel export and plots:
 pip install "sedcoretool[excel,plot] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
 ```
 
-Command line (image with bioturbation painted black, core top at the top of the image):
+This gives the Python module `sedcoretool` and the command `sedcoretool`. (Code written for the old name `ichantool`
+keeps working, with a warning.)
+
+**Command line.** An image with the bioturbation painted black, whose top and bottom rows are at 0 and 500 cm:
 
 ```bash
 sedcoretool analyze core.png --top 0 --bottom 500 --units cm --bin-px 100 -o core.csv
 ```
 
-Colour-coded ichnotaxa (`palette.json` = `{"Zoophycos": "#ff0000", "Chondrites": "#0000ff"}`):
+A colour-coded image with one colour per ichnotaxon (for example the `*_mask.png` and `*_palette.json` exported by
+the program; `palette.json` = `{"Zoophycos": "#ff0000", "Chondrites": "#0000ff"}`):
 
 ```bash
-sedcoretool analyze core_rgb.png --top 0 --bottom 500 --palette palette.json -o core.xlsx
+sedcoretool analyze core_mask.png --top 0 --bottom 500 --palette palette.json -o core.xlsx
 ```
 
-Python:
+**In Python:**
 
 ```python
-from sedcoretool import analyze_image
+from sedcoretool import analyze_image, analyze_mask, load_image, mask_from_palette
 from sedcoretool.plotting import plot_section
 
-section = analyze_image("core.png", top=0, bottom=500, bin_cm=1)   # 1 cm intervals (or bin_px=…)
+# painted image (bioturbation in black), 1 cm intervals
+section = analyze_image("core.png", top=0, bottom=500, bin_cm=1)
+
+# or a colour-coded mask exported by the program
+mask, names = mask_from_palette(load_image("core_mask.png", "RGB"), {"Zoophycos": "#ff0000", "Chondrites": "#0000ff"})
+section = analyze_mask(mask, top=0, bottom=500, bin_cm=1, class_names=names)
+
 section.add_age(model_depth=[0, 500], model_age=[0, 40_000])       # optional age model
-section.data.to_csv("core.csv", index=False)
+section.data.to_csv("core.csv", index=False)                       # depth, bioturbation_pct, <class>_pct, BI, ii, age
 plot_section(section)
 ```
 
-Prefer lossless formats (PNG/TIFF) for masks: JPEG compression alters the pixel values that the analysis counts.
+The package has no image tools and no exclusion layer: every pixel of the mask counts. Prefer lossless formats
+(PNG/TIFF) for masks, because JPEG compression alters the pixel values that are counted. All functions and options are
+described in the [technical documentation](docs/TECHNICAL_DOCUMENTATION.md#25-the-sedcoretool-python-package).
 
 ### Learned segmentation (U-Net, experimental)
 
-Train a U-Net on the traces you reviewed in the app, then use it as a detection method in the app
-(*Detection → U-Net*, load `model.onnx` and `model.json`). No model trained on real cores is published yet.
+A U-Net learns to find traces from the ones you reviewed in the program; the trained model is then used as a
+detection method (*Detection → U-Net*, load `model.onnx` and `model.json`). No model trained on real cores is
+published yet.
 
-In the **desktop program** you can train without the command line: *Detection → U-Net → Train on this
-computer…* (installs a 2–3 GB training module once; uses an NVIDIA or Apple GPU if present; needs Python ≥ 3.10).
-
-For ichnotaxa, *Models and training → What the classifier looks at → Vision model (DINOv2)* replaces the 12
-shape descriptors by the embedding of a pre-trained vision model (88 MB download, cached).
-Plain-language guide (Spanish): [publications/GUIA_APRENDIZAJE_AUTOMATICO.md](publications/GUIA_APRENDIZAJE_AUTOMATICO.md).
+- **In the desktop program** (no command line): *Detection → U-Net → Train on this computer…* installs a 2–3 GB
+  training module once (needs Python ≥ 3.10 on the computer) and uses an NVIDIA or Apple GPU if present.
+- **With the Python package:**
 
 ```bash
 pip install "sedcoretool[unet] @ git+https://github.com/SantiCa/SedCoreTool-Project.git"
-# in the app: Results → U-Net training data (ZIP)
+# in the program: Results → U-Net training data (ZIP)
 sedcoretool unet prepare project_segmentation_dataset.zip data --test CORE_A CORE_B   # tiles, split by core
 sedcoretool unet train data models/unet_v1                                           # GPU recommended
 sedcoretool unet evaluate project_segmentation_dataset.zip models/unet_v1.onnx --dataset data
 ```
+
+For ichnotaxa, *Models and training → What the classifier looks at → Vision model (DINOv2)* replaces the 12 shape descriptors with the features of a
+pre-trained vision model (88 MB download, cached). Plain-language guide (Spanish):
+[publications/GUIA_APRENDIZAJE_AUTOMATICO.md](publications/GUIA_APRENDIZAJE_AUTOMATICO.md).
 
 ## Repository layout
 
 ```
 app/                program (HTML + JavaScript); vendor/ = bundled libraries (UTIF, pako, SheetJS) and fonts (IBM Plex, OFL)
 desktop/            desktop packaging (Electron) for Windows, macOS and Linux
-src/sedcoretool/      Python package
+src/sedcoretool/    Python package (src/ichantool/ = alias for the old name)
 tests/              automated tests (JavaScript and Python, incl. regression against v2.1)
 examples/           public examples: idealised core, IODP U1385I-1H test core, geochemistry demo, training project
 tools/              offline build, tutorial and demo data, export of the documentation
-docs/               technical documentation, version history and roadmap (Spanish)
+docs/               technical documentation (English), version history and roadmap (Spanish)
 publications/       draft papers and candidate journals
 legacy/             original v2.1 code (2019), unchanged
 ```
 
 ## Documentation
 
-- [docs/DOCUMENTACION_TECNICA.md](docs/DOCUMENTACION_TECNICA.md) — every algorithm, formula, default value and
-  validation result (Spanish).
+- [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) — every algorithm, formula, default value and
+  validation result.
 - [docs/HISTORIAL_VERSIONES.md](docs/HISTORIAL_VERSIONES.md) — what changed in each version and why (Spanish).
 - [CHANGELOG.md](CHANGELOG.md) — short English summary of each version.
 - [docs/roadmap.md](docs/roadmap.md) — planned work.

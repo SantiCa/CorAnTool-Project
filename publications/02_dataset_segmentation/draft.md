@@ -9,7 +9,7 @@ Intelligence in Geosciences (method focus). Decide once the dataset size and mod
 descriptors for ichnotaxa in §3.6):** the full workflow is implemented in SedCoreTool and tested on synthetic
 data (export → tiles split by core → training → evaluation on whole images of independent cores →
 use in the app). **No model has been trained on real cores yet; every number below is a placeholder.**
-Methods text describes the code exactly; keep it in sync with `docs/DOCUMENTACION_TECNICA.md` §7.5.
+Methods text describes the code exactly; keep it in sync with `docs/TECHNICAL_DOCUMENTATION.md` §9.
 
 ## Working title
 An open, annotated dataset of sediment-core images and a U-Net baseline for automatic

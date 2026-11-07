@@ -36,7 +36,7 @@ Todo lo marcado `[TODO]` está pendiente; ningún resultado de estos borradores 
 Explicación sencilla del aprendizaje automático (segmentación U-Net, icnotaxones, validación): [GUIA_APRENDIZAJE_AUTOMATICO.md](GUIA_APRENDIZAJE_AUTOMATICO.md).
 Qué algoritmos usa cada artículo, qué se puede afirmar, qué falta validar y respuestas preparadas a revisores:
 [METODOS_Y_DEFENSA.md](METODOS_Y_DEFENSA.md). Detalle técnico con fórmulas:
-[../docs/DOCUMENTACION_TECNICA.md](../docs/DOCUMENTACION_TECNICA.md). Revistas: [journals.md](journals.md).
+[../docs/TECHNICAL_DOCUMENTATION.md](../docs/TECHNICAL_DOCUMENTATION.md). Revistas: [journals.md](journals.md).
 
 ## Descargas
 Versión completa de este dossier (índice, métodos y defensa, borradores y revistas) en

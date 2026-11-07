@@ -41,10 +41,11 @@ esta carpeta, ni siquiera en archivos distintos: historial, changelog y número 
 - Estado: libre.
 - Editor: ninguno.
 - Objetivo: sin tarea de implementación activa.
-- Commit base y archivos: V0.52 sobre 0d56055; cambio de nombre a SedCoreTool (app, escritorio, paquete Python, documentación).
+- Commit base y archivos: V0.53 sobre 89a2cc7; documentación técnica en inglés (docs/TECHNICAL_DOCUMENTATION.md) y README.
 
 ### Último traspaso
 
+- **V0.53, 07-11-2026 (Claude):** documentación técnica reescrita en inglés y renombrada a `docs/TECHNICAL_DOCUMENTATION.md`; README con la diferencia entre programa y paquete Python.
 - **V0.52, 07-11-2026 (Claude):** nuevo nombre SedCoreTool; paquete `sedcoretool` con alias `ichantool`; `.sedcoretool` (se abren `.corantool`); claves de almacenamiento y origen `app://corantool` sin cambios. Pendiente de Santiago: renombrar el repo y crear la etiqueta `v2.1` en `1b9f22a`.
 - **V0.51, 07-11-2026 (Claude):** figuras: curvas simétricas y elección de icnotaxones, orientación horizontal, zonas excluidas en todas.
 - **V0.50, 07-11-2026 (Claude):** descargas sin datos de ejemplo; sin menciones a la tesis ni al artículo de la V2.1 fuera de `publications/`.

@@ -6,7 +6,7 @@ Owner: Santiago Casanova-Arenillas. Communicate in Spanish.
 Every delivery that changes code, algorithms, defaults or files must, in the same commit:
 1. Get the next delivery number **V0.<n>** (see `docs/HISTORIAL_VERSIONES.md`; last: V0.14) and mention it in the reply. Since 05-11-2026 the numbering is V0.<n> (V33 = V0.1); V1 is reserved for when Santiago declares the program fully functional. Below, `V0.<n>` means this number.
 2. Add a `V0.<n>` section to `docs/HISTORIAL_VERSIONES.md` (Qué se hizo / Cambios / Por qué / Comprobación / Pendiente) and a row in its summary table.
-3. Update `docs/DOCUMENTACION_TECNICA.md` if any algorithm, formula, default value, file format or validation result changes. Formulas there must match the code exactly.
+3. Update `docs/TECHNICAL_DOCUMENTATION.md` if any algorithm, formula, default value, file format or validation result changes. Formulas there must match the code exactly. It is written in English for any reader: describe the current behaviour plainly (no version-by-version narration, no notes addressed to reviewers); the history goes in HISTORIAL_VERSIONES.md.
 4. Update `publications/METODOS_Y_DEFENSA.md` if the change affects what a paper can claim.
 5. Add a short English entry to `CHANGELOG.md`.
 6. Set `DELIVERY` in `app/js/app.js` to the new V<n> (shown in the app; used for the offline file name `dist/SedCoreTool_V<n>.html` and the desktop version) and run `python3 tools/sync_version.py` (writes 0.<n>.0 to pyproject, `__init__.py`, CITATION.cff and desktop/package.json; a test checks it).

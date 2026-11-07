@@ -3,7 +3,7 @@
 Requires the optional dependencies (``pip install 'sedcoretool[unet]'``): PyTorch, segmentation-models-pytorch,
 onnx. A consumer GPU (e.g. 8–12 GB) is enough; CPU works for tests and very small sets.
 
-Choices (documented in docs/DOCUMENTACION_TECNICA.md):
+Choices (documented in docs/TECHNICAL_DOCUMENTATION.md):
 * U-Net with a ResNet-34 encoder pre-trained on ImageNet (or random weights with ``encoder_weights=None``);
 * loss = cross-entropy (binary: BCE with logits) + soft Dice, both ignoring pixels labelled 255;
 * augmentation: horizontal and vertical flips and photometric jitter (brightness, contrast, gamma).

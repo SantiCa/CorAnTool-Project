@@ -1,7 +1,7 @@
 # Method
 
 > Short English summary. The authoritative, detailed reference (formulas, defaults, validation,
-> limitations) is [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md).
+> limitations) is [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md).
 
 1. **Image preparation.** The core image is oriented with the top at row 0. Bioturbation
    features are interpreted and selected (manually or semi-automatically, following

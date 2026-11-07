@@ -22,7 +22,7 @@ const APP = 'SedCoreTool', APP_NAMES = ['SedCoreTool', 'CorAnTool', 'IchAnTool']
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.52';
+const DELIVERY = 'V0.53';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -2157,7 +2157,7 @@ $('fPreset').addEventListener('change', (e) => {
 });
 /**
  * Choose the setting (built-in or user) that best separates two grey-level groups in the analysis area
- * (Otsu separability η on a reduced copy of the image). Own procedure; see DOCUMENTACION_TECNICA §6.
+ * (Otsu separability η on a reduced copy of the image). Own procedure; see docs/TECHNICAL_DOCUMENTATION.md §7.3.
  */
 /**
  * V0.28: ranks enhancement settings (presets and their single-channel variants). With traces identified by hand in

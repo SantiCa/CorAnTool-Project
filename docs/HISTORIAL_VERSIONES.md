@@ -86,6 +86,7 @@ La descripción detallada de los algoritmos está en
 | V0.50 | 07-11-2026 | Datos y repositorio | Descargas sin datos de ejemplo (solo la costa de Natural Earth); botones de ejemplo ocultos si faltan sus archivos; sin menciones a la tesis ni al artículo de la V2.1 fuera de `publications/` |
 | V0.51 | 07-11-2026 | Figuras | Distribución de icnotaxones: elegir los mostrados, ancho de columna y abundancia en curvas simétricas; orientación horizontal en todas las figuras; ocultar zonas excluidas en todas las figuras con sondeo |
 | V0.52 | 07-11-2026 | Nombre | El programa pasa a llamarse SedCoreTool (antes CorAnTool); paquete Python `sedcoretool` con alias `ichantool`; extensión `.sedcoretool` (se siguen abriendo `.corantool`); datos guardados conservados; enlace a la versión 2.1 en Zenodo |
+| V0.53 | 07-11-2026 | Documentación | Documentación técnica reescrita en inglés para cualquier lector (`docs/TECHNICAL_DOCUMENTATION.md`), ordenada por programa y paquete Python, sin notas «para el revisor» ni historia por versiones; README: qué es el programa y qué el paquete Python |
 | V0.17 | 05-11-2026 | Aplicación, escritorio y paquete Python | Entrenamiento de la U-Net dentro del programa de escritorio (GPU del equipo, detener y reanudar); rasgos de un modelo de visión preentrenado (DINOv2) para identificar icnotaxones; guía sencilla y publicaciones actualizadas |
 | V0.16 | 05-11-2026 | Publicaciones | Plan de entrenamiento y experimentos de la U-Net en el borrador del artículo 2 |
 | V0.15 | 05-11-2026 | Aplicación y paquete Python | Segmentación U-Net: exportación de datos de entrenamiento, preparación por sondeo, entrenamiento, evaluación y detección en la aplicación con mapa de probabilidad y zonas dudosas |
@@ -676,6 +677,33 @@ ningún error.
 la vez; se planifica aparte).
 
 ---
+
+## V0.53 — Documentación técnica en inglés (07-11-2026)
+
+- **Qué se hizo:** la documentación técnica se reescribe en inglés como documento para cualquier lector y pasa a
+  `docs/TECHNICAL_DOCUMENTATION.md` (antes `DOCUMENTACION_TECNICA.md`). Describe la versión actual: sin notas «Para el
+  revisor» (su contenido se integra en la explicación), sin «desde Vx» y sin referencias a artículos previstos.
+  Se organiza en nueve partes: visión general (qué es el programa y qué el paquete Python, cómo se relacionan, mapa del
+  código, nombres y compatibilidad), definiciones comunes, trabajo con imágenes, columna/datos/multiproxy/mapas,
+  figuras, proyectos y almacenamiento, paquete Python (instalación, API completa, línea de comandos, diferencias con
+  el programa), escritorio y distribución, y validación y límites. Se conservan todas las fórmulas y valores.
+- **Correcciones frente al documento anterior:** nombres del paquete (`sedcoretool`, no `ichantool`), nombre y
+  contenido del archivo sin conexión, versión única en lugar de «paquete 3.0.0.dev0», archivos de la copia automática
+  (`<nombre>__<id>/project.json`, `images/`, `historial/<fecha>.json`, `sedcoretool_ajustes.json`), campos del archivo de
+  proyecto, columnas del CSV de bioturbación (`age_min`, `age_max`), librerías incluidas, recuento de pruebas (94 JS,
+  19 Python), reproducibilidad (los métodos con azar usan semilla), textos de la interfaz en inglés comprobados contra
+  `i18n.js`; restos estropeados de V0.50 («paréndatos privados», «datos privados no tiene acceso») eliminados.
+- **README:** nuevo apartado «The program and the Python package: which one do I need?» con tabla comparativa, uso sin
+  instalar (archivo único y servidor local) y ejemplos del paquete con los nombres actuales.
+- **Cambios:** `docs/TECHNICAL_DOCUMENTATION.md` (renombrado y reescrito), `README.md`, `CLAUDE.md` (regla: documento en
+  inglés y sin historia por versiones), enlaces en `AGENTS.md`, `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`,
+  `docs/method.md`, `desktop/RELEASE_NOTES.md`, `src/sedcoretool/unet/train.py`, `app/js/app.js` (comentario) y
+  `publications/` (referencias § renumeradas). `DELIVERY` = V0.53.
+- **Por qué:** petición de Santiago.
+- **Comprobación:** todas las referencias § del documento existen; ejemplos de la API y de la línea de comandos
+  ejecutados; textos de botones comprobados en `i18n.js`; pruebas JS y Python.
+- **Pendiente:** las referencias §21.8 bis/ter de `publications/METODOS_Y_DEFENSA.md` apuntan a apartados con datos
+  privados que ya no existen en la documentación.
 
 ## V0.52 — Nuevo nombre: SedCoreTool (07-11-2026)
 

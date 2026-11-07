@@ -44,4 +44,4 @@ Los modelos U-Net necesitan entrenamiento propio; la primera descarga de DINOv2 
 requieren internet. El programa no se actualiza solo.
 
 Este borrador queda preparado para revisión antes de publicar. Zenodo y DOI están aplazados.
-Detalles y métodos: `CHANGELOG.md`, `docs/HISTORIAL_VERSIONES.md` y `docs/DOCUMENTACION_TECNICA.md`.
+Detalles y métodos: `CHANGELOG.md`, `docs/HISTORIAL_VERSIONES.md` y `docs/TECHNICAL_DOCUMENTATION.md`.

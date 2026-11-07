@@ -15,7 +15,7 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
 - **Multiproxy (V26–V27):** familias de intervalos (p. ej. periodo frío/cálido; baja oxigenación con sapropel/ORL)
   que se clasifican a mano en cualquier sondeo, y **clasificadores definidos por el usuario** (qué familias, con qué
   variables y familias de entrada, qué modelo: bosque aleatorio, red neuronal MLP, k-NN, Bayes, k-medias), validados
-  dejando un sondeo fuera (§21.4–§21.5). Solo se puntúan intervalos descritos, no los etiquetados por reglas. Desde
+  dejando un sondeo fuera (§18.4–§18.8). Solo se puntúan intervalos descritos, no los etiquetados por reglas. Desde
   V0.37 las familias madre e hijas de la familia objetivo se excluyen de las entradas y el escalado global se ajusta
   en cada pliegue con el entrenamiento.
 - **Icnotaxones (V0.37):** la evaluación deja fuera secciones (o sondeos, a elegir) enteras: pliegues agrupados con
@@ -29,7 +29,7 @@ Estado al 01-11-2026 (software en la entrega **V28**, aplicación web 2.0.1). Ca
   independiente (pendiente de implementar en la interfaz).
 - **Sondeos compartidos entre proyectos (V23):** cuentan una sola vez en mapas y análisis entre proyectos, y los
   ejemplos de icnotaxones repetidos se descartan. La coincidencia es por nombre: revisar los marcados «en N proyectos».
-- **Mapas:** los valores usan solo datos reales; la interpolación (IDW, kriging, TIN, RBF…; §21.6 ter) mide distancias
+- **Mapas:** los valores usan solo datos reales; la interpolación (IDW, kriging, TIN, RBF…; §19.5) mide distancias
   en km y es exploratoria. Los mapas de z por sondeo eliminan el gradiente absoluto entre sondeos: úsense para patrones
   relativos. Los fondos (Esri, GEBCO) son contexto visual y se citan en el pie.
 - **Modo identificación (V32):** registra presencia de icnotaxones (marcas puntuales), no abundancia: con él no se pueden
@@ -61,7 +61,7 @@ hecho, qué falta comprobar antes de enviarlo y las preguntas que probablemente 
 con una respuesta preparada.
 
 Los detalles de cada algoritmo (fórmulas, parámetros, archivos de código) están en
-[`docs/DOCUMENTACION_TECNICA.md`](../docs/DOCUMENTACION_TECNICA.md). Aquí se cita la sección (§).
+[`docs/TECHNICAL_DOCUMENTATION.md`](../docs/TECHNICAL_DOCUMENTATION.md). Aquí se cita la sección (§).
 El historial de cambios está en [`docs/HISTORIAL_VERSIONES.md`](../docs/HISTORIAL_VERSIONES.md).
 
 Regla general: **solo se afirma lo que está medido**. Lo que no está validado se presenta como
@@ -80,31 +80,31 @@ intervalos, mapas por edad y figuras, organizado en proyectos.
 | Método | § |
 |--------|---|
 | Escala de profundidad y zona de análisis | §2 |
-| Porcentaje por intervalos, multiclase y exclusiones | §3, §8 |
+| Porcentaje por intervalos, multiclase y exclusiones | §3, §10 |
 | BI e ii (tramos de la V2, configurables) | §4 |
 | Modelo de edad (interpolación lineal) | §5 |
-| Realce, detección y edición (aplicación web) | §6–§8 |
-| Identificación asistida k-NN (aplicación web) | §10 |
-| Formatos de exportación | §12 |
-| Resolución de trabajo, proyectos | §16–§17 |
-| Registro compuesto y registros externos | §18–§19 |
-| Herramienta multiproxy: familias, clasificadores (RF, MLP, k-NN, NB), validación | §21–§21.5 |
-| Mapas: proyecciones, interpolación (IDW, kriging, TIN, RBF…), exportación | §21.6–§21.6 quater |
-| Gráficos de datos (tipo Grapher) y hoja de cálculo | §22.3 bis |
-| Organización por proyectos y sondeos, análisis entre proyectos, figuras | §22 |
-| Proyecto de entrenamiento y recorrido guiado | §22.7 |
+| Realce, detección y edición (aplicación web) | §7–§10 |
+| Identificación asistida k-NN (aplicación web) | §12 |
+| Formatos de exportación | §24 |
+| Resolución de trabajo, proyectos | §6, §22 |
+| Registro compuesto y registros externos | §15–§16 |
+| Herramienta multiproxy: familias, clasificadores (RF, MLP, k-NN, NB), validación | §18–§18.8 |
+| Mapas: proyecciones, interpolación (IDW, kriging, TIN, RBF…), exportación | §19 |
+| Gráficos de datos (tipo Grapher) y hoja de cálculo | §17.5 |
+| Organización por proyectos y sondeos, análisis entre proyectos, figuras | §21 |
+| Proyecto de entrenamiento y recorrido guiado | §30 |
 
 ### Qué se puede afirmar hoy
-- Integra en una sola herramienta las imágenes, la bioturbación y otros registros del mismo sondeo, en profundidad o en edad, con exportación vectorial (§18). Demostrado con datos públicos del IODP (sondeo de prueba U1385I-1H).
-- Reproduce exactamente los resultados publicados en 2020 (prueba de regresión, §13.1).
+- Integra en una sola herramienta las imágenes, la bioturbación y otros registros del mismo sondeo, en profundidad o en edad, con exportación vectorial (§15). Demostrado con datos públicos del IODP (sondeo de prueba U1385I-1H).
+- Reproduce exactamente los resultados publicados en 2020 (prueba de regresión, §31.1).
 - La aplicación web da los mismos BI e ii que la versión publicada en la imagen de ejemplo
   (100 %). Con la misma máscara la reproduce exactamente; con el decodificador JPEG del navegador el porcentaje
   difiere ≤ 0,56 puntos (media 0,13) por cómo se reconstruyen los bordes de las manchas, no por los pesos de gris
   (corregido en V0.49, §3.4, §13.2). Desde V0.49 las dos comparaciones son pruebas automáticas.
-- Es determinista y el archivo de proyecto permite reproducir cualquier análisis (§15).
-- Tiene pruebas automáticas en integración continua (§13.1).
+- Es determinista y el archivo de proyecto permite reproducir cualquier análisis (§33).
+- Tiene pruebas automáticas en integración continua (§31.1).
 - Integra en el mismo proyecto la interpretación icnológica, registros numéricos de cualquier tipo,
-  intervalos descritos jerárquicos y una clasificación automática de intervalos (§21). Sobre esta parte solo puede afirmarse que funciona
+  intervalos descritos jerárquicos y una clasificación automática de intervalos (§18). Sobre esta parte solo puede afirmarse que funciona
   como herramienta; su capacidad de detectar eventos reales no está validada (ver artículo 4).
 
 ### Qué falta antes de enviarlo
@@ -125,16 +125,16 @@ zonas excluidas y modelo de edad en un solo flujo. Ese flujo en ImageJ requiere 
 
 **¿Cómo sé que los resultados son correctos?**
 Pruebas con casos calculados a mano y prueba de regresión frente a los resultados publicados
-(§13.1). Ambas se ejecutan automáticamente en cada cambio.
+(§31.1). Ambas se ejecutan automáticamente en cada cambio.
 
 **¿Cómo se eligen los parámetros de realce?**
 Con los ajustes publicados (Dorador et al., 2014; Miguez-Salas et al., 2019) o con la propuesta
-automática (§6: separación de las trazas identificadas o, sin ellas, Fisher × coherencia espacial; antes de V0.28,
+automática (§7: separación de las trazas identificadas o, sin ellas, Fisher × coherencia espacial; antes de V0.28,
 separabilidad de Otsu), que es propia y se presenta como punto de partida. No hay
 en la bibliografía un método publicado de preselección automática (revisión V12).
 
 **¿Los ajustes «de artículo» reproducen fielmente los protocolos publicados?**
-Reproducen la secuencia y los parámetros publicados donde existen (§6). Las diferencias están
+Reproducen la secuencia y los parámetros publicados donde existen (§7). Las diferencias están
 documentadas: los niveles se calculan por percentiles porque el artículo los elige en cada imagen; la
 gamma es automática dentro del rango publicado; el contraste y el brillo de Photoshop solo tienen
 equivalentes aproximados; y el CLAHE es por mosaicos (Zuiderveld, 1994) frente a la ventana deslizante
@@ -143,7 +143,7 @@ de Fiji. Los parámetros efectivos de cada sección se guardan en el proyecto.
 **¿Por qué dos implementaciones (Python y JavaScript)?**
 Python para análisis por lotes y reproducibilidad en scripts. Web para el trabajo interactivo sin
 instalar nada. Comparten las mismas definiciones y las pruebas comprueban los mismos casos en las
-dos (§1, §13.1).
+dos (§1, §31.1).
 
 **¿Por qué BI e ii salen solo del porcentaje?**
 Es la componente cuantificable de esas escalas. Se documenta que no sustituye la descripción
@@ -161,14 +161,14 @@ identificación.
 ### Métodos que usa
 | Método | § |
 |--------|---|
-| Herramientas de anotación (varita, pincel, lazo, exclusión) | §8 |
-| Detección clásica: umbral adaptativo + morfología (método base) | §7 |
-| Descriptores de objeto | §9 |
-| k-NN con rechazo de novedad (método base de identificación) | §10 |
-| Rasgos de un modelo de visión preentrenado (DINOv2) como entrada del clasificador (**V0.17, sin evaluar con datos reales**) | §10.6 quater |
-| Entrenamiento de la U-Net en el programa de escritorio (mismo código que `sedcoretool unet`) | §7.5 |
-| Segmentación aprendida U-Net: exportación de datos, entrenamiento, evaluación y uso en la aplicación (**implementada en V0.15, sin entrenar con datos reales**) | §7.5 |
-| Formato de máscara y paleta | §12 |
+| Herramientas de anotación (varita, pincel, lazo, exclusión) | §10 |
+| Detección clásica: umbral adaptativo + morfología (método base) | §8 |
+| Descriptores de objeto | §11 |
+| k-NN con rechazo de novedad (método base de identificación) | §12 |
+| Rasgos de un modelo de visión preentrenado (DINOv2) como entrada del clasificador (**V0.17, sin evaluar con datos reales**) | §12.6 |
+| Entrenamiento de la U-Net en el programa de escritorio (mismo código que `sedcoretool unet`) | §9 |
+| Segmentación aprendida U-Net: exportación de datos, entrenamiento, evaluación y uso en la aplicación (**implementada en V0.15, sin entrenar con datos reales**) | §9 |
+| Formato de máscara y paleta | §24 |
 
 ### Qué se puede afirmar hoy
 Nada sobre la precisión en datos reales: todavía no hay datos anotados. Solo que las herramientas
@@ -184,7 +184,7 @@ existen y producen máscaras en un formato abierto.
   valores de un modelo de visión preentrenado (DINOv2). Se puede afirmar que la opción existe y cómo se
   calcula; **no** que mejore la identificación hasta compararla en testigos independientes.
   Desde V0.45 la descarga predeterminada fija el commit de DINOv2 y el SHA-256 de sus pesos ONNX
-  (documentación técnica §10.6 quater); esto identifica los pesos para reproducibilidad, sin aportar
+  (documentación técnica §12.6); esto identifica los pesos para reproducibilidad, sin aportar
   una evaluación de su precisión.
   En V0.48 se comprobó la inferencia del modelo real con ONNX Runtime Web dentro de Electron y una entrada
   sintética: 384 valores finitos, norma del vector redondeado ≈ 0,999998555, SHA-256 coincidente.
@@ -246,13 +246,13 @@ a uno sin interrupción (el orden aleatorio de los aumentos no se guarda). Para 
 modelos de una vez y con tres semillas.
 
 **¿El acierto del k-NN no está inflado?**
-El acierto dejando uno fuera que muestra la aplicación sí puede estarlo (§10, nota al revisor).
+El acierto dejando uno fuera que muestra la aplicación sí puede estarlo (§12, nota al revisor).
 En el artículo solo se dará el acierto en **testigos independientes**.
 
 **¿Qué pasa con la dependencia del color y de la cámara?**
 Se documentan el equipo y la iluminación de cada imagen y se evalúa el rendimiento entre fuentes
 distintas (entrenar con unas, probar con otras). Los descriptores de tamaño van en unidades
-físicas (§9).
+físicas (§11).
 
 **¿Hay trabajos previos con deep learning en bioturbación?**
 Sí. Hay que revisarlos y citarlos: el artículo de *Applied Sciences* 11(16):7736 (2021) sobre deep
@@ -273,9 +273,9 @@ datos abierto**, la herramienta de anotación libre y la comparación con concor
 |--------|---|
 | Porcentaje, BI e ii automáticos | §3–§4 |
 | BI e ii manuales en la aplicación | §4.3 |
-| Porcentaje por icnotaxón e identificación asistida | §3, §10–§11 |
+| Porcentaje por icnotaxón e identificación asistida | §3, §12–§13 |
 | Modelo de edad | §5 |
-| Registro compuesto, registros externos y CSV interpolado | §18–§19 |
+| Registro compuesto, registros externos y CSV interpolado | §15–§16 |
 
 ### Experimentos necesarios
 0. **Modelo de edad publicado:** el del sondeo de prueba es ilustrativo y no vale para interpretar.
@@ -300,7 +300,7 @@ expertos y si el método automático cae dentro de ella, con la ventaja de ser r
 
 **¿Una medida 2D de la cara del testigo representa la bioturbación?**
 Es la misma limitación de las estimaciones visuales, que también se hacen sobre la cara expuesta.
-Se indica como limitación (§14) y se mantiene la comparación en las mismas condiciones.
+Se indica como limitación (§32) y se mantiene la comparación en las mismas condiciones.
 
 **¿Cómo afecta la incertidumbre del modelo de edad a las correlaciones?**
 Se discute aparte. Si hace falta, se repite el análisis con modelos de edad alternativos. El
@@ -321,19 +321,19 @@ la icnología (bioturbación, BI, ii, icnotaxones) como variables.
 ### Métodos que usa
 | Método | § |
 |--------|---|
-| Importación, remuestreo, razones, log y escalado | §21.1–§21.2 |
-| Capas de intervalos jerárquicas como variables (0/1) | §21.2–§21.3 |
-| Etiquetas por intervalos y reglas | §21.3 |
-| Clasificadores definidos por el usuario (familias objetivo, entradas, modelo) | §21.4 ter |
-| Bosque aleatorio, red neuronal (MLP), k-NN, Bayes ingenuo, k-medias | §21.4, §21.4 bis |
-| Clasificación manual en columnas y copia desde columnas automáticas | §21.4 ter |
-| Validación dejando un sondeo fuera | §21.5 |
-| Mapas por edad e IDW | §21.6 |
-| Bioturbación e índices como variables | §3–§4, §18, §21.1 |
+| Importación, remuestreo, razones, log y escalado | §18.1–§18.2 |
+| Capas de intervalos jerárquicas como variables (0/1) | §18.2–§18.3 |
+| Etiquetas por intervalos y reglas | §18.3 |
+| Clasificadores definidos por el usuario (familias objetivo, entradas, modelo) | §18.6 |
+| Bosque aleatorio, red neuronal (MLP), k-NN, Bayes ingenuo, k-medias | §18.4, §18.5 |
+| Clasificación manual en columnas y copia desde columnas automáticas | §18.6 |
+| Validación dejando un sondeo fuera | §18.8 |
+| Mapas por edad e IDW | §19 |
+| Bioturbación e índices como variables | §3–§4, §15, §18.1 |
 
 ### Qué se puede afirmar hoy
 - La implementación funciona y es reproducible (semilla) con datos sintéticos de verdad conocida
-  (§21.8).
+  (§18.12).
 - Primera prueba con datos reales (§21.8 bis): con registros públicos de ODP 977A, los tipos de ORL
   privados se reconocen mal (acierto equilibrado 36 % por bloques). No se puede afirmar
   capacidad predictiva; faltan los datos geoquímicos propios (XRF) y más sondeos etiquetados.
@@ -373,14 +373,14 @@ el 5 % del intervalo etiquetado a cada lado del bloque de prueba se quita del en
 global se recalcula en cada pliegue solo con el entrenamiento y una familia objetivo nunca usa como entrada a sus
 familias madre ni hijas (p. ej. «sapropel» no usa «baja oxigenación»). Con un único sondeo la autocorrelación más
 allá del margen sigue pudiendo inflar el acierto; con el escalado por sondeo, cada sondeo de prueba se tipifica con
-sus propias medias (sin usar etiquetas). Lo fiable es el acierto en sondeos reservados (§21.5).
+sus propias medias (sin usar etiquetas). Lo fiable es el acierto en sondeos reservados (§18.8).
 
 **Si las etiquetas salen de reglas, ¿el modelo no aprende solo las reglas?**
-Sí, y así se declara (§21.8). Para la evaluación se usan intervalos con interpretación
+Sí, y así se declara (§18.12). Para la evaluación se usan intervalos con interpretación
 independiente; las reglas solo sirven para proponer etiquetas o como referencia experta.
 
 **¿Por qué no deep learning?**
-El programa incluye una red neuronal (perceptrón multicapa con parada temprana, §21.4 bis) y se compara con el bosque
+El programa incluye una red neuronal (perceptrón multicapa con parada temprana, §18.5) y se compara con el bosque
 aleatorio, k-NN y Bayes en el mismo esquema de validación. Con pocas decenas o cientos de intervalos etiquetados, los
 árboles suelen ser más robustos y dan una medida de importancia; redes más profundas (recurrentes, convolucionales
 sobre la serie) necesitarían muchos más sondeos etiquetados de los disponibles.
@@ -390,18 +390,18 @@ Se informa de todos los modelos probados con la misma validación y el acierto f
 intervinieron en la elección (experimento 9).
 
 **¿La interpolación del mapa es fiable?**
-La interpolación es visual y exploratoria (§21.6, §21.6 ter): ningún método estima la incertidumbre
+La interpolación es visual y exploratoria (§19, §19.5): ningún método estima la incertidumbre
 de forma útil con pocos sondeos (el kriging da una varianza, pero su variograma con ~10 sondeos es muy incierto) y
 ninguno tiene en cuenta barreras geográficas. Las conclusiones se basan en los valores de cada sondeo, que también se exportan.
-Los fondos de los mapas (Esri, GEBCO; §21.6 bis) son solo contexto visual: no entran en ningún
+Los fondos de los mapas (Esri, GEBCO; §19.2) son solo contexto visual: no entran en ningún
 cálculo, y su fuente debe citarse en el pie de la figura (el programa la escribe en el mapa).
 
 **¿Cómo entran datos categóricos como la litología en un modelo numérico?**
-Como columnas 0/1 por categoría, sin escalar (§21.2). La ausencia de descripción vale 0, igual que
+Como columnas 0/1 por categoría, sin escalar (§18.2). La ausencia de descripción vale 0, igual que
 «no presente»; se declara como limitación y conviene usar solo sondeos con la capa descrita entera.
 
 **¿Cómo se combinan proxies medidos con técnicas o calibraciones distintas?**
-Con el z-score por sondeo (§21.2) se eliminan diferencias de nivel; se documenta qué escalado se
+Con el z-score por sondeo (§18.2) se eliminan diferencias de nivel; se documenta qué escalado se
 usó y se muestra su efecto (experimento 7).
 
 ---
@@ -428,11 +428,11 @@ repetir el análisis.
 ---
 
 ## Lista de comprobación antes de enviar cualquier artículo
-- [ ] Cada método citado en el texto tiene su sección en `DOCUMENTACION_TECNICA.md`, y coincide con
+- [ ] Cada método citado en el texto tiene su sección en `TECHNICAL_DOCUMENTATION.md`, y coincide con
       el código de la versión citada.
 - [ ] Versión del software citada con DOI de Zenodo.
 - [ ] Parámetros usados guardados (archivo de proyecto) y publicados como material suplementario.
 - [ ] Datos y máscaras depositados (Zenodo o PANGAEA) con licencia.
-- [ ] Limitaciones declaradas (§14).
+- [ ] Limitaciones declaradas (§32).
 - [ ] Referencias comprobadas contra los originales.
 - [ ] Coautorías y agradecimientos acordados.
