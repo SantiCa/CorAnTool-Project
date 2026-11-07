@@ -1,0 +1,5 @@
+$env:Path += ";C:\Program Files\nodejs"
+node -v
+cd desktop
+npm.cmd ci
+npm.cmd start
