@@ -307,8 +307,22 @@ export function tickFieldsHTML(st) {
   const none = t('st.none'), auto = t('fig.auto2'), au = t('st.auto');
   return `${f('yStep', 'any', 0, au)}${f('yDiv', 1, 1, au)}${f('yMajor', 'any', 0, none)}${f('yMedium', 'any', 0, none)}${f('yMinor', 'any', 0, none)}<span></span>
     ${f('yLabelLen', 0.5, 0.5, 6)}${f('yMajorLen', 0.5, 0.5, 6)}${f('yMediumLen', 0.5, 0.5, 4.5)}${f('yMinorLen', 0.5, 0.5, 3)}
+    <div class="f" style="grid-column:1/-1"><span>${t('st.ruler')}</span><span class="row"><input type="number" data-rulern step="any" min="0" value="${rulerN}" placeholder="1" style="max-width:6em"><button type="button" class="btn small" data-rulerbtn title="${esc(t('st.rulerTip'))}">${t('st.rulerGo')}</button></span></div>
     <p class="note" style="grid-column:1/-1;margin:0">${t('st.tickHelp')}</p>`;
 }
+/* V0.74: one-click ruler scale. The panel is redrawn after every change, so each field is looked up again. */
+let rulerN = '';
+document.addEventListener('input', (e) => { if (e.target.dataset?.rulern != null) rulerN = e.target.value; });
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-rulerbtn]'); if (!b) return;
+  const n = +b.closest('.f').querySelector('[data-rulern]').value;
+  if (!(n > 0)) { toast(t('st.rulerNeed')); return; }
+  const r = (x) => String(+x.toFixed(6));
+  for (const [k, v] of [['yMinor', r(n)], ['yMedium', r(5 * n)], ['yStep', r(10 * n)], ['yMajor', ''], ['yMinorLen', '3'], ['yMediumLen', '5'], ['yLabelLen', '8']]) {
+    const el = [...document.querySelectorAll(`input[data-st="${k}"]`)].find((x) => x.offsetParent);
+    if (el) { el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+});
 export function styleFormHTML() {
   const st = { ...LOG_STYLE, ...(S.logView.style || {}) }, num = (k, lab, step = 'any', min = 0) => `<label class="f"><span>${t(lab)}</span><input type="number" data-st="${k}" step="${step}" min="${min}" value="${st[k] ?? ''}" placeholder="${t('fig.auto2')}"></label>`;
   const chk = (k, lab) => `<label class="chk"><input type="checkbox" data-st="${k}" ${st[k] ? 'checked' : ''}><span>${t(lab)}</span></label>`;

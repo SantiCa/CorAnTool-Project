@@ -2014,3 +2014,7 @@ Object.assign(D.en, { 'st.yStep': 'Depth number every', 'st.yDiv': 'or approx. n
 // V0.73: saved versions of a figure as tabs
 Object.assign(D.es, { 'fig.tab.add': 'Nueva pestaña: copia de la figura actual, para guardar otra versión', 'fig.tab.del': 'Borrar esta figura guardada', 'fig.tab.delAsk': '¿Borrar esta pestaña con su figura? No se puede deshacer.', 'fig.tab.rename': 'Doble clic para cambiar el nombre' });
 Object.assign(D.en, { 'fig.tab.add': 'New tab: a copy of the current figure, to keep another version', 'fig.tab.del': 'Delete this saved figure', 'fig.tab.delAsk': 'Delete this tab and its figure? This cannot be undone.', 'fig.tab.rename': 'Double-click to rename' });
+
+// V0.74: ruler button of the depth scale
+Object.assign(D.es, { 'st.ruler': 'Escala tipo regla: marca pequeña cada', 'st.rulerGo': 'Aplicar regla', 'st.rulerTip': 'Rellena: pequeña = el valor, mediana = 5×, número y marca larga = 10×, con largos 3, 5 y 8 px', 'st.rulerNeed': 'Escribe primero cada cuánto va la marca pequeña (mayor que 0).' });
+Object.assign(D.en, { 'st.ruler': 'Ruler scale: short tick every', 'st.rulerGo': 'Apply ruler', 'st.rulerTip': 'Fills in: short = the value, medium = 5×, number and long tick = 10×, with lengths 3, 5 and 8 px', 'st.rulerNeed': 'First enter the short tick interval (greater than 0).' });
