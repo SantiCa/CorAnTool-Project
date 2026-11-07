@@ -10,6 +10,11 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.75 — 2026-11-07
+- Core column: the title and the shape of the bioturbation column and the title of the ichnotaxa column move into their
+  rows of the table of columns (width, limits, divisions), and the separate "Divisions of % axes" field is gone: the
+  Div. cell of each percentage column now shows the default (4) and replaces it when filled in.
+
 ## V0.74 — 2026-11-07
 - Depth scale: a "Ruler scale" button fills in the intervals from one value (short tick every n, medium every 5n, number
   and long tick every 10n, lengths 3, 5 and 8 px). It is available in the Core column panel and in the figure panel.
