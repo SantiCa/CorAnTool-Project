@@ -301,6 +301,14 @@ document.addEventListener('click', (e) => {
   if (kind === 'geo') { $('geoStyleForm').innerHTML = ''; renderGeoLogs(); }
   else { renderLogPanel(); scheduleLog(); if (mode === 'fig') { renderFigPanel(); scheduleFigure(); } }
 });
+/** V0.69: ruler-style vertical scale — number, long, medium and short ticks, each with its own interval and length. */
+export function tickFieldsHTML(st) {
+  const f = (k, step, min, ph) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="${step}" min="${min}" value="${st[k] ?? ''}" placeholder="${ph}"></label>`;
+  const none = t('st.none'), auto = t('fig.auto2'), au = t('st.auto');
+  return `${f('yStep', 'any', 0, au)}${f('yDiv', 1, 1, au)}${f('yMajor', 'any', 0, none)}${f('yMedium', 'any', 0, none)}${f('yMinor', 'any', 0, none)}<span></span>
+    ${f('yLabelLen', 0.5, 0.5, 6)}${f('yMajorLen', 0.5, 0.5, 6)}${f('yMediumLen', 0.5, 0.5, 4.5)}${f('yMinorLen', 0.5, 0.5, 3)}
+    <p class="note" style="grid-column:1/-1;margin:0">${t('st.tickHelp')}</p>`;
+}
 export function styleFormHTML() {
   const st = { ...LOG_STYLE, ...(S.logView.style || {}) }, num = (k, lab, step = 'any', min = 0) => `<label class="f"><span>${t(lab)}</span><input type="number" data-st="${k}" step="${step}" min="${min}" value="${st[k] ?? ''}" placeholder="${t('fig.auto2')}"></label>`;
   const chk = (k, lab) => `<label class="chk"><input type="checkbox" data-st="${k}" ${st[k] ? 'checked' : ''}><span>${t(lab)}</span></label>`;
@@ -308,9 +316,7 @@ export function styleFormHTML() {
   return `${colOrderHTML('log')}<div class="grid2">
     ${sel('yUnit', 'st.yUnit', [['', t('st.native')], ['m', 'm'], ['cm', 'cm'], ['mm', 'mm']])}
     ${sel('yUnitAge', 'st.yUnitAge', [['', t('st.native')], ['a', 'a'], ['ka', 'ka'], ['Ma', 'Ma']])}
-    ${num('yStep', 'st.yStep')}${num('yDiv', 'st.yDiv', 1, 1)}
-    ${num('yMajor', 'st.yMajor')}${num('yMinor', 'st.yMinor')}
-    ${num('yLabelLen', 'st.yLabelLen', 1, 1)}${num('yMinorLen', 'st.yMinorLen', 1, 1)}
+    ${tickFieldsHTML(st)}
     ${num('pctDiv', 'st.pctDiv', 1, 1)}${num('fontSize', 'st.fontSize', 1, 6)}
     ${sel('totalStyle', 'st.totalStyle', ['barsline', 'bars', 'line', 'points'].map((v) => [v, t('st.ts.' + v)]))}
     <label class="f"><span>${t('st.totalTitle')}</span><input type="text" data-st="totalTitle" value="${esc(st.totalTitle || '')}" placeholder="${esc(t('log.total'))}"></label>

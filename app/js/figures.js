@@ -1,6 +1,6 @@
 /* Figures: representative traces, interpreted core, logs, location map and range chart. */
 import { $, S, clsById, fmt, hex } from './state.js';
-import { arrowFormHTML, axesFormHTML, colOrderHTML, colView, colorsFormHTML, compositeData, coreImages, lastLog, logRecords, logStyleOf, mode, ndFormHTML, onStyleInput, reduceRGBA, renderLog, scheduleLog, speciesFormHTML, styleFormHTML, syncColOrder } from './columns.js';
+import { tickFieldsHTML, arrowFormHTML, axesFormHTML, colOrderHTML, colView, colorsFormHTML, compositeData, coreImages, lastLog, logRecords, logStyleOf, mode, ndFormHTML, onStyleInput, reduceRGBA, renderLog, scheduleLog, speciesFormHTML, styleFormHTML, syncColOrder } from './columns.js';
 import { busy, clsAbbr, compositeMarks, curCore, depthAtRow, effClassArray, effClassId, esc, idListOf, idMode, legendOf, markDirty, needPixels, pxPerCm, requestRender, rowAtDepth, safe, saveFile, toast } from './app.js';
 import { fetchImage, geoComputeSamples, geoLand, geoOverlay, geoRT, mapNetConsent, renderGeoLogs, renderGeoMap } from './multiproxy.js';
 
@@ -330,7 +330,8 @@ function sectionsSVG() {
   const LS = logStyleOf(D);
   out.push(`<defs>${noDataDefs(LS.style)}</defs>`);   // V0.68: pattern used by the no-data rectangles
   for (const e of extraTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 8 - e.len}" y1="${y(e.v)}" x2="${x0 - 8}" y2="${y(e.v)}" stroke="${INK.text}" stroke-width="0.6"/>`);   // V0.22
-  for (const v of verticalTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 13}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="${INK.text}" stroke-width="0.8"/><text x="${x0 - 15}" y="${y(v) + 3}" text-anchor="end" fill="${INK.text}">${+(v * LS.style.yFactor).toPrecision(6)}</text>`);
+  const lblLen = +LS.style.yLabelLen > 0 ? +LS.style.yLabelLen : 5;
+  for (const v of verticalTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 8 - lblLen}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="${INK.text}" stroke-width="0.8"/><text x="${x0 - 10 - lblLen}" y="${y(v) + 3}" text-anchor="end" fill="${INK.text}">${+(v * LS.style.yFactor).toPrecision(6)}</text>`);
   panels.forEach((p, i) => {
     const X = x0 + i * (W + gap), href = panelDataURL(D, from, to, H, W, p);
     out.push(`<text x="${X}" y="${top - 10}" font-weight="700" fill="${INK.text}">${String.fromCharCode(97 + i)}</text><text x="${X + 12}" y="${top - 10}" fill="${INK.text}">${esc(t('fig.p.' + p))}</text>`);
@@ -402,7 +403,7 @@ function syncCoreFigSize() {
   $('figCoreH').disabled = !!(F.keepRatio && z.r);
 }
 export function verticalStyleHTML(st = S.logView.style || {}, nd = true) {
-  return `${nd ? ndFormHTML(st) : ''}<div class="grid2"><label class="f"><span>${t('st.yUnit')}</span><select data-st="yUnit">${['', 'mm', 'cm', 'm'].map((u) => `<option value="${u}" ${(st.yUnit || '') === u ? 'selected' : ''}>${u || t('st.native')}</option>`).join('')}</select></label><label class="f"><span>${t('st.yStep')}</span><input type="number" data-st="yStep" step="any" min="0" value="${st.yStep ?? ''}" placeholder="${t('fig.auto2')}"></label><label class="f"><span>${t('st.yDiv')}</span><input type="number" data-st="yDiv" min="1" step="1" value="${st.yDiv ?? ''}" placeholder="${t('fig.auto2')}"></label>${['yMajor', 'yMinor'].map((k) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="any" min="0" value="${st[k] ?? ''}" placeholder="${t('st.none')}"></label>`).join('')}${['yLabelLen', 'yMinorLen'].map((k) => `<label class="f"><span>${t('st.' + k)}</span><input type="number" data-st="${k}" step="1" min="1" value="${st[k] ?? ''}" placeholder="${k === 'yLabelLen' ? 6 : 3}"></label>`).join('')}</div>`;
+  return `${nd ? ndFormHTML(st) : ''}<div class="grid2"><label class="f"><span>${t('st.yUnit')}</span><select data-st="yUnit">${['', 'mm', 'cm', 'm'].map((u) => `<option value="${u}" ${(st.yUnit || '') === u ? 'selected' : ''}>${u || t('st.native')}</option>`).join('')}</select></label>${tickFieldsHTML(st)}</div>`;
 }
 export function renderFigPanel() {
   const F = S.fig, box = $('figOpts');

@@ -10,6 +10,12 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.69 — 2026-11-07
+- Depth scale of the core column and of the figures: besides the numbered ticks, the long and the short ticks there is now
+  a medium tick, each level with its own interval and its own length, so a ruler-style scale is possible (for example
+  short every 1, medium every 5, long and number every 10). The same form is used in the column panel and in the figures.
+- The section figure now respects the length of the numbered ticks.
+
 ## V0.68 — 2026-11-07
 - Section figure: intervals without data now show the chosen fill (hatched or solid) over the image, not just the "No data"
   text on a blank background.

@@ -2002,3 +2002,11 @@ Object.assign(D.en, {
 // V0.67: the save indicator says where the data are when there is no backup folder
 Object.assign(D.es, { 'save.local': 'Guardado en este equipo · sin copia en carpeta', 'save.localPending': 'Guardado en este equipo · copia en carpeta pendiente', 'save.localTip': 'Los datos están en el almacenamiento interno del programa, no en una carpeta tuya. Elige una carpeta en Copias de seguridad para tener una copia fuera de él.' });
 Object.assign(D.en, { 'save.local': 'Saved on this computer · no folder backup', 'save.localPending': 'Saved on this computer · folder backup pending', 'save.localTip': 'The data are in the program\'s internal storage, not in a folder of yours. Choose a folder under Backups to keep a copy outside it.' });
+
+// V0.69: ruler-style vertical scale
+Object.assign(D.es, { 'st.yStep': 'Número de profundidad cada', 'st.yDiv': 'o nº aproximado de números', 'st.yMajor': 'Marca larga cada', 'st.yMedium': 'Marca mediana cada', 'st.yMinor': 'Marca pequeña cada',
+  'st.yLabelLen': 'Largo de la marca con número (px)', 'st.yMajorLen': 'Largo de la marca larga (px)', 'st.yMediumLen': 'Largo de la marca mediana (px)', 'st.yMinorLen': 'Largo de la marca pequeña (px)', 'st.auto': 'auto',
+  'st.tickHelp': 'Intervalos en las unidades del eje. Si una posición coincide con varias marcas, gana la de mayor nivel: número > larga > mediana > pequeña. Regla: pequeña 1, mediana 5, larga 10 y número 10.' });
+Object.assign(D.en, { 'st.yStep': 'Depth number every', 'st.yDiv': 'or approx. number of labels', 'st.yMajor': 'Long tick every', 'st.yMedium': 'Medium tick every', 'st.yMinor': 'Short tick every',
+  'st.yLabelLen': 'Length of the numbered tick (px)', 'st.yMajorLen': 'Length of the long tick (px)', 'st.yMediumLen': 'Length of the medium tick (px)', 'st.yMinorLen': 'Length of the short tick (px)', 'st.auto': 'auto',
+  'st.tickHelp': 'Intervals in axis units. Where several ticks coincide the highest level wins: number > long > medium > short. Ruler: short 1, medium 5, long 10 and number 10.' });

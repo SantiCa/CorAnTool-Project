@@ -140,6 +140,20 @@ test('V0.22: extra vertical ticks skip labelled positions', async () => {
   assert.ok(!minor.includes(10) && !minor.includes(5));
 });
 
+test('V0.69: ruler scale — number every 10, long every 10, medium every 5, short every 1, own lengths', async () => {
+  const { extraTicks, verticalTicks } = await import('../../app/js/log.js');
+  const st = { yStep: 10, yMajor: 10, yMedium: 5, yMinor: 1, yMajorLen: 8, yMediumLen: 5, yMinorLen: 2 };
+  assert.deepEqual(verticalTicks(0, 30, 400, st), [0, 10, 20, 30]);
+  const e = extraTicks(0, 30, 400, st), at = (len) => e.filter((x) => x.len === len).map((x) => x.v);
+  assert.deepEqual(at(8), []);                       // long ticks coincide with the numbered ones
+  assert.deepEqual(at(5), [5, 15, 25]);
+  assert.equal(at(2).length, 31 - 4 - 3);
+  assert.ok(e.every((x) => ![0, 10, 20, 30].includes(x.v)));
+  const f = extraTicks(0, 40, 400, { yStep: 20, yMajor: 10, yMedium: 5, yMinor: 1 });   // default lengths 6 / 4.5 / 3
+  assert.deepEqual(f.filter((x) => x.len === 6).map((x) => x.v), [10, 30]);
+  assert.deepEqual(f.filter((x) => x.len === 4.5).map((x) => x.v), [5, 15, 25, 35]);
+});
+
 test('V0.33: column order and hidden columns', async () => {
   const { orderCols } = await import('../../app/js/log.js');
   const cols = [{ id: 'axis' }, { id: 'a' }, { id: 'b' }, { id: 'c' }];

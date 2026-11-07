@@ -1630,10 +1630,12 @@ The editable colours affect drawing and exported figures, not the underlying mea
 - `log.js::verticalTicks` shares the vertical ticks between the core column, the sections figure and the distribution
   figure. Data coordinates stay in the original unit; labels show `v · yFactor`, with
   `yFactor = UNIT_TO_CM[original unit] / UNIT_TO_CM[shown unit]` for depth.
-- `yStep` is the distance between numbered ticks in the shown unit and has priority over `yDiv`; `yMajor` adds long
-  ticks without numbers and `yMinor` short ticks (`log.js::extraTicks`; not repeated where a numbered or long tick
-  already exists). `yLabelLen` and `yMinorLen` set their length in px (6 and 3 by default; long ticks use `yMajorLen`,
-  6). An explicit step is limited to 400 ticks so that the program cannot freeze.
+- `yStep` is the distance between numbered ticks in the shown unit and has priority over `yDiv`. Three more levels
+  without numbers can be added (`log.js::extraTicks`): `yMajor` long ticks, `yMedium` medium ticks and `yMinor` short
+  ticks. Where several levels coincide the highest wins (numbered > long > medium > short), so a ruler-style scale is
+  `yMinor` 1, `yMedium` 5, `yMajor` 10, `yStep` 10. Their lengths in px are `yLabelLen`, `yMajorLen`, `yMediumLen` and
+  `yMinorLen` (6, 6, 4.5 and 3 by default). An explicit step is limited to 400 ticks (4 000 for the unnumbered levels)
+  so that the program cannot freeze.
 - Each horizontal axis (`logView.style.axes[id]`) accepts `min`, `max`, `div`, `dec`, `rev`, `log` and `step`. `step`
   has priority over `div` on linear axes. Logarithmic axes draw powers of ten; limits must be positive and the maximum
   greater than the minimum; if the automatic minimum is not positive, maximum/1000 is proposed. Plotting uses log10 and

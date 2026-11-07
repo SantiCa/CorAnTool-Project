@@ -87,7 +87,8 @@ export function verticalTicks(from, to, height, style = {}) {
 
 /**
  * V0.22: extra ticks of the vertical axis without labels. Steps are in displayed units (× yFactor):
- * yMajor = long ticks (default: none besides the labelled ones), yMinor = short ticks. Returns [{ v, len }] in axis units,
+ * yMajor = long ticks, yMedium = medium ticks (V0.69), yMinor = short ticks (none by default). Where several coincide the
+ * highest level wins: labelled > long > medium > short. Lengths: yMajorLen, yMediumLen, yMinorLen. Returns [{ v, len }] in axis units,
  * skipping positions that already carry a labelled tick (or a long tick, for the short ones).
  */
 export function extraTicks(from, to, height, style = {}) {
@@ -95,9 +96,12 @@ export function extraTicks(from, to, height, style = {}) {
   const near = (list, v) => list.some((u) => Math.abs(u - v) < eps);
   const steps = (step) => { const r = []; if (!(step > 0)) return r; const a = Math.ceil(Math.min(from, to) * f / step - 1e-9), b = Math.floor(Math.max(from, to) * f / step + 1e-9); if (b - a > 4000) return r; for (let k = a; k <= b; k++) r.push(k * step / f || 0); return r; };
   const major = steps(+style.yMajor).filter((v) => !near(lab, v));
-  const minor = steps(+style.yMinor).filter((v) => !near(lab, v) && !near(major, v));
-  for (const v of major) out.push({ v, len: +style.yMajorLen > 0 ? +style.yMajorLen : 6 });
-  for (const v of minor) out.push({ v, len: +style.yMinorLen > 0 ? +style.yMinorLen : 3 });
+  const medium = steps(+style.yMedium).filter((v) => !near(lab, v) && !near(major, v));
+  const minor = steps(+style.yMinor).filter((v) => !near(lab, v) && !near(major, v) && !near(medium, v));
+  const len = (k, d) => (+style[k] > 0 ? +style[k] : d);
+  for (const v of major) out.push({ v, len: len('yMajorLen', 6) });
+  for (const v of medium) out.push({ v, len: len('yMediumLen', 4.5) });
+  for (const v of minor) out.push({ v, len: len('yMinorLen', 3) });
   return out;
 }
 const labelLen = (st) => (+st?.yLabelLen > 0 ? +st.yLabelLen : 6);
