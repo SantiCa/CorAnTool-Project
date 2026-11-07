@@ -44,3 +44,9 @@ test('V0.43: frame, scale, north convergence and SVG with labels on chosen sides
   const d = buildLocMapSVG({ settings: { coordFmt: 'dms', gridType: 'geo', crs: 'EPSG:3857' }, points: pts });
   assert.match(d.svg, /°\d\d′[NSEW]?/);
 });
+
+test('location map uses its text and background colours', () => {
+  const r = buildLocMapSVG({ settings: { textColor: '#123456', bgColor: '#fefefe' }, points: [{ name: 'A', lon: -4, lat: 36 }, { name: 'B', lon: -3, lat: 37 }], title: 'T' });
+  assert.match(r.svg ?? r, /fill="#fefefe"/);
+  assert.match(r.svg ?? r, /<text[^>]*fill="#123456"[^>]*>T</);
+});

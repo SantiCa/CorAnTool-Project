@@ -42,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--overlap", type=int, default=64)
     pr.add_argument("--px-per-cm", type=float, default=None, help="training resolution (default: median of the export)")
     pr.add_argument("--multiclass", action="store_true", help="keep ichnotaxa as classes (default: bioturbation yes/no)")
+    pr.add_argument("--overwrite", action="store_true", help="replace a previous dataset in OUT (needs its dataset.json)")
     pr.add_argument("--val", nargs="*", default=None, help="validation cores")
     pr.add_argument("--test", nargs="*", default=None, help="test cores (never used in training)")
     pr.add_argument("--seed", type=int, default=42)
@@ -100,7 +101,7 @@ def _unet(args) -> int:
     if args.unet == "prepare":
         from .unet.dataset import prepare_dataset
         s = prepare_dataset(args.export, args.out, args.tile, args.overlap, args.px_per_cm, not args.multiclass,
-                            args.val, args.test, args.seed)
+                            args.val, args.test, args.seed, overwrite=args.overwrite)
         for k, v in s["split"].items():
             print(f"{k}: {v['tiles']} tiles, cores {', '.join(v['cores']) or '-'}")
         if not s["split"]["test"]["cores"]:

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -119,8 +120,12 @@ def tiles_of(item: Item, tile: int, overlap: int, px_per_cm: float | None, min_v
 
 def prepare_dataset(src: str | Path, out: str | Path, tile: int = 512, overlap: int = 64,
                     px_per_cm: float | None = None, binary: bool = True, val_cores=None, test_cores=None,
-                    seed: int = 42, min_valid: float = 0.5) -> dict:
-    """Write ``out/{train,val,test}/{images,masks}/*.png`` and ``out/dataset.json``; return the summary."""
+                    seed: int = 42, min_valid: float = 0.5, overwrite: bool = False) -> dict:
+    """Write ``out/{train,val,test}/{images,masks}/*.png`` and ``out/dataset.json``; return the summary.
+
+    ``out`` must be empty, so that tiles of two datasets are never mixed. With ``overwrite=True`` a previous dataset
+    in ``out`` (recognised by its ``dataset.json``) is replaced; any other non-empty directory is refused.
+    """
     items, classes = load_export(src)
     if not items:
         raise ValueError("the export has no images")
@@ -129,7 +134,14 @@ def prepare_dataset(src: str | Path, out: str | Path, tile: int = 512, overlap: 
     split = split_cores([it.core for it in items], val_cores, test_cores, seed=seed)
     out = Path(out)
     if out.exists() and any(out.iterdir()):
-        raise ValueError("output directory must be empty; choose a new directory to avoid mixing datasets")
+        if not overwrite:
+            raise ValueError("output directory must be empty; choose a new directory or use --overwrite to replace "
+                             "a previous dataset")
+        if not (out / "dataset.json").is_file():
+            raise ValueError("--overwrite only replaces a previous dataset (a directory containing dataset.json)")
+        for k in ("train", "val", "test"):
+            shutil.rmtree(out / k, ignore_errors=True)
+        (out / "dataset.json").unlink()
     counts = {k: {"tiles": 0, "cores": sorted({c for c, v in split.items() if v == k})} for k in ("train", "val", "test")}
     for k in counts:
         for d in ("images", "masks"):

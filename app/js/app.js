@@ -3,7 +3,7 @@ import { rleValid, interpAgeRange, baconToAgeText, BI, II, UNIT_TO_CM, idsAt, to
 import { withProvenance, ageModelText, bioturbationTable, objectsTable, recordSeries } from './exportio.js';
 import { LOCMAP_DEFAULTS, lmUtmZone, lmFitBBox, lmZoom, buildLocMapSVG } from './locmap.js';
 import { DEFAULT_FILTERS, FILTER_PRESETS, DEFAULT_DETECT, traceSeparation, localSeparability, applyFilters, detectMask, components, regionGrow, polygonPixels, objectStats, features, rotate90, downsampleRGBA, autoLevels, gammaForMedian, separability } from './imageproc.js';
-import { orderCols, LOG_STYLE, ND_STYLE, noDataRect, noDataGaps, parseTable, decodeText, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
+import { orderCols, LOG_STYLE, mergedStyle, ND_STYLE, noDataRect, noDataGaps, parseTable, decodeText, guessAxisColumn, invertModel, toAxis, compositeRows, rowsRange, buildLogSVG, windowCSV, abbrevs, buildRangeSVG, verticalTicks, extraTicks, traceSymbolPath } from './log.js';
 import { storageAvailable, listProjects, getProject, putProject, putMeta, deleteProject, getPref, setPref, putLite, listLite, getMeta, putImage, getImage, gcImages } from './storage.js';
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
@@ -22,7 +22,7 @@ const APP = 'SedCoreTool', APP_NAMES = ['SedCoreTool', 'CorAnTool', 'IchAnTool']
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.58';
+const DELIVERY = 'V0.59';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -5169,7 +5169,7 @@ function mapStyleUI(boxId, get, set, redraw) {
     <label class="f"><span>${t('ms.symbol')}</span><select data-k="symbol">${MAP_SYMBOLS.map((k) => `<option value="${k}" ${k === st.symbol ? 'selected' : ''}>${t('ms.sym.' + k)}</option>`).join('')}</select></label>
     ${num('size', 'ms.size', 0.3, 4, 0.1)}${chk('sizeByFraction', 'ms.sizeFrac')}${col('pointColor', 'ms.pointColor')}${col('stroke', 'ms.stroke')}
     ${chk('labels', 'ms.labels')}${num('labelSize', 'ms.labelSize', 6, 30, 1)}${col('labelColor', 'ms.labelColor')}${chk('halo', 'ms.halo')}${chk('labelValue', 'ms.labelValue')}
-    ${col('land', 'ms.land')}${col('sea', 'ms.sea')}${chk('graticule', 'ms.grat')}${chk('scaleBar', 'ms.scale')}${chk('north', 'ms.north')}
+    ${col('land', 'ms.land')}${col('sea', 'ms.sea')}${col('textColor', 'color.textColor')}${col('subColor', 'color.subColor')}${col('bgColor', 'color.bgColor')}${chk('graticule', 'ms.grat')}${chk('scaleBar', 'ms.scale')}${chk('north', 'ms.north')}
     <label class="f"><span>${t('ms.extent')}</span><span class="row">${[0, 1, 2, 3].map((i) => `<input type="number" step="any" data-e="${i}" value="${ext[i]}">`).join('')}</span></label>
     <div class="zbtn"><button class="btn small" data-z="in" title="Zoom +">＋</button><button class="btn small" data-z="out" title="Zoom −">－</button><button class="btn small" data-z="fit">${t('ms.fit')}</button><button class="btn small" data-z="reset">${t('ms.reset')}</button></div>
     <p class="note" style="margin:0;flex-basis:100%">${t('ms.zoomHelp')}<span class="msload"></span></p></div></details>`;
@@ -6276,7 +6276,10 @@ function traceScale(X, y, T, pxPerCm, sc) {
   }
   return `<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="4" fill="${col}" stroke="${ink}" stroke-width="0.6"/>${txt}`;
 }
+/** V0.59: text and background colours of the figures built here, from the core-column style (validated hex colours). */
+function figInk() { const st = mergedStyle(S.logView.style); return { text: st.textColor, sub: st.subColor, bg: st.bgColor }; }
 function tracesSVG() {
+  const INK = figInk();
   const F = S.fig, T = F.tile, gap = 12, vgap = 4, labW = 190, rows = [], views = traceViews(F), sc = F.scale || {};
   for (const c of S.classes) {
     if (!c.counts && c.id !== 'undet') continue;
@@ -6287,12 +6290,12 @@ function tracesSVG() {
   if (!rows.length) return null;
   const nv = views.length, TW = nv * T + (nv - 1) * vgap, head = nv > 1 ? 16 : 0;
   const maxN = Math.max(...rows.map((r) => r.chosen.length)), W = labW + maxN * (TW + gap) + 10, rowH = T + 34, H = head + rows.length * rowH + 10;
-  const parts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="IBM Plex Sans, Arial, sans-serif" font-size="11"><rect width="${W}" height="${H}" fill="#fff"/>`];
-  if (nv > 1) for (let k = 0; k < maxN; k++) views.forEach((v, vi) => parts.push(`<text x="${labW + k * (TW + gap) + vi * (T + vgap) + T / 2}" y="12" text-anchor="middle" fill="#5b6763" font-size="10">${esc(t('fig.tv.' + v))}</text>`));
+  const parts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="IBM Plex Sans, Arial, sans-serif" font-size="11"><rect width="${W}" height="${H}" fill="${INK.bg}"/>`];
+  if (nv > 1) for (let k = 0; k < maxN; k++) views.forEach((v, vi) => parts.push(`<text x="${labW + k * (TW + gap) + vi * (T + vgap) + T / 2}" y="12" text-anchor="middle" fill="${INK.sub}" font-size="10">${esc(t('fig.tv.' + v))}</text>`));
   rows.forEach((r, ri) => {
     const y = head + 6 + ri * rowH;
-    parts.push(`<rect x="8" y="${y + 4}" width="10" height="10" fill="${r.c.color}"/><text x="24" y="${y + 13}" font-size="13" font-style="${r.c.plain ? 'normal' : 'italic'}" font-weight="600" fill="#1c2422">${esc(r.c.name)}</text>`);
-    parts.push(`<text x="24" y="${y + 29}" fill="#5b6763">${t('fig.nOf', { n: r.chosen.length, m: classTraces(r.c.id).length })}</text>`);
+    parts.push(`<rect x="8" y="${y + 4}" width="10" height="10" fill="${r.c.color}"/><text x="24" y="${y + 13}" font-size="13" font-style="${r.c.plain ? 'normal' : 'italic'}" font-weight="600" fill="${INK.text}">${esc(r.c.name)}</text>`);
+    parts.push(`<text x="24" y="${y + 29}" fill="${INK.sub}">${t('fig.nOf', { n: r.chosen.length, m: classTraces(r.c.id).length })}</text>`);
     r.chosen.forEach((x, k) => {
       let tc0 = null;
       views.forEach((v, vi) => {
@@ -6301,7 +6304,7 @@ function tracesSVG() {
         parts.push(`<rect x="${X}" y="${y}" width="${T}" height="${T}" fill="${img === 'none' || iso ? '#ffffff' : '#f0f0ee'}"${img === 'none' || iso ? ' stroke="#d9dedc" stroke-width="0.6"' : ''}/><image x="${ox.toFixed(1)}" y="${oy.toFixed(1)}" width="${tc.canvas.width}" height="${tc.canvas.height}" href="${tc.canvas.toDataURL(mask || img === 'none' ? 'image/png' : 'image/jpeg', 0.92)}"/>`);
         if (vi === 0 || sc.all) parts.push(traceScale(X, y, T, tc.pxPerCm, { ...sc, ...((img === 'none' || iso) && (sc.color || '#ffffff').toLowerCase() === '#ffffff' ? { color: sc.ink || '#000000', ink: '#ffffff' } : {}) }));
       });
-      parts.push(`<text x="${labW + k * (TW + gap) + TW / 2}" y="${y + T + 13}" text-anchor="middle" fill="#5b6763" font-size="10">${esc(x.s.name)} · ${fmt(tc0.depth, 3)} ${tc0.units}</text>`);
+      parts.push(`<text x="${labW + k * (TW + gap) + TW / 2}" y="${y + T + 13}" text-anchor="middle" fill="${INK.sub}" font-size="10">${esc(x.s.name)} · ${fmt(tc0.depth, 3)} ${tc0.units}</text>`);
     });
   });
   parts.push('</svg>');
@@ -6493,6 +6496,7 @@ function arrowMarksSVG(tr, X, W, y) {
   return out.join('');
 }
 function sectionsSVG() {
+  const INK = figInk();
   if (!S.sections.length) return null;
   const F = S.fig, D0 = compositeData(), D = { ...D0, axis: 'depth' };
   const { from, to } = secFigRange(D);
@@ -6501,24 +6505,24 @@ function sectionsSVG() {
   const legend = S.classes.filter((c) => c.id !== 'artifact' && (tr.some((q) => q.name === c.name) || S.sections.some((s) => [...s.objects.values()].some((o) => effClassId(o) === c.id))));
   const ab = clsAbbr(), perRow = Math.max(1, Math.floor((x0 + panels.length * (W + gap)) / 190)), legH = legend.length ? Math.ceil(legend.length / perRow) * 16 + 18 : 0;
   const Wt = Math.max(x0 + panels.length * (W + gap) + 8, 360), Ht = top + H + 30 + legH, y = (v) => +(top + ((v - from) / (to - from)) * H).toFixed(2);
-  const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${Wt}" height="${Ht}" viewBox="0 0 ${Wt} ${Ht}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10"><rect width="${Wt}" height="${Ht}" fill="#fff"/>`];
-  out.push(`<text transform="translate(14,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="#1c2422">${esc(logStyleOf(D).label)}</text>`);
-  out.push(`<line x1="${x0 - 8}" y1="${top}" x2="${x0 - 8}" y2="${top + H}" stroke="#1c2422" stroke-width="0.8"/>`);
+  const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${Wt}" height="${Ht}" viewBox="0 0 ${Wt} ${Ht}" font-family="IBM Plex Sans, Arial, Helvetica, sans-serif" font-size="10"><rect width="${Wt}" height="${Ht}" fill="${INK.bg}"/>`];
+  out.push(`<text transform="translate(14,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="${INK.text}">${esc(logStyleOf(D).label)}</text>`);
+  out.push(`<line x1="${x0 - 8}" y1="${top}" x2="${x0 - 8}" y2="${top + H}" stroke="${INK.text}" stroke-width="0.8"/>`);
   const LS = logStyleOf(D);
-  for (const e of extraTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 8 - e.len}" y1="${y(e.v)}" x2="${x0 - 8}" y2="${y(e.v)}" stroke="#1c2422" stroke-width="0.6"/>`);   // V0.22
-  for (const v of verticalTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 13}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="#1c2422" stroke-width="0.8"/><text x="${x0 - 15}" y="${y(v) + 3}" text-anchor="end" fill="#1c2422">${+(v * LS.style.yFactor).toPrecision(6)}</text>`);
+  for (const e of extraTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 8 - e.len}" y1="${y(e.v)}" x2="${x0 - 8}" y2="${y(e.v)}" stroke="${INK.text}" stroke-width="0.6"/>`);   // V0.22
+  for (const v of verticalTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 13}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="${INK.text}" stroke-width="0.8"/><text x="${x0 - 15}" y="${y(v) + 3}" text-anchor="end" fill="${INK.text}">${+(v * LS.style.yFactor).toPrecision(6)}</text>`);
   panels.forEach((p, i) => {
     const X = x0 + i * (W + gap), href = panelDataURL(D, from, to, H, W, p);
-    out.push(`<text x="${X}" y="${top - 10}" font-weight="700" fill="#1c2422">${String.fromCharCode(97 + i)}</text><text x="${X + 12}" y="${top - 10}" fill="#1c2422">${esc(t('fig.p.' + p))}</text>`);
-    out.push(`<image x="${X}" y="${top}" width="${W}" height="${H}" preserveAspectRatio="none" href="${href}" xlink:href="${href}"/><rect x="${X}" y="${top}" width="${W}" height="${H}" fill="none" stroke="#5b6763" stroke-width="0.6"/>`);
+    out.push(`<text x="${X}" y="${top - 10}" font-weight="700" fill="${INK.text}">${String.fromCharCode(97 + i)}</text><text x="${X + 12}" y="${top - 10}" fill="${INK.text}">${esc(t('fig.p.' + p))}</text>`);
+    out.push(`<image x="${X}" y="${top}" width="${W}" height="${H}" preserveAspectRatio="none" href="${href}" xlink:href="${href}"/><rect x="${X}" y="${top}" width="${W}" height="${H}" fill="none" stroke="${INK.sub}" stroke-width="0.6"/>`);
     if (p === 'arrows') out.push(arrowMarksSVG(tr, X, W, y));
     if (LS.style.ndImage) for (const g of noDataGaps(D.rows.filter((r) => r.a1 > from && r.a0 < to))) out.push(noDataRect(LS.style, X, W, y(Math.max(g.a0, from)), y(Math.min(g.a1, to)) - y(Math.max(g.a0, from)), t('log.noData')));   // V0.23
   });
-  out.push(`<text x="${x0}" y="${top + H + 18}" fill="#5b6763">${esc(curCore()?.name || S.name)} · ${+from.toPrecision(6)}–${+to.toPrecision(6)} ${esc(D.base)}</text>`);
+  out.push(`<text x="${x0}" y="${top + H + 18}" fill="${INK.sub}">${esc(curCore()?.name || S.name)} · ${+from.toPrecision(6)}–${+to.toPrecision(6)} ${esc(D.base)}</text>`);
   legend.forEach((c, i) => {
     const lx = 8 + (i % perRow) * 190, ly = top + H + 30 + Math.floor(i / perRow) * 16;
     const symOnly = F.panels.includes('arrows') && (F.markStyle || 'arrowLabel') !== 'arrowLabel';
-    out.push(`${symOnly ? figSymbol(F.markStyle, lx + 5, ly + 9, c.color, 1e9, true) : `<rect x="${lx}" y="${ly}" width="10" height="10" fill="${c.color}"/>`}<text x="${lx + 14}" y="${ly + 9}" fill="#1c2422">${symOnly ? '' : `<tspan font-weight="700">${esc(ab.get(c.name))}</tspan> `}<tspan font-style="${c.plain ? 'normal' : 'italic'}">${esc(c.name)}</tspan></text>`);
+    out.push(`${symOnly ? figSymbol(F.markStyle, lx + 5, ly + 9, c.color, 1e9, true) : `<rect x="${lx}" y="${ly}" width="10" height="10" fill="${c.color}"/>`}<text x="${lx + 14}" y="${ly + 9}" fill="${INK.text}">${symOnly ? '' : `<tspan font-weight="700">${esc(ab.get(c.name))}</tspan> `}<tspan font-style="${c.plain ? 'normal' : 'italic'}">${esc(c.name)}</tspan></text>`);
   });
   out.push('</svg>');
   return out.join('');
@@ -6554,12 +6558,13 @@ function rangeSVG() {
 
 /** Adds title and caption around any figure SVG. */
 function wrapFigure(svg, title, caption) {
+  const INK = figInk();
   const w = +(/width="([\d.]+)"/.exec(svg)?.[1] || 800), h = +(/height="([\d.]+)"/.exec(svg)?.[1] || 600);
   const lines = []; let cur = '';
   for (const word of String(caption || '').split(/\s+/).filter(Boolean)) { if ((cur + ' ' + word).length * 6.2 > w - 20) { lines.push(cur); cur = word; } else cur = cur ? cur + ' ' + word : word; }
   if (cur) lines.push(cur);
   const top = title ? 34 : 0, H = top + h + (lines.length ? lines.length * 15 + 16 : 0);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${H}" viewBox="0 0 ${w} ${H}" font-family="IBM Plex Sans, Arial, sans-serif"><rect width="${w}" height="${H}" fill="#fff"/>${title ? `<text x="10" y="23" font-size="16" font-weight="600" fill="#1c2422">${esc(title)}</text>` : ''}${svg.replace('<svg ', `<svg x="0" y="${top}" `)}${lines.map((l, i) => `<text x="10" y="${top + h + 18 + i * 15}" font-size="12" fill="#1c2422">${esc(l)}</text>`).join('')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${H}" viewBox="0 0 ${w} ${H}" font-family="IBM Plex Sans, Arial, sans-serif"><rect width="${w}" height="${H}" fill="${INK.bg}"/>${title ? `<text x="10" y="23" font-size="16" font-weight="600" fill="${INK.text}">${esc(title)}</text>` : ''}${svg.replace('<svg ', `<svg x="0" y="${top}" `)}${lines.map((l, i) => `<text x="10" y="${top + h + 18 + i * 15}" font-size="12" fill="${INK.text}">${esc(l)}</text>`).join('')}</svg>`;
 }
 
 /** V0.2: depth window fields shared by all figures (empty = whole core). */
@@ -6759,6 +6764,7 @@ function locmapPanelHTML() {
       <div class="row" style="gap:4px"><button class="btn small" type="button" data-lmz="allSides">${t('mp.all')}</button><button class="btn small" type="button" data-lmz="noSides">${t('mp.none')}</button></div></div>
       ${st.crs === 'EPSG:4326' || st.gridType === 'geo' ? `<label class="f"><span>${t('lm.fmt')}</span>${opt('coordFmt', ['dd', 'dms'], (v) => t('lm.f.' + v))}</label>` : `<label class="f"><span>${t('lm.unit')}</span>${opt('metricUnit', ['m', 'km'], (v) => v)}</label><p class="note">${t('lm.metricNote')}</p>`}
       <div class="grid2">${num('labelSize', 6, 24, 1)}<label class="f"><span>${t('lm.gridColor')}</span><input type="color" data-lm="gridColor" value="${st.gridColor}"></label></div>
+      <div class="grid2">${['textColor', 'subColor', 'bgColor'].map((k) => `<label class="f"><span>${t('color.' + k)}</span><input type="color" data-lm="${k}" value="${esc(st[k] || LOCMAP_DEFAULTS[k])}"></label>`).join('')}</div>
       ${chk('ticks')}${chk('rotateSide')}${chk('gridDash')}
     </details>
     <details class="mini"><summary>${t('lm.elemT')}</summary>

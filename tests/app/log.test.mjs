@@ -174,3 +174,14 @@ test('V0.51: ichnotaxa distribution as symmetric curves, column width and hidden
   const hid = buildRangeSVG({ from: 0, to: 10, height: 100, rows, classes, display: 'kite', style: { colHide: ['sp:B'] } });
   assert.doesNotMatch(hid.svg, />B<\/text>/);
 });
+
+test('figure colours: hex colours are used, anything else falls back to the default', async () => {
+  const { mergedStyle, LOG_STYLE } = await import('../../app/js/log.js');
+  const st = mergedStyle({ bgColor: '#000000', textColor: '"/><script>x</script>', gridColor: 'red' });
+  assert.equal(st.bgColor, '#000000');
+  assert.equal(st.textColor, LOG_STYLE.textColor);
+  assert.equal(st.gridColor, LOG_STYLE.gridColor);
+  const { svg } = buildLogSVG({ from: 0, to: 10, height: 200, rows: [], classes: [], records: [], tracks: { total: true }, style: { bgColor: '#101010', textColor: '<b>' }, title: 'T' });
+  assert.match(svg, /fill="#101010"/);
+  assert.doesNotMatch(svg, /<b>/);
+});

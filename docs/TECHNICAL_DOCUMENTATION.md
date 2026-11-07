@@ -659,7 +659,9 @@ at least one reviewed trace (§24). The Python package then provides four comman
   50 % valid pixels. Parts of a tile outside the image are marked "ignore". **Split by core:** all tiles of a core go
   to the same set (training, validation or test). Cores can be chosen; otherwise they are assigned at random with a
   seed (20 % test and 20 % validation, at least one of each when there are 3 or more cores). Binary by default (all
-  classes → 1); `--multiclass` keeps ichnotaxa as classes.
+  classes → 1); `--multiclass` keeps ichnotaxa as classes. The output directory must be empty, so that tiles of two
+  datasets are never mixed; `--overwrite` replaces a previous dataset (a directory containing `dataset.json`) and
+  refuses any other non-empty directory. Validation and test core lists must not overlap.
 - **`train`**: U-Net (Ronneberger et al., 2015) with a ResNet-34 encoder pre-trained on ImageNet
   (`segmentation-models-pytorch`). Loss = cross-entropy (binary: BCE with logits) + soft Dice
   `1 − (2Σpt + 1)/(Σp + Σt + 1)` (multi-class: mean over classes ≥ 1), ignoring pixels marked 255. Augmentations:
@@ -957,6 +959,8 @@ stored in the project, so any result can be reproduced.
 
 Hand-placed marks can be hidden in the core column and the whole-core figure without deleting them. When hidden,
 their triangles and mark-only legend entries are omitted; the identified-ichnotaxa list remains in identification mode.
+The legend of the core column and of the whole-core figure lists the ichnotaxa with a non-zero percentage in the
+displayed interval and those identified by hand marks that are shown.
 
 For cores where bioturbation cannot be quantified but ichnotaxa can be recognised, **Identification mode**
 (`settings.idMode`, a checkbox in the section bar) records presence instead of area.
@@ -1024,7 +1028,11 @@ section (`logView.imgPanels`), with a width in the real proportion of the core p
 
 Colours can be edited and restored to defaults: bioturbation bars `#e7c9a5` and line `#a85f1c`, BI and ii bars
 `#c98a4b`, manual indices and text `#1c2422`, subtitle and section boundaries `#5b6763`, frames `#9aa5a1`,
-grid `#e3e8e6`, and background `#ffffff`. Ichnotaxon, record and interval category colours remain data-specific.
+grid `#e3e8e6`, and background `#ffffff`. Ichnotaxon, record and interval category colours remain data-specific. The
+text, subtitle and background colours of the core-column style also apply to the sections figure, the trace gallery
+and the title and caption added around any exported figure. The multiproxy map and the location map have their own
+text (`#1c2422`), subtitle (`#5b6763`) and background (`#ffffff`) colours. Colours read from a project are used only
+if they are hex colours (`#rgb` or `#rrggbb`); any other value falls back to its default.
 
 | Column | Content | Horizontal scale |
 |--------|---------|------------------|
@@ -1949,7 +1957,7 @@ The U-Net workflow (§9.2), with its defaults:
 
 | Command | Arguments and options |
 |---------|----------------------|
-| `prepare EXPORT OUT` | `EXPORT` = the ZIP exported by the program; `--tile 512`, `--overlap 64`, `--px-per-cm` (default: median of the export), `--multiclass`, `--val CORE…`, `--test CORE…` (never used for training), `--seed 42`. Prints the tiles and cores of each set and warns if there are no test cores. |
+| `prepare EXPORT OUT` | `EXPORT` = the ZIP exported by the program; `--tile 512`, `--overlap 64`, `--px-per-cm` (default: median of the export), `--multiclass`, `--val CORE…`, `--test CORE…` (never used for training), `--seed 42`, `--overwrite` (replace a previous dataset in `OUT`). Prints the tiles and cores of each set and warns if there are no test cores. |
 | `train DATA OUT` | `DATA` = folder made by `prepare`; `OUT` = output name (e.g. `models/unet_v1` → `.onnx`, `.json`, `.ckpt`); `--encoder resnet34`, `--no-pretrained`, `--epochs 60`, `--batch 8`, `--lr 3e-4`, `--patience 12`, `--seed 42`, `--device cuda|mps|cpu` (default: the best available), `--resume`, `--progress-json`. |
 | `device` | Prints, as JSON, the training hardware PyTorch sees. |
 | `evaluate EXPORT MODEL` | `--dataset` (use the test cores of a prepared folder) or `--cores CORE…`, `--threshold 0.5`, `--bin-cm 1.0`, `-o scores.json`. Prints pooled IoU and Dice. |

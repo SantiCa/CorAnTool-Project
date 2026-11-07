@@ -10,7 +10,7 @@ export const LOCMAP_DEFAULTS = {
   base: 'vector', baseOpacity: 1, land: '#e6e6dc', sea: '#eef4f6', coast: true,
   grid: true, gridType: 'auto', gridStep: null, gridColor: '#8a9592', gridWidth: 0.5, gridDash: true,
   labels: { top: false, bottom: true, left: true, right: false }, coordFmt: 'dd', metricUnit: 'm', rotateSide: true,
-  labelSize: 10, ticks: true,
+  labelSize: 10, ticks: true, textColor: '#1c2422', subColor: '#5b6763', bgColor: '#ffffff',
   scaleBar: true, scalePos: 'bl', north: true, northPos: 'tr', northSize: 1,
   symbol: 'circle', pointSize: 6, pointColor: '#c0392b', pointStroke: '#1c2422', coreLabels: true, coreLabelSize: 11,
   fmt: 'svg', scale: 3, quality: 0.92,
@@ -178,8 +178,8 @@ export function buildLocMapSVG(o) {
   const m = { t: (L.top ? fs + 12 : 8) + (o.title ? 24 : 0), b: (L.bottom ? fs + 14 : 8) + 12, l: L.left ? sideW : 8, r: L.right ? sideW : 8 };
   const TW = W + m.l + m.r, TH = H + m.t + m.b, ox = m.l, oy = m.t, f1 = (v) => v.toFixed(1);
   const s = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${TW}" height="${TH}" viewBox="0 0 ${TW} ${TH}" font-family="IBM Plex Sans, Arial, sans-serif" font-size="${fs}">`,
-    `<rect width="${TW}" height="${TH}" fill="#ffffff"/>`];
-  if (o.title) s.push(`<text x="${ox}" y="18" font-size="14" font-weight="600" fill="#1c2422">${lmEsc(o.title)}</text>`);
+    `<rect width="${TW}" height="${TH}" fill="${lmEsc(st.bgColor)}"/>`];
+  if (o.title) s.push(`<text x="${ox}" y="18" font-size="14" font-weight="600" fill="${lmEsc(st.textColor)}">${lmEsc(o.title)}</text>`);
   s.push(`<defs><clipPath id="lmclip"><rect x="${ox}" y="${oy}" width="${W}" height="${H}"/></clipPath></defs><g clip-path="url(#lmclip)">`);
   const P = (lon, lat) => { const [x, y] = fr.P(lon, lat); return [x + ox, y + oy]; };
   const raster = !!o.bg?.href && st.base !== 'vector' && st.base !== 'blank';
@@ -257,20 +257,20 @@ export function buildLocMapSVG(o) {
       if (side === 'top' || side === 'bottom') {
         const x = ox + p, y = side === 'top' ? oy : oy + H, d = side === 'top' ? -1 : 1;
         if (st.ticks && show) s.push(`<line x1="${f1(x)}" y1="${y}" x2="${f1(x)}" y2="${y + d * tl}" stroke="#1c2422" stroke-width="0.8"/>`);
-        if (show) s.push(`<text x="${f1(x)}" y="${f1(side === 'top' ? y - tl - 3 : y + tl + fs + 1)}" text-anchor="middle" fill="#1c2422">${lmEsc(txt)}</text>`);
+        if (show) s.push(`<text x="${f1(x)}" y="${f1(side === 'top' ? y - tl - 3 : y + tl + fs + 1)}" text-anchor="middle" fill="${lmEsc(st.textColor)}">${lmEsc(txt)}</text>`);
       } else {
         const y = oy + p, x = side === 'left' ? ox : ox + W, d = side === 'left' ? -1 : 1;
         if (st.ticks && show) s.push(`<line x1="${x}" y1="${f1(y)}" x2="${x + d * tl}" y2="${f1(y)}" stroke="#1c2422" stroke-width="0.8"/>`);
         if (!show) continue;
         const tx = x + d * (tl + 3);
         s.push(st.rotateSide
-          ? `<text transform="translate(${f1(tx + (side === 'left' ? -2 : fs - 1))} ${f1(y)}) rotate(-90)" text-anchor="middle" fill="#1c2422">${lmEsc(txt)}</text>`
-          : `<text x="${f1(tx)}" y="${f1(y + fs * 0.35)}" text-anchor="${side === 'left' ? 'end' : 'start'}" fill="#1c2422">${lmEsc(txt)}</text>`);
+          ? `<text transform="translate(${f1(tx + (side === 'left' ? -2 : fs - 1))} ${f1(y)}) rotate(-90)" text-anchor="middle" fill="${lmEsc(st.textColor)}">${lmEsc(txt)}</text>`
+          : `<text x="${f1(tx)}" y="${f1(y + fs * 0.35)}" text-anchor="${side === 'left' ? 'end' : 'start'}" fill="${lmEsc(st.textColor)}">${lmEsc(txt)}</text>`);
       }
     }
   }
   const foot = [o.labelsText?.crs ? `${o.labelsText.crs}: ${crs.name} (EPSG:${crs.epsg})` : `${crs.name} (EPSG:${crs.epsg})`, raster ? o.bg.attribution : ''].filter(Boolean).join(' · ');
-  s.push(`<text x="${ox + W}" y="${TH - 2}" text-anchor="end" font-size="8" fill="#5b6763">${lmEsc(foot)}</text>`);
+  s.push(`<text x="${ox + W}" y="${TH - 2}" text-anchor="end" font-size="8" fill="${lmEsc(st.subColor)}">${lmEsc(foot)}</text>`);
   s.push('</svg>');
   return { svg: s.join(''), frame: fr, crs, bbox, margins: m };
 }

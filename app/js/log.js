@@ -231,8 +231,15 @@ export const LOG_STYLE = { yFactor: 1, yStep: null, yDiv: null, pctDiv: 4, total
   boundaryColor: '#5b6763', biColor: '#c98a4b', iiColor: '#c98a4b', manualColor: '#1c2422',
   frame: true, grid: true, boundaries: true, totalTitle: '', speciesTitle: '', fontSize: 10, showTitle: true,
   axes: {} };   // V0.6: per column {min, max, div, dec, rev, log} keyed by column id (total, species, BI, ii, rec:<name>)
+const HEX_COLOR = /^#[0-9a-f]{3}([0-9a-f]{3})?$/i;
+/** Style merged with LOG_STYLE; a colour that is not a hex colour falls back to its default (project files are untrusted). */
+export function mergedStyle(style) {
+  const st = { ...LOG_STYLE, ...(style || {}) };
+  for (const k of Object.keys(LOG_STYLE)) if (k.endsWith('Color') && !HEX_COLOR.test(String(st[k]))) st[k] = LOG_STYLE[k];
+  return st;
+}
 export function buildLogSVG(o) {
-  const st = { ...LOG_STYLE, ...(o.style || {}) };
+  const st = mergedStyle(o.style);
   SYM = { k: +st.markSize > 0 ? +st.markSize : 1, stroke: st.markStroke === 'none' ? 'none' : st.markStroke || '#ffffff', sw: +st.markStrokeW >= 0 && st.markStrokeW != null ? +st.markStrokeW : 0.8 };
   const L = { total: 'Bioturbation (%)', species: 'Ichnotaxa (%)', image: 'Core', ...(o.labels || {}) };
   if (st.totalTitle) L.total = st.totalTitle;
@@ -451,7 +458,7 @@ export function abbrevs(names) {
  * total: bool (bioturbation % column)}.
  */
 export function buildRangeSVG(o) {
-  const K = { ...LOG_STYLE, ...(o.style || {}) };
+  const K = mergedStyle(o.style);
   const H = o.height, from = o.from, to = o.to, span = to - from || 1, colW = Math.max(16, Math.min(200, +o.colW || 30)), x0 = 72;   // V0.51: column width
   const longest = Math.max(8, ...o.classes.map((c) => String(c.name).length)), top = 46 + Math.min(150, longest * 5.2 * 0.87);   // room for names at 60°
   const y = (v) => f2(top + ((v - from) / span) * H);

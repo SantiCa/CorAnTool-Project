@@ -10,6 +10,12 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.59 — 2026-11-07
+- Text, subtitle and background colours can also be changed in the multiproxy map and the location map; the
+  sections figure, the trace gallery and figure titles and captions follow the core-column colours.
+- Colours stored in a project are checked before drawing; invalid values fall back to the defaults.
+- `sedcoretool unet prepare --overwrite` replaces a previous dataset; other non-empty folders are still refused.
+
 ## V0.58 — 2026-11-07
 - Reserving cores for the final test now excludes only the library and other-project examples that may come from
   them (same core identifier or name, or identical trace descriptors), and shows how many were excluded.
@@ -24,6 +30,7 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 ## V0.56 — 2026-11-07
 - Customise figure colours for core columns, ichnotaxon distributions and multiproxy columns, or restore defaults.
 - Show or hide hand-placed identification marks in core columns and whole-core figures without deleting them.
+- Legends of the core column and whole-core figure list only the ichnotaxa present in the displayed interval.
 
 ## V0.55 — 2026-11-07
 - Keep the desktop window open when saving fails, including when a save is already in progress.

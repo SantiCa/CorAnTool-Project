@@ -590,7 +590,7 @@ export function divColor(v) {
 export const MAP_STYLE = {
   bg: 'vector', bgOpacity: 1, coast: true, symbol: 'circle', size: 1, sizeByFraction: true,
   labels: true, labelSize: 11, labelColor: '#1c2422', halo: true, labelValue: true,
-  pointColor: '#ffffff', stroke: '#1c2422', land: '#e6e6dc', sea: '#f4f8f9', graticule: true, scaleBar: true, north: false, proj: 'plate',
+  pointColor: '#ffffff', stroke: '#1c2422', land: '#e6e6dc', sea: '#f4f8f9', textColor: '#1c2422', subColor: '#5b6763', bgColor: '#ffffff', graticule: true, scaleBar: true, north: false, proj: 'plate',
 };
 export const MAP_SYMBOLS = ['circle', 'square', 'triangle', 'diamond', 'star', 'hexagon', 'cross'];
 
@@ -686,9 +686,9 @@ export function buildMapSVG(o) {
   const linear = F.kind === 'plate' || F.kind === 'mercator'; // grid cells stay rectangles
   const raster = !!(bg && bg.href) && linear;
   const s = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H + top + bottom}" viewBox="0 0 ${W} ${H + top + bottom}" font-family="IBM Plex Sans, Arial, sans-serif" font-size="11">`,
-    `<rect width="${W}" height="${H + top + bottom}" fill="#ffffff"/><rect x="0" y="${top}" width="${W}" height="${H}" fill="${esc2(st.sea)}"/>`,
-    `<text x="8" y="18" font-size="14" font-weight="600" fill="#1c2422">${esc2(o.title || '')}</text>`,
-    `<text x="8" y="34" fill="#5b6763">${esc2(o.subtitle || '')}</text>`];
+    `<rect width="${W}" height="${H + top + bottom}" fill="${esc2(st.bgColor)}"/><rect x="0" y="${top}" width="${W}" height="${H}" fill="${esc2(st.sea)}"/>`,
+    `<text x="8" y="18" font-size="14" font-weight="600" fill="${esc2(st.textColor)}">${esc2(o.title || '')}</text>`,
+    `<text x="8" y="34" fill="${esc2(st.subColor)}">${esc2(o.subtitle || '')}</text>`];
   // land paths (used for drawing and, with a second image, as clip path)
   const landD = [];
   for (const r of o.land || []) {
@@ -714,7 +714,7 @@ export function buildMapSVG(o) {
     const C = (u, w) => xy(x0 + (u + 0.5) * dl, y1 - (w + 0.5) * dp);
     for (const c of o.contours || []) {
       if (c.segs.length) s.push(`<path d="${c.segs.map((q) => `M${C(q[0], q[1])}L${C(q[2], q[3])}`).join('')}" fill="none" stroke="#1c2422" stroke-opacity="0.75" stroke-width="0.8"/>`);
-      if (o.contourLabels) for (let k = 0; k < c.segs.length; k += Math.max(25, Math.round(c.segs.length / 3))) { const q = c.segs[k], [tx, ty] = P(x0 + ((q[0] + q[2]) / 2 + 0.5) * dl, y1 - ((q[1] + q[3]) / 2 + 0.5) * dp); s.push(`<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="8.5" fill="#1c2422" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="middle">${esc2(c.label ?? c.level)}</text>`); }
+      if (o.contourLabels) for (let k = 0; k < c.segs.length; k += Math.max(25, Math.round(c.segs.length / 3))) { const q = c.segs[k], [tx, ty] = P(x0 + ((q[0] + q[2]) / 2 + 0.5) * dl, y1 - ((q[1] + q[3]) / 2 + 0.5) * dp); s.push(`<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="8.5" fill="${esc2(st.textColor)}" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="middle">${esc2(c.label ?? c.level)}</text>`); }
     }
   }
   if (!raster) for (const d of landD) s.push(`<path d="${d}" fill="${esc2(st.land)}" stroke="#b9b9a8" stroke-width="0.6"/>`);
@@ -747,16 +747,16 @@ export function buildMapSVG(o) {
   if (st.north) { const nx = W - 24, ny = top + 14, c = raster ? '#ffffff' : '#1c2422'; s.push(`<polygon points="${nx},${ny} ${nx - 7},${ny + 20} ${nx},${ny + 15} ${nx + 7},${ny + 20}" fill="${c}"/><text x="${nx}" y="${ny + 32}" text-anchor="middle" font-size="10" font-weight="600" fill="${c}">N</text>`); }
   s.push('</g>');
   let lx = 8; const ly = top + H + 20;
-  for (const [name, color] of o.legend || []) { s.push(`${symbolSVG(st.symbol, lx + 5.5, ly - 3.5, 5.5, `fill="${esc2(color)}" stroke="#1c2422" stroke-width="0.5"`)}<text x="${lx + 15}" y="${ly}" fill="#1c2422">${esc2(name)}</text>`); lx += 30 + name.length * 6.2; }
+  for (const [name, color] of o.legend || []) { s.push(`${symbolSVG(st.symbol, lx + 5.5, ly - 3.5, 5.5, `fill="${esc2(color)}" stroke="#1c2422" stroke-width="0.5"`)}<text x="${lx + 15}" y="${ly}" fill="${esc2(st.textColor)}">${esc2(name)}</text>`); lx += 30 + name.length * 6.2; }
   if (o.colorbar) { // horizontal colour bar under the map, right side
     const cb = o.colorbar, bw = 240, bx = W - bw - 16, by = top + H + 12, nst = 60, ticks = cb.ticks || niceTicks(cb.min, cb.max, 5);
     for (let k = 0; k < nst; k++) { const v = cb.min + ((k + 0.5) / nst) * (cb.max - cb.min); s.push(`<rect x="${(bx + (k * bw) / nst).toFixed(1)}" y="${by}" width="${(bw / nst + 0.4).toFixed(1)}" height="10" fill="${cb.fn(v)}"/>`); }
     s.push(`<rect x="${bx}" y="${by}" width="${bw}" height="10" fill="none" stroke="#1c2422" stroke-width="0.5"/>`);
-    for (const v of ticks) { if (v < cb.min - 1e-9 || v > cb.max + 1e-9) continue; const x = bx + ((v - cb.min) / (cb.max - cb.min || 1)) * bw; s.push(`<line x1="${x.toFixed(1)}" y1="${by + 10}" x2="${x.toFixed(1)}" y2="${by + 13}" stroke="#1c2422" stroke-width="0.6"/><text x="${x.toFixed(1)}" y="${by + 22}" font-size="8.5" text-anchor="middle" fill="#1c2422">${+v.toFixed(3)}</text>`); }
-    if (cb.label) s.push(`<text x="${bx - 6}" y="${by + 9}" font-size="9" text-anchor="end" fill="#1c2422">${esc2(cb.label)}</text>`);
+    for (const v of ticks) { if (v < cb.min - 1e-9 || v > cb.max + 1e-9) continue; const x = bx + ((v - cb.min) / (cb.max - cb.min || 1)) * bw; s.push(`<line x1="${x.toFixed(1)}" y1="${by + 10}" x2="${x.toFixed(1)}" y2="${by + 13}" stroke="${esc2(st.textColor)}" stroke-width="0.6"/><text x="${x.toFixed(1)}" y="${by + 22}" font-size="8.5" text-anchor="middle" fill="${esc2(st.textColor)}">${+v.toFixed(3)}</text>`); }
+    if (cb.label) s.push(`<text x="${bx - 6}" y="${by + 9}" font-size="9" text-anchor="end" fill="${esc2(st.textColor)}">${esc2(cb.label)}</text>`);
   }
-  if (o.note) s.push(`<text x="8" y="${top + H + 46}" fill="#5b6763" font-size="10">${esc2(o.note)}</text>`);
-  if (bg && bg.attribution) s.push(`<text x="${W - 6}" y="${top + H + 62}" text-anchor="end" fill="#5b6763" font-size="8.5">${esc2(bg.attribution)}</text>`);
+  if (o.note) s.push(`<text x="8" y="${top + H + 46}" fill="${esc2(st.subColor)}" font-size="10">${esc2(o.note)}</text>`);
+  if (bg && bg.attribution) s.push(`<text x="${W - 6}" y="${top + H + 62}" text-anchor="end" fill="${esc2(st.subColor)}" font-size="8.5">${esc2(bg.attribution)}</text>`);
   s.push('</svg>');
   return s.join('');
 }

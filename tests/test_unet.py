@@ -69,6 +69,16 @@ def test_export_round_trip_and_prepare(tmp_path):
     s = prepare_dataset(exp, tmp_path / "ds", tile=16, overlap=4, px_per_cm=10, test_cores=["C3"], val_cores=["C2"])
     with pytest.raises(ValueError, match="output directory must be empty"):
         prepare_dataset(exp, tmp_path / "ds", tile=16, overlap=4, px_per_cm=10, test_cores=["C1"], val_cores=["C2"])
+    s2 = prepare_dataset(exp, tmp_path / "ds", tile=16, overlap=4, px_per_cm=10, test_cores=["C1"], val_cores=["C2"],
+                         overwrite=True)
+    assert s2["split"]["test"]["cores"] == ["C1"]
+    assert not any(p.name.startswith("C1__") for p in (tmp_path / "ds" / "train" / "images").iterdir())
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "notes.txt").write_text("keep")
+    with pytest.raises(ValueError, match="dataset.json"):
+        prepare_dataset(exp, other, tile=16, overlap=4, px_per_cm=10, overwrite=True)
+    assert (other / "notes.txt").exists()
     assert s["split"]["test"]["cores"] == ["C3"] and s["split"]["val"]["cores"] == ["C2"]
     assert s["split"]["train"]["tiles"] > 0 and s["classes"] == ["bioturbation"]
     m = np.asarray(Image.open(next((tmp_path / "ds" / "train" / "masks").glob("*.png"))))
