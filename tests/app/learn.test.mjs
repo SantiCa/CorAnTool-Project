@@ -1,4 +1,11 @@
 import test from 'node:test';
+import { independentExternalExamples } from '../../app/js/learn.js';
+
+test('reserved cores disable external examples with unknown or copied origins', () => {
+  const external = [{ key: 'other|copied|section|1' }, { x: [1, 2] }];
+  assert.equal(independentExternalExamples(external, false).length, 2);
+  assert.equal(independentExternalExamples(external, true).length, 0);
+});
 import assert from 'node:assert/strict';
 import { Classifier, FEATURES } from '../../app/js/learn.js';
 

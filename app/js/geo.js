@@ -215,6 +215,19 @@ export function colStats(rows, n) {
   return { mu, sd };
 }
 
+/** Fit numeric transforms using training rows only; core scaling is already computed per core. */
+export function fitSampleTransform(rows, n, scaling) {
+  const stats = colStats(rows, n);
+  return { scaling, ...stats };
+}
+export function transformSample(row, columns, n, transform) {
+  return columns.map((j) => {
+    if (j >= n || transform.scaling === 'core') return row.f[j];
+    const value = row.t[j] == null ? transform.mu[j] : row.t[j];
+    return transform.scaling === 'global' ? (value - transform.mu[j]) / transform.sd[j] : value;
+  });
+}
+
 /* ───────── labels ───────── */
 
 /** Rule condition: {feature, op: 'z>'|'z<'|'>'|'<', value}. 'z' uses the per-core z-score. */
@@ -493,12 +506,12 @@ export function* crossValidateSteps(samples, labels, method, params, seed = 42, 
     folds = Array.from({ length: k }, (_, f) => sorted.slice(Math.floor((f * sorted.length) / k), Math.floor(((f + 1) * sorted.length) / k)));
     gap = opt.gap ?? (sorted.length ? (samples[sorted.at(-1)].x - samples[sorted[0]].x) * 0.05 : 0);
   }
-  const resc = opt.rescale && samples.length && samples[0].t ? opt.rescale : null;
+  const resc = (opt.rescale || opt.impute) && samples.length && samples[0].t ? (opt.rescale || opt.impute) : null;
   const zf = (train) => {   // per-fold z-score of the numeric columns (training statistics only)
     if (!resc) return (i) => samples[i].f;
     const mu = resc.map((on, j) => (on ? mean(train.map((i) => samples[i].t[j]).filter((v) => v != null)) : 0));
-    const sd = resc.map((on, j) => { if (!on) return 1; const v = train.map((i) => samples[i].t[j]).filter((x) => x != null); const m = mu[j]; const q = v.length > 1 ? Math.sqrt(v.reduce((a, x) => a + (x - m) ** 2, 0) / (v.length - 1)) : 0; return q || 1; });
-    return (i) => samples[i].f.map((v, j) => (resc[j] ? (samples[i].t[j] == null ? 0 : (samples[i].t[j] - mu[j]) / sd[j]) : v));
+    const sd = resc.map((on, j) => { if (!on || opt.impute) return 1; const v = train.map((i) => samples[i].t[j]).filter((x) => x != null); const m = mu[j]; const q = v.length > 1 ? Math.sqrt(v.reduce((a, x) => a + (x - m) ** 2, 0) / (v.length - 1)) : 0; return q || 1; });
+    return (i) => samples[i].f.map((v, j) => (resc[j] ? opt.impute ? (samples[i].t[j] ?? mu[j]) : (samples[i].t[j] == null ? 0 : (samples[i].t[j] - mu[j]) / sd[j]) : v));
   };
   const classes = [...new Set(idx.map((i) => labels[i]))].sort(), cm = classes.map(() => classes.map(() => 0));
   const perFold = []; let nScored = 0, nCovered = 0, nCovOk = 0;

@@ -10,6 +10,13 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.55 — 2026-11-07
+- Keep the desktop window open when saving fails, including when a save is already in progress.
+- Reject duplicate age depths and invalid named age ranges; blank age cells are ignored instead of read as zero.
+- Prevent U-Net preparation from mixing existing tiles and reject overlapping validation and test core lists.
+- Exclude external ichnotaxon examples while cores are reserved and retain source keys in exported models.
+- Fit multiproxy scaling and missing-value imputation on training samples only, and exclude reserved cores from k-means fitting.
+
 ## V0.54 — 2026-11-07
 - Documentation reorganised for public readers: everything in English, no duplicated content, one guide for
   contributors and AI coding assistants (`AGENTS.md`, also read by Claude through `CLAUDE.md`), and this changelog as

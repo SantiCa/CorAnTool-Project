@@ -137,7 +137,7 @@ export function binRows(counts, { top, bottom, binPx, minValid = 0 }) {
  */
 export function parseAgeModel(text) {
   const lines = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
-  const split = (l) => (/[;\t]/.test(l) ? l.split(/\s*[;\t]\s*/).map((x) => x.replace(/\s+/g, '').replace(',', '.')) : l.split(/[,\s]+/));
+  const split = (l) => (/[;\t]/.test(l) ? l.split(/\s*[;\t]\s*/).map((x) => x.replace(/\s+/g, '').replace(',', '.')) : l.includes(',') ? l.split(/\s*,\s*/) : l.split(/\s+/));
   let iD = 0, iA = 1, iMin = 2, iMax = 3, named = false, bacon = false;
   const first = lines.length ? split(lines[0]).map((x) => x.replace(/"/g, '').toLowerCase()) : [];
   if (first.length >= 2 && first.some((x) => x && !Number.isFinite(Number(x)))) {   // header line
@@ -150,14 +150,16 @@ export function parseAgeModel(text) {
   }
   const pts = [];
   for (const line of lines) {
-    const p = split(line).map(Number);
+    const p = split(line).map((v) => v === '' ? NaN : Number(v));
     if (Number.isFinite(p[iD]) && Number.isFinite(p[iA])) pts.push([p[iD], p[iA], iMin >= 0 ? p[iMin] : NaN, iMax >= 0 ? p[iMax] : NaN]);
   }
   pts.sort((a, b) => a[0] - b[0]);
   if (pts.length < 2) return null;
+  if (pts.some((p, i) => i && p[0] === pts[i - 1][0])) return null;
   const m = { depth: pts.map((p) => p[0]), age: pts.map((p) => p[1]) };
   // V0.28: age range (e.g. the 95 % interval of a Bacon model), only if every row has one that contains the age
   const lo = (p) => Math.min(p[2], p[3]), hi = (p) => Math.max(p[2], p[3]);
+  if (named && iMin >= 0 && iMax >= 0 && pts.some((p) => !Number.isFinite(p[2]) || !Number.isFinite(p[3]) || p[1] < lo(p) || p[1] > hi(p))) return null;
   if (pts.every((p) => Number.isFinite(p[2]) && Number.isFinite(p[3]) && (named || (lo(p) <= p[1] && p[1] <= hi(p))))) { m.min = pts.map(lo); m.max = pts.map(hi); }
   if (bacon) m.bacon = true;
   // reversals (age decreasing downwards) make depth↔age conversion ambiguous: flagged for the interface

@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BI, II, classify, rowCounts, binRows, parseAgeModel, interpAge, rleEncode, rleDecode, toCSV } from '../../app/js/core.js';
+
+test('age models reject duplicate depths and invalid ranges and skip empty ages', () => {
+  assert.deepEqual(parseAgeModel('depth;age\n0;0\n10;\n20;200').age, [0, 200]);
+  assert.deepEqual(parseAgeModel('depth,age,min,max\n0,0,0,1\n10,,0,1\n20,20,19,21').depth, [0, 20]);
+  assert.equal(parseAgeModel('depth;age\n0;0\n0;100\n10;200'), null);
+  assert.equal(parseAgeModel('depth;age;min;max\n0;50;60;100\n10;150;160;200'), null);
+});
 import { components, detectMask, polygonPixels, regionGrow, objectStats, features, rotate90, applyFilters, DEFAULT_FILTERS } from '../../app/js/imageproc.js';
 import { Classifier } from '../../app/js/learn.js';
 

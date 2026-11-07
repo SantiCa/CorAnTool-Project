@@ -74,6 +74,8 @@ def split_cores(cores: list[str], val: list[str] | None = None, test: list[str] 
                 val_frac: float = 0.2, test_frac: float = 0.2, seed: int = 42) -> dict[str, str]:
     """Core -> 'train' | 'val' | 'test'. Named cores are used as given; the rest are shuffled with ``seed``."""
     val, test = list(val or []), list(test or [])
+    if set(val) & set(test):
+        raise ValueError("validation and test cores must be disjoint")
     unknown = [c for c in val + test if c not in cores]
     if unknown:
         raise ValueError(f"unknown cores: {unknown}")
@@ -126,6 +128,8 @@ def prepare_dataset(src: str | Path, out: str | Path, tile: int = 512, overlap: 
         px_per_cm = float(np.median([it.px_per_cm for it in items]))
     split = split_cores([it.core for it in items], val_cores, test_cores, seed=seed)
     out = Path(out)
+    if out.exists() and any(out.iterdir()):
+        raise ValueError("output directory must be empty; choose a new directory to avoid mixing datasets")
     counts = {k: {"tiles": 0, "cores": sorted({c for c, v in split.items() if v == k})} for k in ("train", "val", "test")}
     for k in counts:
         for d in ("images", "masks"):

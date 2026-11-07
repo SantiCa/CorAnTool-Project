@@ -8,7 +8,7 @@ const URL = process.env.APP_URL || 'http://localhost:8765/app/index.html';
 const b = await puppeteer.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'], defaultViewport: { width: 1440, height: 900 } });
 const p = await b.newPage(), errs = [];
 p.on('pageerror', (e) => errs.push(e.message));
-p.on('console', (m) => { if (m.type() === 'error' && !/404|Failed to load resource/.test(m.text())) errs.push(m.text()); });
+p.on('console', (m) => { if (m.type() === 'error' && !/404|Failed to load resource|simulated quota exceeded/.test(m.text())) errs.push(m.text()); });
 p.on('dialog', (d) => d.accept());
 const W = (ms) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn, ms = 60000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await p.evaluate(fn)) return; await W(500); } throw new Error('timeout: ' + fn); };
@@ -52,6 +52,24 @@ try {
   });
   if (v2.bi !== v2.n || v2.ii !== v2.n || v2.depth > 1e-9 || v2.max > 0.6) fail(`web–V2 in the browser: BI ${v2.bi}/${v2.n}, ii ${v2.ii}/${v2.n}, depth ${v2.depth}, max Δ% ${v2.max}`);
   console.log(`web–V2 in the browser: ${v2.n} intervals, BI and ii identical, max Δ ${v2.max.toFixed(2)} points, mean ${v2.mean.toFixed(2)}`);
+  // Simulate a failed desktop save: the page must remain open with its changes pending.
+  const failure = await p.evaluate(async () => {
+    const I = window.ichantool; I.setMode('section');
+    const s = I.S.sections[I.S.cur], id = s.objects.keys().next().value;
+    I.S.selected = id; document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    const tx = IDBDatabase.prototype.transaction, close = window.close, desktop = window.corantoolDesktop;
+    let closed = false; window.close = () => { closed = true; }; window.corantoolDesktop = {};
+    IDBDatabase.prototype.transaction = function (stores, mode, ...args) {
+      if (mode === 'readwrite') throw new DOMException('simulated quota exceeded', 'QuotaExceededError');
+      return tx.call(this, stores, mode, ...args);
+    };
+    window.dispatchEvent(new Event('beforeunload', { cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const result = { closed, state: document.getElementById('saveState').dataset.state };
+    IDBDatabase.prototype.transaction = tx; window.close = close; window.corantoolDesktop = desktop;
+    return result;
+  });
+  if (failure.closed || failure.state !== 'error') fail(`failed save did not keep the window open: ${JSON.stringify(failure)}`);
   if (errs.length) fail('page errors: ' + errs.join(' | '));
   console.log(process.exitCode ? 'E2E finished with failures' : `E2E ok (${first} traces in the first section; reload identical)`);
 } catch (e) { fail(e.message); } finally { await b.close(); }

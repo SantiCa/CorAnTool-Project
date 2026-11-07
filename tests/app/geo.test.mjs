@@ -3,7 +3,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseTable } from '../../app/js/log.js';
 import { coresFromLongTable, applyCatalogue, buildSamples, labelSamples, ruleMatches, resample, coreConvert,
-  fitModel, predictLabel, crossValidate, kmeansFit, mapSummary, buildMapSVG, mapBBox, seededRandom, crossValidateSteps, fitModelSteps, fitBBoxAspect, mapGeometry } from '../../app/js/geo.js';
+  fitModel, predictLabel, crossValidate, kmeansFit, mapSummary, buildMapSVG, mapBBox, seededRandom, crossValidateSteps, fitModelSteps, fitBBoxAspect, mapGeometry, fitSampleTransform, transformSample } from '../../app/js/geo.js';
+
+test('training transforms and missing-value imputation use only the supplied training rows', () => {
+  const a = [{ t: [0, null], f: [0, 0] }, { t: [10, 4], f: [0, 0] }];
+  const global = fitSampleTransform(a, 2, 'global');
+  assert.deepEqual(global.mu, [5, 4]);
+  assert.deepEqual(transformSample(a[0], [0, 1], 2, global), [-1, 0]);
+  const none = fitSampleTransform(a, 2, 'none');
+  assert.deepEqual(transformSample(a[0], [0, 1], 2, none), [0, 4]);
+});
 
 const tab = parseTable(readFileSync(new URL('../../examples/geochem_demo/demo_long.csv', import.meta.url), 'utf8'));
 const H = tab.headers, col = (n) => H.indexOf(n);

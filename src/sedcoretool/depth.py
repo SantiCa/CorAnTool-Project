@@ -21,8 +21,12 @@ def depth_to_age(depth: np.ndarray, model_depth: np.ndarray, model_age: np.ndarr
     """
     md = np.asarray(model_depth, dtype=float)
     ma = np.asarray(model_age, dtype=float)
+    if md.ndim != 1 or ma.ndim != 1 or len(md) < 2 or len(md) != len(ma) or not np.isfinite(md).all() or not np.isfinite(ma).all():
+        raise ValueError("age model requires at least two finite depth-age pairs")
     order = np.argsort(md)
     md, ma = md[order], ma[order]
+    if np.any(np.diff(md) == 0):
+        raise ValueError("age model depths must be unique")
     d = np.asarray(depth, dtype=float)
     age = np.interp(d, md, ma)
     if extrapolate:

@@ -10,6 +10,11 @@ export const LOO_MAX = 1500;
 
 export const vec = (f) => FEATURES.map((k) => (Number.isFinite(f?.[k]) ? f[k] : 0));
 
+/** External examples cannot be proven independent of a reserved core, including copies in other projects. */
+export function independentExternalExamples(examples, hasHoldout) {
+  return hasHoldout ? [] : examples;
+}
+
 export class Classifier {
   /** V0.17: `features` names the input vector (FEATURES, or a vision-model id); its length is taken from the examples. */
   constructor({ k = 5, novelty = 3, weights = 'distance', features = FEATURES } = {}) { this.k = k; this.novelty = novelty; this.weights = weights; this.features = features; this.n = 0; }

@@ -1927,7 +1927,7 @@ Object.assign(D.en, {
 });
 // V0.49: final test on reserved cores
 Object.assign(D.es, {
-  'ft.title': 'Prueba final con sondeos reservados', 'ft.intro': 'Los sondeos marcados no entrenan ningún modelo ni intervienen al elegirlo (ni en la evaluación ni en la validación cruzada). Sirven para medir el acierto una sola vez, al final, sin optimismo.',
+  'ft.title': 'Prueba final con sondeos reservados', 'ft.intro': 'Los sondeos marcados no entrenan ni intervienen al elegir modelos. Mientras haya sondeos reservados, se excluyen todos los ejemplos de biblioteca y de otros proyectos porque su independencia no está garantizada. La prueba final debe usarse una sola vez.',
   'ft.run': 'Hacer la prueba final', 'ft.ichnoHint': 'Predice con el modelo en uso las trazas identificadas de los sondeos reservados.',
   'ft.confirm': 'La prueba final solo es independiente si no cambias el modelo después de ver su resultado. Cada repetición queda registrada. ¿Hacerla ahora?',
   'ft.none': 'Todavía no hay pruebas finales.', 'ft.when': 'Fecha', 'ft.what': 'Modelo y sondeos reservados',
@@ -1936,7 +1936,7 @@ Object.assign(D.es, {
   'ft.reserved': '«{c}» reservado para la prueba final: ya no entrena ni interviene al elegir el modelo.', 'ft.released': '«{c}» vuelve a usarse para entrenar.',
 });
 Object.assign(D.en, {
-  'ft.title': 'Final test on reserved cores', 'ft.intro': 'Marked cores never train a model nor take part in choosing one (neither in the evaluation nor in cross-validation). They measure accuracy once, at the end, without optimism.',
+  'ft.title': 'Final test on reserved cores', 'ft.intro': 'Marked cores do not train or select models. While cores are reserved, all library and other-project examples are excluded because their independence cannot be guaranteed. Use the final test only once.',
   'ft.run': 'Run the final test', 'ft.ichnoHint': 'Predicts the identified traces of the reserved cores with the model in use.',
   'ft.confirm': 'The final test is independent only if you do not change the model after seeing its result. Every repetition is logged. Run it now?',
   'ft.none': 'No final tests yet.', 'ft.when': 'Date', 'ft.what': 'Model and reserved cores',

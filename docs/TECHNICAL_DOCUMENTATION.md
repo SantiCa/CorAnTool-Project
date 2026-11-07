@@ -350,6 +350,10 @@ describing the ichnofabric. This is why the program also stores the manual index
 
 ## 5. Age model
 
+Empty depth or age cells are ignored rather than converted to zero. Duplicate depths invalidate the model; named
+minimum and maximum columns must contain the central age. The Python API requires at least two finite pairs and
+unique depths. Age reversals remain flagged by the program rather than silently corrected.
+
 Implementation: `depth.py::depth_to_age` (Python) and `core.js::parseAgeModel, interpAge, interpAgeRange,
 baconToAgeText` (program).
 
@@ -641,6 +645,9 @@ The desktop program bundles ONNX Runtime Web; the browser and the offline file d
 time.
 
 ### 9.2 Training data and training (Python package)
+
+Dataset preparation requires an empty output directory and rejects validation and test core lists that overlap.
+Choose a new output directory for each preparation so stale tiles cannot contaminate the split.
 The data come from the program: **Results → U-Net training data (ZIP)** exports every image of the project that has
 at least one reviewed trace (§24). The Python package then provides four commands (`sedcoretool unet …`, §25.4):
 
@@ -1331,10 +1338,13 @@ otherwise of the labels.
 Choosing a model by looking at its cross-validation makes that cross-validation optimistic. For an unbiased estimate,
 cores can be **reserved** for a final test (`core.holdout`, stored in the project):
 
-- **Ichnotaxa:** traces of reserved cores never enter any set of examples (`ownExamples` skips them; so do library
-  and other-project entries whose key starts with `<project>|<reserved core>|`), so they neither train nor take part
-  in the evaluation that chooses the method.
-- **Multiproxy:** the labels of their intervals are hidden for training and cross-validation (`labels`); the full
+- **Ichnotaxa:** traces of reserved cores never enter any set of examples. While any core is reserved, all library
+  and other-project examples are excluded because copies or older imported models may lack reliable source identity.
+  Exported new model examples retain their source keys; old models remain importable.
+- **Multiproxy:** reserved samples are excluded from fitting, including k-means. Global scaling and missing-value
+  imputation are fitted on training samples and reused for prediction; cross-validation fits them per fold. Per-core
+  scaling uses each core's own distribution and is therefore transductive. The labels of reserved intervals are hidden
+  for training and cross-validation (`labels`); the full
   labels are kept apart (`all`). Each training run records the reservation it was made with (`run.held`); if it
   changes later, the final test asks for retraining.
 - **Final test** (button in *Models and training* → Train, and in Multiproxy → Classifiers, with confirmation): for
@@ -1691,7 +1701,8 @@ Implementation: `storage.js` and the *projects* block of `app.js`.
   the previous one. If loading fails halfway, the state is cleared, nothing is saved and the user is warned. The
   initial state (before any project) is never saved.
 - When the page is hidden or closed, pending changes are saved (`visibilitychange`, `pagehide`); in the desktop
-  program, closing with unsaved changes waits for the save to finish.
+  program, closing with unsaved changes waits for the save to finish. If it fails, the window remains open and the
+  unsaved state remains visible; changes made during a save are also kept pending.
 - Every 10 saves the storage quota is checked (`navigator.storage.estimate`) and the user is warned above 80 %.
 - Errors that are not caught, and those of long operations, are shown in a notice (at most one every 5 s) instead of
   being lost in the console.
@@ -2055,8 +2066,8 @@ separate windows where needed.
 ## 31. Validation
 
 ### 31.1 Automated tests
-**94 program tests, 19 Python tests** (17 run always; 2 are skipped when the optional `onnx`/`torch` dependencies are
-missing) and two end-to-end tests. They run on GitHub at every change (§28).
+**97 program tests, 19 Python tests** (17 run always; 2 are skipped when the optional `onnx`/`torch` dependencies are
+missing), a browser end-to-end test in the tests workflow and a desktop end-to-end test in the desktop build workflow (§28).
 
 - **Python** (`tests/test_core.py`, `tests/test_unet.py`): index tiers, percentages and intervals on hand-computed
   cases, incomplete last interval, multi-class by colour, grey and RGB input, depth and age, the reference image, the

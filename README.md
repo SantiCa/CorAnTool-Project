@@ -116,6 +116,10 @@ Use lossless formats (PNG, TIFF) for masks. The complete API, command line and U
 desktop program (*Detection → U-Net → Train on this computer…*) or with `sedcoretool unet` — and then used as a
 detection method. No model trained on real cores is distributed yet.
 
+When preparing training data from the command line, choose a new or empty output directory for each preparation.
+While any core is reserved for a final test, the ichnotaxon classifier excludes all library and other-project
+examples, whose independence cannot be established for older model files.
+
 ## Privacy
 
 Images and data never leave the computer. The program connects to the internet only for optional downloads: map

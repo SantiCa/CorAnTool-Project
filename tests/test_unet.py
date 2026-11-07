@@ -35,6 +35,8 @@ def test_split_by_core_keeps_cores_together_and_honours_names():
     assert split_cores(cores, seed=1) == split_cores(cores, seed=1)
     with pytest.raises(ValueError):
         split_cores(cores, test=["Z"])
+    with pytest.raises(ValueError, match="disjoint"):
+        split_cores(cores, val=["A"], test=["A"])
 
 
 def _export(tmp_path, cores=("C1", "C2", "C3"), size=(40, 30)):
@@ -65,6 +67,8 @@ def test_export_round_trip_and_prepare(tmp_path):
     items, classes = load_export(exp)
     assert [c["name"] for c in classes] == ["Zoophycos", "Chondrites"] and items[1].mask.max() == IGNORE
     s = prepare_dataset(exp, tmp_path / "ds", tile=16, overlap=4, px_per_cm=10, test_cores=["C3"], val_cores=["C2"])
+    with pytest.raises(ValueError, match="output directory must be empty"):
+        prepare_dataset(exp, tmp_path / "ds", tile=16, overlap=4, px_per_cm=10, test_cores=["C1"], val_cores=["C2"])
     assert s["split"]["test"]["cores"] == ["C3"] and s["split"]["val"]["cores"] == ["C2"]
     assert s["split"]["train"]["tiles"] > 0 and s["classes"] == ["bioturbation"]
     m = np.asarray(Image.open(next((tmp_path / "ds" / "train" / "masks").glob("*.png"))))

@@ -8,13 +8,13 @@ import { storageAvailable, listProjects, getProject, putProject, putMeta, delete
 import { interpolate, maskLand, rampColor, colorRange, contourLevels, contourSegments, RAMPS, INTERP_METHODS, INTERP_DEFAULT } from './interp.js';
 import { buildXYPlot, buildStratPlot, PLOT_TYPES, FIT_KINDS, PLOT_COLORS } from './plot.js';
 import { evalColumn, evalCells, cellName, FUNCTIONS, parseFormula, formulaRefs, fillLinear } from './sheet.js';
-import { Classifier, TaxonModel, evaluateModels, finalTestMetrics, vec, FEATURES } from './learn.js';
+import { Classifier, TaxonModel, evaluateModels, finalTestMetrics, independentExternalExamples, vec, FEATURES } from './learn.js';
 import { splitPieces, mergeKeeper, sameTaxonGroups, undoPixels, upgradeProject } from './edit.js';
 import { t, lang, setLang, applyI18n } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
 import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } from './unet.js';
 import { VISION_MODEL, visionFeatureId, traceWindow, traceInput, pickEmbedding } from './vision.js';
-import { tidyIntervals, coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, colStats, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidate, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
+import { tidyIntervals, coresFromLongTable, coreFromRows, applyCatalogue, coreAges, featureSeries, buildSamples, fitSampleTransform, transformSample, labelSamples, layerFeatureNames, intervalsOnAxis, orphanIntervals, intervalsFromTable, METHODS, fitModel, predictLabel, crossValidate, crossValidateSteps, fitModelSteps, mapSummary, buildMapSVG, mapBBox, predictProba, MAP_STYLE, MAP_SYMBOLS, MAP_PROJECTIONS, zoomBBox, fitBBoxAspect, mapGeometry, mapFrame } from './geo.js';
 
 /** App name (V16: IchAnTool → CorAnTool; V0.52: → SedCoreTool). Files written with the old names are still accepted;
  *  browser storage keys, the IndexedDB name and the desktop origin keep the old names so saved data stays. */
@@ -22,7 +22,7 @@ const APP = 'SedCoreTool', APP_NAMES = ['SedCoreTool', 'CorAnTool', 'IchAnTool']
 const $ = (id) => document.getElementById(id);
 const VERSION = '3.0.0-dev';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-const DELIVERY = 'V0.54';
+const DELIVERY = 'V0.55';
 const ASSET_BASES = ['', '../examples/'];
 
 /** Bundled files (example images, test core). The standalone build injects them as data URIs. */
@@ -870,13 +870,13 @@ function mlSets() {
   const grp = (k) => String(k).split('|').slice(0, 3).join('|');
   // V0.49: traces of reserved cores (final test) never train nor enter model selection, wherever they come from
   const held = new Set(S.cores.filter((c) => c.holdout).map((c) => `${S.id}|${c.id}|`)), notHeld = (e) => ![...held].some((h) => String(e.key || '').startsWith(h));
-  const lib = S.library.filter((e) => e.name && Array.isArray(xOfLib(e)) && notHeld(e)).map((e, i) => ({ key: e.key || `lib|${i}`, g: grp(e.key || `lib|${i}`), y: e.name, x: xOfLib(e), lib: e }));
+  const lib = independentExternalExamples(S.library, held.size > 0).filter((e) => e.name && Array.isArray(xOfLib(e)) && notHeld(e)).map((e, i) => ({ key: e.key || `lib|${i}`, g: grp(e.key || `lib|${i}`), y: e.name, x: xOfLib(e), lib: e }));
   const cur = S.cores.find((c) => c.id === S.curCore), exCore = ownExamples(cur ? [cur] : []), exProj = ownExamples(S.cores);
   const keys = new Set([...exProj, ...lib].map((e) => e.key));
   // the same trace can exist in two projects (shared core, duplicated or imported project): identical descriptors are
   // used once, otherwise it would count twice and could be both trained on and tested in the evaluation
   const sig = (e) => e.x.map((v) => (+v).toFixed(3)).join(','), seen = new Set(exProj.concat(lib).map(sig));
-  const other = otherExamples.map((e) => ({ ...e, x: xOfLib(e) })).filter((e) => Array.isArray(e.x) && !mlExcluded.has(e.key) && !keys.has(e.key) && notHeld(e)).filter((e) => { const k = sig(e); if (seen.has(k)) return false; seen.add(k); return true; }).map((e) => ({ ...e, g: grp(e.key) }));
+  const other = independentExternalExamples(otherExamples, held.size > 0).map((e) => ({ ...e, x: xOfLib(e) })).filter((e) => Array.isArray(e.x) && !mlExcluded.has(e.key) && !keys.has(e.key) && notHeld(e)).filter((e) => { const k = sig(e); if (seen.has(k)) return false; seen.add(k); return true; }).map((e) => ({ ...e, g: grp(e.key) }));
   // V0.17: only vectors of the current feature set and length
   const D = exProj[0]?.x.length ?? lib[0]?.x.length ?? other[0]?.x.length, ok = (e) => e.x.length === D;
   return { core: exCore.concat(lib).filter(ok), project: exProj.concat(lib).filter(ok), all: exProj.concat(lib, other).filter(ok) };
@@ -2472,7 +2472,7 @@ $('expPalette').addEventListener('click', () => {
 
 function modelExamples() {
   const ex = [];
-  for (const s of S.sections) for (const o of s.objects.values()) if (o.cls && xOf(o)) ex.push({ name: clsById(o.cls).name, x: xOf(o).map((v) => +v.toFixed(5)) });
+  for (const e of ownExamples(S.cores.filter((c) => c.id === S.curCore), true, true)) ex.push({ key: e.key, name: e.y, x: e.x.map((v) => +v.toFixed(5)) });
   return ex.concat(S.library.filter((e) => Array.isArray(xOfLib(e))).map((e) => ({ ...e, x: xOfLib(e), xv: undefined })));
 }
 $('exportModel').addEventListener('click', () => {
@@ -2849,15 +2849,15 @@ async function checkQuota() {
   } catch { /* not available */ }
 }
 let saveCount = 0;
-async function flushSave() { if (dirty) await saveToDB(); if (backupPending) await backupNow(); }
+async function flushSave() { if (savePromise) await savePromise; if (dirty) await saveToDB(); if (backupPending) await backupNow(); }
 /* V0.36: do not lose the last changes when the page or the program is closed */
 let closeOK = false;
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && dirty) saveToDB(); });
 window.addEventListener('pagehide', () => { if (dirty) saveToDB(); });
 window.addEventListener('beforeunload', (e) => {
-  if (!dirty || closeOK || readOnlyProject || blankStart) return;
+  if ((!dirty && !savePromise) || closeOK || readOnlyProject || blankStart) return;
   e.preventDefault(); e.returnValue = '';
-  if (window.corantoolDesktop) flushSave().finally(() => { closeOK = true; window.close(); });   // desktop: save, then close
+  if (window.corantoolDesktop) flushSave().then(() => { if (!dirty) { closeOK = true; window.close(); } }).catch((err) => console.error(err));
 });
 
 function updateProjHeader() {
@@ -3855,7 +3855,7 @@ function modelIdx(m) {
   return idx.every((j) => j >= 0) ? idx : null;
 }
 /** Input vector of a sample for a trained model: numeric columns re-scaled with the statistics frozen at training (global z-score). */
-function clfX(m, s, idx) { return idx.map((j, k) => (m.zmu && m.isNum[k] ? (s.t[j] == null ? 0 : (s.t[j] - m.zmu[k]) / m.zsd[k]) : s.f[j])); }
+function clfX(m, s, idx) { return m.transform ? transformSample(s, idx, m.nNum, m.transform) : idx.map((j, k) => (m.zmu && m.isNum[k] ? (s.t[j] == null ? 0 : (s.t[j] - m.zmu[k]) / m.zsd[k]) : s.f[j])); }
 function predictRun(c) {
   const run = geoRT.runs.get(c.id); if (!run) return;
   for (const r of run.byTarget.values()) {
@@ -3877,23 +3877,25 @@ async function trainClassifier(c, tick = async () => {}) {
   if (!cols.length) { run.error = 'cl.noInputs'; geoRT.runs.set(c.id, run); return run; }
   const view = geoRT.samples.map((s) => ({ core: s.core, x: s.x, f: cols.map((j) => s.f[j]), t: cols.map((j) => s.t[j]) }));
   const rescale = st.scaling === 'global' ? cols.map((j) => j < geoRT.nNum) : null;   // V0.37: scaling refitted in each fold
-  const scale = st.scaling === 'global' ? scaleOf(geoRT.samples, geoRT.nNum) : null;
   for (const lid of c.targets) {
     const L = geoLayer(lid); if (!L) continue;
     // V0.49: intervals of reserved cores (final test) are hidden from training and cross-validation
     const held = holdoutIds(), all = labelsFor(lid, c.useRules !== false), labels = all.map((l, i) => (held.has(view[i].core) ? { label: null, source: null } : l));
     const idx = labels.map((l, i) => (l.label ? i : -1)).filter((i) => i >= 0);
     if (method !== 'kmeans' && new Set(idx.map((i) => labels[i].label)).size < 2) { run.byTarget.set(lid, { labels, preds: [], error: 'cl.needLabels' }); continue; }
-    const X = method === 'kmeans' ? view.map((v) => v.f) : idx.map((i) => view[i].f), y = method === 'kmeans' ? null : idx.map((i) => labels[i].label);
+    const trainIdx = method === 'kmeans' ? view.map((v, i) => held.has(v.core) ? -1 : i).filter((i) => i >= 0) : idx;
+    if (!trainIdx.length) { run.byTarget.set(lid, { labels, preds: [], error: 'cl.needLabels' }); continue; }
+    const transform = fitSampleTransform(trainIdx.map((i) => geoRT.samples[i]), geoRT.nNum, st.scaling);
+    const X = trainIdx.map((i) => transformSample(geoRT.samples[i], cols, geoRT.nNum, transform)), y = method === 'kmeans' ? null : idx.map((i) => labels[i].label);
     const fit = fitModelSteps(method, X, y, params, seed); let fr;
     if (await tick(t('cl.pFit', { c: c.name, f: L.name }), 0, true)) return null;
     while (!(fr = fit.next()).done) if (await tick(t('cl.pFit', { c: c.name, f: L.name }) + ' · ' + t('cl.pEpoch', { e: fr.value.epoch, n: fr.value.epochs }), fr.value.epoch / fr.value.epochs, false)) return null;
     const model = fr.value;
-    Object.assign(model, { cols, nNum: geoRT.nNum, colNames: cols.map((j) => geoRT.featNames[j]), isNum: cols.map((j) => j < geoRT.nNum), zmu: scale ? cols.map((j) => scale.mu[j] ?? 0) : null, zsd: scale ? cols.map((j) => scale.sd[j] || 1) : null,
+    Object.assign(model, { cols, nNum: geoRT.nNum, colNames: cols.map((j) => geoRT.featNames[j]), isNum: cols.map((j) => j < geoRT.nNum), transform,
       scaling: st.scaling, axis: st.axis, target: lid, features: cols.map((j) => geoRT.featNames[j]), n: X.length });
     let cv = null;
     if (method !== 'kmeans') {
-      const it = crossValidateSteps(view, labels.map((l) => l.label), method, params, seed, { scored: (i) => labels[i].source !== 'rule', minProb: c.minProb, rescale });
+      const it = crossValidateSteps(view, labels.map((l) => l.label), method, params, seed, { scored: (i) => labels[i].source !== 'rule', minProb: c.minProb, rescale, impute: st.scaling === 'none' ? cols.map((j) => j < geoRT.nNum) : null });
       for (let r = it.next(); ; r = it.next()) { if (r.done) { cv = r.value; break; } const v = r.value; if (await tick(t('cl.pFold', { c: c.name, f: L.name, k: v.fold + 1, n: v.folds }) + (v.epoch ? ' · ' + t('cl.pEpoch', { e: v.epoch, n: v.epochs }) : ''), v.epoch ? v.epoch / v.epochs : 0, !v.epoch)) return null; }
     }
     run.byTarget.set(lid, { model, cv, labels, all, preds: [] });
@@ -3931,8 +3933,6 @@ function geoComputeSamples() {
   syncCurrent();
 }
 
-
-const scaleOf = (samples, nNum) => colStats(samples, nNum); // same statistics as buildSamples (missing values ignored)
 
 function geoReset() { Object.assign(geoRT, { samples: [], labels: [], preds: [], model: null, cv: null, dirty: true, featNames: [], orphans: new Set(), runs: new Map(), layerCols: new Map(), ruleLabels: new Map() }); }
 

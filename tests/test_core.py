@@ -56,6 +56,10 @@ def test_depth_and_age():
     assert age[1] == 50 and np.isnan(age[2])
     with pytest.raises(ValueError):
         pixel_depths(4, 5, 5)
+    with pytest.raises(ValueError, match="unique"):
+        depth_to_age([0], [0, 0], [0, 10])
+    with pytest.raises(ValueError, match="finite"):
+        depth_to_age([0], [0, 1], [0, np.nan])
 
 
 def test_example_image_runs():
