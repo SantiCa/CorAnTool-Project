@@ -10,7 +10,7 @@ import { INTERP_DEFAULT } from './interp.js';
 import { evalColumn, formulaRefs, fillLinear } from './sheet.js';
 import { TaxonModel, evaluateModels, finalTestMetrics, independentExternalExamples, descriptorSig, vec, FEATURES } from './learn.js';
 import { splitPieces, mergeKeeper, sameTaxonGroups, undoPixels, upgradeProject } from './edit.js';
-import { t, lang, setLang, applyI18n } from './i18n.js';
+import { t, lang, setLang, applyI18n, fxText } from './i18n.js';
 import { zipFiles, unzipBlob } from './zip.js';
 import { UNET_DEFAULTS, IGNORE, predictProb, doubtful, trainingMask, cropRGBA } from './unet.js';
 import { VISION_MODEL, visionFeatureId, traceWindow, traceInput, pickEmbedding } from './vision.js';
@@ -22,7 +22,7 @@ import { frameRatio, panelPrefs, savePanels } from './panels.js';
 import { addRecordFromTable, defaultLogView, lastLog, mode, renderLog, renderLogPanel, renderRecList, scheduleLog, sectionCanvas, setMode } from './columns.js';
 import { GROUP_COLORS, addImported, addNamedIntervals, attachMapZoom, coreListUI, defaultGeo, exportMapPNG, geoComputeSamples, geoLand, geoLayer, geoMarkDirty, geoRT, geoReset, geoTrain, interpUI, loadGeoDemo, loadLand, mapBackground, mapStyleUI, mapTip, normalizeGeo, renderGeo, renderGeoMap, scheduleGeo, valueLayer, initMultiproxy } from './multiproxy.js';
 /** Delivery number (V27…): shown in the header, the start screen, the help, the window title, project files and the name of the offline file. */
-export const DELIVERY = 'V0.75';
+export const DELIVERY = 'V0.76';
 /* V0.17: input of the ichnotaxon classifier — 12 shape/colour descriptors ('shape') or the vector of a pre-trained
    vision model ('vision', DINOv2). Vectors of the two sets are never mixed. */
 const visionOn = () => (S.settings.ml?.features || 'shape') === 'vision';
@@ -2552,7 +2552,7 @@ function applyComputedColumns(c) {
       if (col.interp !== false) { const x = c.depth || c.age || []; for (const r of formulaRefs(col.formula)) if (c.proxies[r]) cols[r] = fillLinear(x, c.proxies[r]); }
       const v = evalColumn(col.formula, cols, n);
       c.proxies[col.name] = v; c.src[col.name] = 'calc';
-    } catch (e) { col.error = e.message; continue; }
+    } catch (e) { col.error = fxText(e); continue; }
     col.error = null;
   }
 }
@@ -2982,10 +2982,8 @@ $('impProj').addEventListener('change', async (e) => {
 /* ───────────── test core (IODP 397-U1385I-1H) ───────────── */
 
 const TEST_CORE = {
-  name: 'Sondeo de prueba · IODP 397-U1385I-1H',
   sections: [[1, 0, 1.5], [2, 1.5, 2.99], [3, 2.99, 4.49], [4, 4.49, 5.98], [5, 5.98, 7.48], [6, 7.48, 8.78]],
-  age: '# Modelo de edad ILUSTRATIVO, no publicado: tasa de sedimentación constante supuesta de 10 cm/ka,\n# solo para probar la conversión a edad. Sustitúyelo por el modelo publicado del sitio U1385.\n# profundidad CSF-A (m), edad (ka)\n0, 0\n8.78, 87.8',
-  records: [['U1385I-1H/records/397-U1385I-1H_RSC_color.csv', 'Color RSC'], ['U1385I-1H/records/397-U1385I-1H_MS.csv', 'Susceptibilidad magnética']],
+  records: [['U1385I-1H/records/397-U1385I-1H_RSC_color.csv', 'Color RSC'], ['U1385I-1H/records/397-U1385I-1H_MS.csv', '@test.ms']],
 };
 
 async function openTestProject() {
@@ -2993,7 +2991,7 @@ async function openTestProject() {
   await busy(async () => {
     resetState(); loading = true;
     try {
-      S.name = TEST_CORE.name; S.id = 'test-u1385'; Object.assign(curCore(), { name: 'U1385I-1H', lat: 37.571, lon: -10.126, waterDepth: 2578, units: 'm' }); renderCoreBar();
+      S.name = t('test.name'); S.id = 'test-u1385'; Object.assign(curCore(), { name: 'U1385I-1H', lat: 37.571, lon: -10.126, waterDepth: 2578, units: 'm' }); renderCoreBar();
       S.notes = 'IODP Expedition 397, Site U1385, Hole I, Core 1H. Section-half images, colour reflectance (RSC) and magnetic susceptibility from the IODP LIMS (web.iodp.tamu.edu/LORE). Images reduced to 50 px/cm.';
       for (const [i, top, bottom] of TEST_CORE.sections) {
         const path = `U1385I-1H/web/397-U1385I-1H-${i}-A_50pxcm.jpg`;
@@ -3007,8 +3005,8 @@ async function openTestProject() {
         S.sections.push(s);
       }
       if (S.sections[0]) S.settings.binCm = 100 / pxPerCm(S.sections[0]);
-      $('ageText').value = TEST_CORE.age; $('ageUnits').value = 'ka';
-      for (const [path, name] of TEST_CORE.records) {
+      $('ageText').value = t('test.age'); $('ageUnits').value = 'ka';
+      for (const [path, name0] of TEST_CORE.records) { const name = name0.startsWith('@') ? t(name0.slice(1)) : name0;
         const tab = parseTable(await (await fetchAsset(path)).text());
         addRecordFromTable(name, tab, 0, 'depth', tab.headers.map((_, i) => i).slice(1));
       }

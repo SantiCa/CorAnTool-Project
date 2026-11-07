@@ -1011,13 +1011,13 @@ const GEBCO = (b, w, h, pr) => pr === 'mercator'
 let bgWidth = 1600; // pixels across of the background image (raised temporarily for high-resolution exports)
 const MAP_BG = {
   vector: null,
-  physical: { url: ESRI('World_Physical_Map'), attr: 'Fondo: Esri, U.S. National Park Service (World Physical Map)' },
-  relief: { url: ESRI('World_Shaded_Relief'), attr: 'Fondo: Esri (World Shaded Relief)' },
-  topo: { url: ESRI('World_Topo_Map'), attr: 'Fondo: Esri y colaboradores (World Topographic Map)' },
-  bathy: { url: ESRI('Ocean/World_Ocean_Base'), attr: 'Fondo: Esri, Garmin, GEBCO, NOAA NGDC y otros (World Ocean Base)' },
-  gebco: { url: GEBCO, attr: 'Batimetría y topografía: GEBCO Compilation Group, GEBCO_LATEST grid (www.gebco.net)' },
-  photo: { url: ESRI('World_Imagery'), attr: 'Imagen: Esri, Maxar, Earthstar Geographics y GIS User Community (World Imagery)' },
-  photobathy: { url: GEBCO, url2: ESRI('World_Imagery'), attr: 'Batimetría: GEBCO Compilation Group (GEBCO_LATEST); tierra: Esri, Maxar, Earthstar Geographics (World Imagery)' },
+  physical: { url: ESRI('World_Physical_Map'), attr: 'map.attr.physical' },
+  relief: { url: ESRI('World_Shaded_Relief'), attr: 'map.attr.relief' },
+  topo: { url: ESRI('World_Topo_Map'), attr: 'map.attr.topo' },
+  bathy: { url: ESRI('Ocean/World_Ocean_Base'), attr: 'map.attr.bathy' },
+  gebco: { url: GEBCO, attr: 'map.attr.gebco' },
+  photo: { url: ESRI('World_Imagery'), attr: 'map.attr.photo' },
+  photobathy: { url: GEBCO, url2: ESRI('World_Imagery'), attr: 'map.attr.photobathy' },
 };
 const bgCache = new Map(), bgPromises = new Map(); let bgFailShown = false, mapNetAsked = null;
 export function mapNetConsent() {
@@ -1042,7 +1042,7 @@ export function mapBackground(kind, bbox, onReady, proj = 'plate') {
     let w = Math.min(4096, bgWidth), h = Math.round(proj === 'mercator' ? (w * (my1 - my0)) / (mx1 - mx0) : (w * (bbox[3] - bbox[1])) / (bbox[2] - bbox[0]));
     if (h > 4096) { w = Math.round((w * 4096) / h); h = 4096; } h = Math.max(h, 50);
     bgPromises.set(key, Promise.all([fetchImage(def.url(bbox, w, h, proj)), def.url2 ? fetchImage(def.url2(bbox, w, h, proj)) : null])
-      .then(([href, href2]) => { bgCache.set(key, { href, href2, attribution: def.attr }); onReady(); })
+      .then(([href, href2]) => { bgCache.set(key, { href, href2, attribution: t(def.attr) }); onReady(); })
       .catch(() => { bgCache.set(key, 'fail'); if (!bgFailShown) { bgFailShown = true; toast(t('ms.bgFail')); } onReady(); }));
   }
   return null;

@@ -10,6 +10,11 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.76 — 2026-11-07
+- Language: the parts that stayed in Spanish in English now follow the language: formula errors (Data tab and computed
+  columns), the test core (name, age-model note, magnetic susceptibility record), the map background credits and the
+  moving-average fit label (now `movavg(n)`).
+
 ## V0.75 — 2026-11-07
 - Core column: the title and the shape of the bioturbation column and the title of the ichnotaxa column move into their
   rows of the table of columns (width, limits, divisions), and the separate "Divisions of % axes" field is gone: the

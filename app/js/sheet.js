@@ -2,6 +2,9 @@
 // Column formulas work on whole columns of one core: [XRF Ba/Ti] / TOC_pct, log10(x), zscore(x), movavg(x, 5)…
 // Cell formulas work like a small spreadsheet: =A1*2, =SUM(A1:A5), =MEAN(COL("TOC_pct")), =CORR(COL("a"), COL("b")).
 
+/** Formula error carrying a key + args; the UI translates it with fxText() (i18n.js). `message` is the key. */
+const ferr = (key, args = {}) => Object.assign(new Error(key), { key, args });
+
 /* ───────── tokenizer and parser (recursive descent) ───────── */
 
 function tokenize(src) {
@@ -10,13 +13,13 @@ function tokenize(src) {
     const ch = src[i];
     if (/\s/.test(ch)) { i++; continue; }
     if (/[0-9.]/.test(ch)) { const m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(src.slice(i)); out.push({ t: 'num', v: +m[0] }); i += m[0].length; continue; }
-    if (ch === '[') { const j = src.indexOf(']', i); if (j < 0) throw new Error('falta ]'); out.push({ t: 'name', v: src.slice(i + 1, j) }); i = j + 1; continue; }
-    if (ch === '"' || ch === "'") { const j = src.indexOf(ch, i + 1); if (j < 0) throw new Error('falta comilla'); out.push({ t: 'str', v: src.slice(i + 1, j) }); i = j + 1; continue; }
+    if (ch === '[') { const j = src.indexOf(']', i); if (j < 0) throw ferr('noBracket'); out.push({ t: 'name', v: src.slice(i + 1, j) }); i = j + 1; continue; }
+    if (ch === '"' || ch === "'") { const j = src.indexOf(ch, i + 1); if (j < 0) throw ferr('noQuote'); out.push({ t: 'str', v: src.slice(i + 1, j) }); i = j + 1; continue; }
     const id = /^[A-Za-z_$][\w.$]*(:[A-Za-z]+\d+)?/.exec(src.slice(i));
     if (id) { out.push({ t: 'id', v: id[0] }); i += id[0].length; continue; }
     const op = /^(<=|>=|==|!=|[-+*/^(),<>])/.exec(src.slice(i));
     if (op) { out.push({ t: 'op', v: op[0] }); i += op[0].length; continue; }
-    throw new Error(`carácter no válido: ${ch}`);
+    throw ferr('badChar', { v: ch });
   }
   return out;
 }
@@ -24,10 +27,10 @@ function tokenize(src) {
 /** Parse to an AST: {k:'num'|'str'|'ref'|'call'|'bin'|'neg', ...}. */
 export function parseFormula(src) {
   const tk = tokenize(String(src).replace(/^\s*=/, '')); let p = 0;
-  const peek = () => tk[p], eat = (v) => { if (tk[p]?.v !== v) throw new Error(`se esperaba ${v}`); p++; };
+  const peek = () => tk[p], eat = (v) => { if (tk[p]?.v !== v) throw ferr('expected', { v }); p++; };
   const binary = (next, ops) => () => { let a = next(); while (tk[p]?.t === 'op' && ops.includes(tk[p].v)) { const op = tk[p++].v; a = { k: 'bin', op, a, b: next() }; } return a; };
   const primary = () => {
-    const x = peek(); if (!x) throw new Error('fórmula incompleta');
+    const x = peek(); if (!x) throw ferr('incomplete');
     if (x.t === 'num') { p++; return { k: 'num', v: x.v }; }
     if (x.t === 'str') { p++; return { k: 'str', v: x.v }; }
     if (x.t === 'name') { p++; return { k: 'ref', v: x.v }; }
@@ -38,14 +41,14 @@ export function parseFormula(src) {
       if (tk[p]?.v === '(') { p++; const args = []; if (tk[p]?.v !== ')') { args.push(cmp()); while (tk[p]?.v === ',') { p++; args.push(cmp()); } } eat(')'); return { k: 'call', f: x.v.toLowerCase(), args }; }
       return { k: 'ref', v: x.v };
     }
-    throw new Error(`no se esperaba ${x.v}`);
+    throw ferr('unexpected', { v: x.v });
   };
   const power = () => { const a = primary(); if (tk[p]?.v === '^') { p++; return { k: 'bin', op: '^', a, b: power() }; } return a; };
   const unary = () => (tk[p]?.v === '-' ? (p++, { k: 'neg', a: unary() }) : power());
   const mul = binary(unary, ['*', '/']);
   const add = binary(mul, ['+', '-']);
   const cmp = binary(add, ['<', '>', '<=', '>=', '==', '!=']);
-  const e = cmp(); if (p < tk.length) throw new Error(`sobra ${tk[p].v}`);
+  const e = cmp(); if (p < tk.length) throw ferr('extra', { v: tk[p].v });
   return e;
 }
 
@@ -100,10 +103,10 @@ function evalAst(e, resolve) {
     }
     case 'call': {
       if (e.f === 'col') return resolve({ col: evalAst(e.args[0], resolve), core: e.args[1] ? evalAst(e.args[1], resolve) : null });
-      const fn = FUN[e.f]; if (!fn) throw new Error(`función desconocida: ${e.f}`);
+      const fn = FUN[e.f]; if (!fn) throw ferr('unkFn', { v: e.f });
       return fn(...e.args.map((a) => evalAst(a, resolve)));
     }
-    default: throw new Error('fórmula no válida');
+    default: throw ferr('invalid');
   }
 }
 
@@ -111,8 +114,8 @@ function evalAst(e, resolve) {
 export function evalColumn(formula, columns, n) {
   const ast = parseFormula(formula);
   const r = evalAst(ast, (name) => {
-    if (typeof name !== 'string') throw new Error('COL() solo en celdas');
-    if (!(name in columns)) throw new Error(`no existe la columna «${name}»`);
+    if (typeof name !== 'string') throw ferr('colOnly');
+    if (!(name in columns)) throw ferr('noCol', { v: name });
     return columns[name];
   });
   return Array.isArray(r) ? r : new Array(n).fill(ok(r) ? r : null);
@@ -131,7 +134,7 @@ export function evalCells(cells, getCol) {
   const value = (ref) => {
     ref = ref.toUpperCase();
     if (state[ref] === 2) return out[ref];
-    if (state[ref] === 1) throw new Error('referencia circular');
+    if (state[ref] === 1) throw ferr('circular');
     state[ref] = 1;
     const raw = cells[ref];
     let v;
@@ -140,15 +143,15 @@ export function evalCells(cells, getCol) {
       else if (String(raw).startsWith('=')) v = evalAst(parseFormula(raw), resolve);
       else v = Number.isFinite(+raw) && String(raw).trim() !== '' ? +raw : raw;
       if (Array.isArray(v)) v = meanOf(v); // a cell shows one value
-    } catch (e) { v = { error: e.message }; }
+    } catch (e) { v = { error: e.message, err: e }; }
     out[ref] = v; state[ref] = 2;
     return v;
   };
   const resolve = (name) => {
     if (typeof name === 'object') return getCol(name.col, name.core);
     const m = /^([A-Za-z]+)(\d+)(?::([A-Za-z]+)(\d+))?$/.exec(name);
-    if (!m) throw new Error(`referencia no válida: ${name}`);
-    if (!m[3]) { const v = value(m[1] + m[2]); if (v && v.error) throw new Error(v.error); return v; }
+    if (!m) throw ferr('badRef', { v: name });
+    if (!m[3]) { const v = value(m[1] + m[2]); if (v && v.error) throw v.err; return v; }
     const c0 = colIdx(m[1]), r0 = +m[2] - 1, c1 = colIdx(m[3]), r1 = +m[4] - 1, arr = [];
     for (let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++) for (let c = Math.min(c0, c1); c <= Math.max(c0, c1); c++) { const v = value(cellName(c, r)); arr.push(typeof v === 'number' ? v : null); }
     return arr;

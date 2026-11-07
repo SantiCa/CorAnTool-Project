@@ -10,8 +10,8 @@ test('column formulas: names with symbols, functions, missing values', () => {
   const z = evalColumn('zscore(depth)', cols, 4); assert.ok(Math.abs(z[0] + 1.1619) < 1e-3 && Math.abs(z[3] - 1.1619) < 1e-3);
   assert.deepEqual(evalColumn('movavg(depth, 3)', cols, 4), [0.5, 1, 2, 2.5]);
   assert.deepEqual(evalColumn('5', cols, 4), [5, 5, 5, 5]);
-  assert.throws(() => evalColumn('nope + 1', cols, 4), /no existe/);
-  assert.throws(() => parseFormula('(1 + 2'), /\)/);
+  assert.throws(() => evalColumn('nope + 1', cols, 4), /noCol/);
+  assert.throws(() => parseFormula('(1 + 2'), /expected/);
 });
 
 test('cells: references, ranges, aggregates, columns, cycles', () => {

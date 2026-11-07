@@ -1,5 +1,5 @@
 /* Data tab: all data of the project, Grapher-like plots and the spreadsheet view. */
-import { t } from './i18n.js';
+import { t, fxText } from './i18n.js';
 import { $, S, fmt } from './state.js';
 import { armed, busy, cellEdit, curCore, editCount, esc, markDirty, refreshAllCores, refreshCoreData, safe, saveFile, toast, view, withProv } from './app.js';
 import { geoCat, geoRT } from './multiproxy.js';
@@ -205,7 +205,7 @@ $('dBody').addEventListener('click', (e) => {
       dataEditOn = true; refreshCoreData(c);
     } else {
       const formula = $('dsFormula').value.trim(); if (!formula) { toast(t('ds.needFormula')); return; }
-      try { parseFormula(formula); } catch (err) { toast(t('ds.badFormula', { e: err.message })); return; }
+      try { parseFormula(formula); } catch (err) { toast(t('ds.badFormula', { e: fxText(err) })); return; }
       const interp = $('dsInterp')?.checked !== false;
       if (dataFormOpen.i != null) Object.assign(S.sheet.columns[dataFormOpen.i], { name, formula, core, interp }); else S.sheet.columns.push({ name, formula, core, interp });
       refreshAllCores();
@@ -289,9 +289,9 @@ const CELL_COLS = 10, CELL_ROWS = 40;
 function cellResults() {
   return evalCells(S.sheet.cells, (name, coreName) => {
     const c = coreName ? S.cores.find((x) => x.name === coreName || x.id === coreName) : curCore();
-    if (!c) throw new Error(`no existe el sondeo «${coreName}»`);
+    if (!c) throw Object.assign(new Error('noCore'), { key: 'noCore', args: { v: coreName } });
     if (name === 'depth' || name === 'age') return c[name] || [];
-    if (!c.proxies[name]) throw new Error(`no existe la columna «${name}»`);
+    if (!c.proxies[name]) throw Object.assign(new Error('noCol'), { key: 'noCol', args: { v: name } });
     return c.proxies[name];
   });
 }
@@ -301,7 +301,7 @@ function renderDataCells() {
   let h = `<table class="dtable cells"><thead><tr><th></th>${Array.from({ length: CELL_COLS }, (_, c) => `<th>${cellName(c, 0).replace(/\d+/, '')}</th>`).join('')}</tr></thead><tbody>`;
   for (let r = 0; r < CELL_ROWS; r++) {
     h += `<tr><th>${r + 1}</th>`;
-    for (let c = 0; c < CELL_COLS; c++) { const ref = cellName(c, r), raw = S.sheet.cells[ref] ?? '', v = R[ref]; h += `<td class="${v && v.error ? 'err' : ''}" title="${esc(v && v.error ? v.error : raw)}"><input data-ref="${ref}" data-raw="${esc(raw)}" value="${esc(String(raw).startsWith('=') ? show(v) : raw)}"></td>`; }
+    for (let c = 0; c < CELL_COLS; c++) { const ref = cellName(c, r), raw = S.sheet.cells[ref] ?? '', v = R[ref]; h += `<td class="${v && v.error ? 'err' : ''}" title="${esc(v && v.error ? fxText(v.err || v) : raw)}"><input data-ref="${ref}" data-raw="${esc(raw)}" value="${esc(String(raw).startsWith('=') ? show(v) : raw)}"></td>`; }
     h += '</tr>';
   }
   $('dBody').innerHTML = h + `</tbody></table><p class="note">${t('data.cellsHelp')}</p>`;

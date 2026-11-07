@@ -52,7 +52,7 @@ export function fitCurve(x, y, kind, { deg = 2, window = 5 } = {}) {
   if (kind === 'log') { const q = p.filter((r) => r[0] > 0); const c = polyfit(q.map(([a, b]) => [Math.log(a), b]), 1); if (!c) return null; const fn = (t) => c[0] + c[1] * Math.log(t); return { fn, eq: `y = ${fmtN(c[0])} ${c[1] < 0 ? '−' : '+'} ${fmtN(Math.abs(c[1]))}·ln x`, r2: r2of(q, fn), n: q.length, coef: c }; }
   if (kind === 'movavg') {
     const h = Math.floor(Math.max(2, window) / 2), sm = p.map((_, i) => { const w = p.slice(Math.max(0, i - h), i + h + 1); return [p[i][0], w.reduce((s, r) => s + r[1], 0) / w.length]; });
-    return { pts: sm, eq: `media móvil (${2 * h + 1})`, r2: null, n: p.length };
+    return { pts: sm, eq: `movavg(${2 * h + 1})`, r2: null, n: p.length };
   }
   return null;
 }
