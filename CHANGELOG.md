@@ -10,6 +10,9 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.62 — 2026-11-07
+- Column headers stay visible while scrolling in the data tables, the spreadsheet view, the results and comparison tables.
+
 ## V0.61 — 2026-11-07
 - Release notes brought up to date; `tools/sync_version.py` now also writes the version into
   `desktop/RELEASE_NOTES.md` and `--check` fails if it differs, so a release can no longer carry old file names.

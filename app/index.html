@@ -408,6 +408,8 @@ details.bk > summary { cursor: pointer; font-weight: 600; }
 .pane { padding: 12px 14px; display: grid; gap: 12px; align-content: start; overflow: auto; min-height: 0; flex: 1; grid-template-columns: minmax(0, 1fr); }
 .pane table, .clfscope table { display: block; overflow-x: auto; max-width: 100%; }
 .mlbody table { display: block; overflow-x: auto; max-width: 100%; }
+/* V0.62: tables inside a scroll wrapper scroll with the wrapper, so their column headers stay visible */
+.pane .tablewrap table, .pane .dsgrid table, .clfscope .tablewrap table, .mlbody .tablewrap table { display: table; overflow: visible; max-width: none; }
 #sideTabs button { flex: 1 1 0; min-width: 0; padding: 10px 2px; }
 .tipcard { position: fixed; left: 16px; bottom: 16px; z-index: 40; max-width: 380px; background: var(--tip-bg); color: var(--tip-ink); border: 1px solid var(--tip-line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.18); left: auto; right: 16px; bottom: 16px; max-width: 340px; }
 #ageStatus.warn { color: var(--danger); }

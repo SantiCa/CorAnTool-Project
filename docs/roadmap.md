@@ -42,7 +42,7 @@ Planned work, grouped by area. Completed work is listed in the [changelog](../CH
 
 ## Program
 - [ ] Unified data import; age model edited in the core dialog
-- [ ] Column headers that stay visible while scrolling
+- [x] Column headers that stay visible while scrolling
 - [ ] Dedicated horizontal layout for each figure type
 - [ ] Simultaneous editing of a shared project
 - [ ] `app.js` split into smaller modules
