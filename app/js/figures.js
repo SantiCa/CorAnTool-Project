@@ -6,7 +6,7 @@ import { fetchImage, geoComputeSamples, geoLand, geoOverlay, geoRT, mapNetConsen
 
 import { UNIT_TO_CM, hasId, interpAge, topAt } from './core.js';
 import { vec } from './learn.js';
-import { buildLogSVG, buildRangeSVG, extraTicks, mergedStyle, noDataGaps, noDataRect, rowsRange, verticalTicks } from './log.js';
+import { buildLogSVG, buildRangeSVG, extraTicks, noDataDefs, mergedStyle, noDataGaps, noDataRect, rowsRange, verticalTicks } from './log.js';
 import { t } from './i18n.js';
 import { LOCMAP_DEFAULTS, buildLocMapSVG, lmFitBBox, lmUtmZone, lmZoom } from './locmap.js';
 
@@ -328,6 +328,7 @@ function sectionsSVG() {
   out.push(`<text transform="translate(14,${top + H / 2}) rotate(-90)" text-anchor="middle" font-weight="600" fill="${INK.text}">${esc(logStyleOf(D).label)}</text>`);
   out.push(`<line x1="${x0 - 8}" y1="${top}" x2="${x0 - 8}" y2="${top + H}" stroke="${INK.text}" stroke-width="0.8"/>`);
   const LS = logStyleOf(D);
+  out.push(`<defs>${noDataDefs(LS.style)}</defs>`);   // V0.68: pattern used by the no-data rectangles
   for (const e of extraTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 8 - e.len}" y1="${y(e.v)}" x2="${x0 - 8}" y2="${y(e.v)}" stroke="${INK.text}" stroke-width="0.6"/>`);   // V0.22
   for (const v of verticalTicks(from, to, H, LS.style)) out.push(`<line x1="${x0 - 13}" y1="${y(v)}" x2="${x0 - 8}" y2="${y(v)}" stroke="${INK.text}" stroke-width="0.8"/><text x="${x0 - 15}" y="${y(v) + 3}" text-anchor="end" fill="${INK.text}">${+(v * LS.style.yFactor).toPrecision(6)}</text>`);
   panels.forEach((p, i) => {

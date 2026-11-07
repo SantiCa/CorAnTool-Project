@@ -10,6 +10,10 @@ Technical details of every method are in [docs/TECHNICAL_DOCUMENTATION.md](docs/
 
 ---
 
+## V0.68 — 2026-11-07
+- Section figure: intervals without data now show the chosen fill (hatched or solid) over the image, not just the "No data"
+  text on a blank background.
+
 ## V0.67 — 2026-11-07
 - The save indicator no longer says just "Saved" when no backup folder is chosen: it reads "Saved on this computer · no folder
   backup" (or "folder backup pending" when the folder needs permission again) in the warning colour, and "Saved" only
